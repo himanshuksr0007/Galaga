@@ -41,6 +41,11 @@ hl.on("hyprland.start", function()
     -- Forward bluetooth media commands to MPRIS
     hl.exec_cmd("mpris-proxy")
 
+    -- 4-finger tap -> quick settings: the one gesture Hyprland's engine has no
+    -- shape for. libinput-gestures only reads the pad (no grab), so the native
+    -- swipes in gestures.lua are unaffected; its whole config is that one line
+    hl.exec_cmd("libinput-gestures")
+
     -- hypridle starts the shell (Rules.idle): timings from house rules -> ~/.config/demonshot/hypridle.conf
 
     -- background kitty without a window: the first Super+Q opens instantly too

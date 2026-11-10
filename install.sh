@@ -32,6 +32,7 @@ PACMAN=(
 AUR=(
     qtengine darkly-bin bibata-cursor-theme-bin
     zen-browser-bin
+    libinput-gestures # the 4-finger tap only -- the swipes are Hyprland-native (config/libinput-gestures.conf)
 )
 
 # greeter only (./install.sh --greeter). The compositor is the session's own Hyprland
@@ -65,6 +66,7 @@ LINKS=(
     "$G/term/gtk-4.0/settings.ini               .config/gtk-4.0/settings.ini"
     "$G/term/window-buttons                     .config/gtk-3.0/window-buttons"
     "$G/term/window-buttons                     .config/gtk-4.0/window-buttons"
+    "config/libinput-gestures.conf              .config/libinput-gestures.conf"
     "config/fish/config.fish                    .config/fish/config.fish"
     "config/fish/functions/fish_greeting.fish   .config/fish/functions/fish_greeting.fish"
     "config/fonts                               .local/share/fonts/glyph"
