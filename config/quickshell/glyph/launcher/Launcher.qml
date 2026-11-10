@@ -269,7 +269,7 @@ PanelWindow {
         if (mode === 3 && query.trim()) calc.exec(["qalc", "-t", query]); // exec cancels the previous calculation
         else calcOut = "";
     }
-    onModeChanged: { sel = 0; flick.contentY = 0; menuOpen = false; computeSmart(); if (mode === 3) queryChanged(); }
+    onModeChanged: { sel = 0; flick.contentY = 0; menuOpen = false; computeSmart(); if (mode === 3) queryChanged(); modeFx.restart(); }
     // list shrank without a new query (a window closed in windows) -- cursor past the end, cur empty
     onFlatChanged: sel = Math.max(0, Math.min(sel, flat.length - 1))
 
@@ -299,6 +299,7 @@ PanelWindow {
             y: 140 + 24 * (1 - root.t)
             width: 860
             height: Math.min(stage.height - 280, 30 + 66 + 20 + body.height + 34)
+            Behavior on height { NumberAnimation { duration: 250; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } } // filtering shrinks the list -- glide, not steps
             opacity: root.t
             radius: Theme.corner(44)
             color: Theme.s1
@@ -382,6 +383,17 @@ PanelWindow {
                 Column {
                     id: body
                     width: flick.width
+
+                    // a mode switch swaps the whole list in one binding step; the swap
+                    // rides through a quick dip and settle (mt) instead of a hard cut
+                    property real mt: 1
+                    opacity: mt
+                    transform: Translate { y: 10 * (1 - body.mt) }
+                    SequentialAnimation {
+                        id: modeFx
+                        NumberAnimation { target: body; property: "mt"; to: 0.25; duration: 80; easing.type: Easing.OutCubic }
+                        NumberAnimation { target: body; property: "mt"; to: 1; duration: 240; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide }
+                    }
 
                     // the smart strip: maths / conversion / kill, above the results
                     Item {
