@@ -239,6 +239,7 @@ Singleton {
             property bool soundAlerts: true    // alerts: a notification arriving
             property bool soundSys: true       // system: lock, unlock, screenshot, charger
             property var gameAuto: null        // services/Game: what game mode and dnd were before it took them; null -- it isn't holding them
+            property var powerHold: null       // services/PowerAuto: { mode } to restore when the charger returns; null -- it isn't holding one
             property string avatar: ""         // profile photo: the copy in the state dir; "" -- the dotted face (lock/LockFace.qml)
             property bool lockHideLen: false // lock: three fixed dots while typing, the password's length doesn't show (SenulMapa's idea, AMM021's port)
             property bool lockOneScreen: false // lock: the full face only on the screen in focus, the others get a plain cover

@@ -67,6 +67,7 @@ Singleton {
             property bool gameBlur: false
             property bool gameShadow: false
             property bool gameDnd: true     // auto game mode (services/Game) turns on do not disturb
+            property bool powerAuto: false  // ultra on battery, by itself (services/PowerAuto): unplug -- ultra; plug in -- the mode you had comes back
             // Colors
             property int palette: 0
             property bool paintHypr: true
