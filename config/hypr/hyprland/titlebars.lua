@@ -115,10 +115,15 @@ end
 -- minimise move ride windowsMove (animations.lua; the tree has no fullscreen leaf).
 -- The black button maximises (fullscreen mode "maximized": the window fills the
 -- workspace, bar and gaps stay) -- true fullscreen is the bar double-click above.
--- Minimise does not exist in Hyprland: the window is parked on special:minimized with
--- follow = false (we stay here). Restore: Super+Alt+Shift+M, see functions.lua.
--- The buttons register only when the load above verified (the `loaded` gate, the
--- same one the config block uses); the pcall still guards the call itself.
+-- Minimise does not exist in Hyprland: the window is parked on special:minimized.
+-- The white button runs scripts/minimise.sh -- the one entry point every park
+-- path uses (Super+Alt+M runs it too, via functions.minimise_active): it offers
+-- the window to the glyph shell for the genie warp into the deck's minimised
+-- section, and parks directly if the shell does not take it. A click focuses
+-- the window first (barDeco), so the script's active window is this one.
+-- Restore: Super+Alt+Shift+M, see functions.lua.
+-- Same gate as the config above: the buttons register only when the plugin
+-- verified in. The pcall still guards the call itself.
 if loaded then pcall(function()
     hl.plugin.hyprbars.add_button({
         bg_color = "rgb(D71921)", -- close: the one red
@@ -132,7 +137,7 @@ if loaded then pcall(function()
         fg_color = "rgb(000000)",
         size     = 16,
         icon     = "━",
-        action   = [[hyprctl dispatch 'hl.dsp.window.move({ workspace = "special:minimized", follow = false })']],
+        action   = [[bash $HOME/.config/hypr/scripts/minimise.sh]],
     })
     hl.plugin.hyprbars.add_button({
         bg_color = "rgb(000000)", -- maximise: black

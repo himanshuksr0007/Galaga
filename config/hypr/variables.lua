@@ -79,6 +79,7 @@ return {
     cursorSize                 = 23,
     sleepGestureCmd            = "systemctl suspend-then-hibernate || systemctl suspend", -- no hibernation -- regular sleep
     showDesktopCmd             = "bash $HOME/.config/hypr/scripts/show-desktop.sh", -- 3-finger swipe down: park this workspace's windows
+    minimiseCmd                = "bash $HOME/.config/hypr/scripts/minimise.sh", -- THE minimise entry point: every park path runs this (scripts/minimise.sh)
 
     ------------------
     ---- KEYBINDS ----

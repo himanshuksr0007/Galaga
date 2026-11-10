@@ -79,10 +79,14 @@ local function move_actions(win)
 end
 
 -- Minimise: Hyprland has no minimise, so the window is parked on the hidden
--- special:minimized workspace (follow = false -- focus stays where it is). The white
--- title-bar button does the same through a dispatcher string (hyprland/titlebars.lua).
+-- special:minimized workspace. Every park path converges on scripts/minimise.sh
+-- (vars.minimiseCmd): it offers the window to the glyph shell first, which warps
+-- it into the deck's minimised section (the genie effect) and dispatches the park
+-- itself -- and when the shell does not take it, the script parks directly with
+-- the same dispatch this function used to run. The white title-bar button runs
+-- the same script (hyprland/titlebars.lua).
 local function minimise_active()
-    hl.dispatch(hl.dsp.window.move({ workspace = "special:minimized", follow = false }))
+    hl.exec_cmd(vars.minimiseCmd)
 end
 
 -- peek at the minimised windows; restore one by focusing it there and moving it out
