@@ -1,4 +1,6 @@
 import QtQuick
+import QtQuick.Effects
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Bluetooth
 import Quickshell.Hyprland
@@ -7,6 +9,7 @@ import Quickshell.Services.UPower
 import Quickshell.Wayland
 import qs
 import qs.components
+import qs.services
 import qs.settings
 
 // bar: a pill at the left edge or on top -- Theme.state.barAt. First the mark (ring of 16 dots) -- launcher, the center turns red while recording or the microphone is on.
@@ -158,13 +161,47 @@ PanelWindow {
         }
     }
 
-    readonly property var parts: ({ layout: layoutC, wifi: wifiC, bluetooth: btC, sound: soundC, notes: notesC, focus: focusC, battery: batC, mode: modeC, power: powerC })
+    readonly property var parts: ({ layout: layoutC, wifi: wifiC, bluetooth: btC, sound: soundC, notes: notesC, focus: focusC, battery: batC, mode: modeC, power: powerC, cat: catC })
     Component { id: layoutC; Lb { text: Sys.layout; px: 10 } }
+    // RunCat: the busier the cpu, the faster it runs (250 ms a frame idle, 50 at full load). cpu is polled
+    // while it is in the tray; the Binding is not in a delegate -- a destroyed value is not given back.
+    // Grey as-is; in the light theme it would vanish on white, so it inverts to black, like the buds
+    Component {
+        id: catC
+        AnimatedImage {
+            width: 44
+            height: 26
+            source: "runcat.gif"
+            mipmap: true
+            speed: 1 + 4 * SysStats.cpu
+            layer.enabled: Theme.light
+            layer.effect: MultiEffect { brightness: -1 }
+        }
+    }
+    Binding { target: SysStats; property: "cat"; value: Theme.state.bar.includes("cat") }
+    // wifi: two arcs and a dot with round caps, like the battery; off gets a slash
     Component {
         id: wifiC
-        Icon {
-            text: Networking.wifiEnabled ? "\u{F05A9}" : "\u{F05AA}"
-            color: root.wifi?.connected ? Theme.fg : Theme.grey
+        Shape {
+            id: wf
+            width: 20
+            height: 18
+            preferredRendererType: Shape.CurveRenderer
+            readonly property color ink: root.wifi?.connected ? Theme.fg : Theme.grey
+            ShapePath {
+                strokeColor: wf.ink; strokeWidth: 2.2; capStyle: ShapePath.RoundCap; fillColor: "transparent"
+                PathAngleArc { centerX: 10; centerY: 15; radiusX: 5.5; radiusY: 5.5; startAngle: 220; sweepAngle: 100 }
+                PathAngleArc { centerX: 10; centerY: 15; radiusX: 10.5; radiusY: 10.5; startAngle: 220; sweepAngle: 100 }
+            }
+            ShapePath {
+                strokeColor: Networking.wifiEnabled ? "transparent" : wf.ink; strokeWidth: 2.2; capStyle: ShapePath.RoundCap
+                startX: 3; startY: 2
+                PathLine { x: 17; y: 17 }
+            }
+            ShapePath {
+                strokeWidth: -1; fillColor: wf.ink
+                PathAngleArc { centerX: 10; centerY: 15; radiusX: 1.9; radiusY: 1.9; startAngle: 0; sweepAngle: 360 }
+            }
         }
     }
     Component {
