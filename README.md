@@ -94,7 +94,8 @@ hl.bind("SUPER + G", hl.dsp.global("shell:game"))  -- game mode has no key by de
 <h2 align="center">Window buttons</h2>
 
 Every window gets the same three buttons, top-left, in the same order: **close** (red),
-**minimise** (white), **maximise** (black) — one look, two layers:
+**minimise** (white), **maximise** (black) — one look, two layers (GTK headerbar apps
+are the exception: they render close only, for the reasons under "Minimise is not real"):
 
 - **Server-side windows** (terminals, most apps) get a bar from **hyprbars**, the
   hyprland-plugins plugin — `install.sh` adds and enables it through hyprpm, the config is
@@ -109,9 +110,12 @@ Every window gets the same three buttons, top-left, in the same order: **close**
   (hyprbars' `icon_on_hover`; on the GTK side the same reveal is done in CSS).
 - **Apps that draw their own buttons** (GTK headerbar apps, Electron) are excluded
   from the bar in `hypr/hyprland/rules.lua` (`hyprbars:no_bar`) and themed instead:
-  `quickshell/glyph/term/gtk-3.0` and `gtk-4.0` ship a `settings.ini` (buttons on the left,
-  `close,minimize,maximize:appmenu`) and CSS that paints the native buttons as the same
-  red/white/black discs, with glyphs from `term/window-buttons/`. GTK4 needs its own
+  `quickshell/glyph/term/gtk-3.0` and `gtk-4.0` ship a `settings.ini` and CSS that paints
+  the native **close** button as the same red disc, with its glyph from
+  `term/window-buttons/`. Only close is rendered (`gtk-decoration-layout=close:appmenu`):
+  a GTK headerbar's own minimise/maximise buttons can never work on Hyprland — see
+  "Minimise is not real" below — so they are not shown at all, rather than painted as
+  discs whose clicks do nothing. GTK4 needs its own
   rules in that CSS: there the button itself is transparent and the visible disc is its
   image node, so colours and glyphs are painted on `windowcontrols button > image` —
   painting the button (the GTK3 way) leaves GTK4 buttons plain grey. **Flatpak** GTK apps
@@ -143,10 +147,21 @@ Every window gets the same three buttons, top-left, in the same order: **close**
 **Minimise is not real.** Hyprland has no minimise: the white button (and `Super+Alt+M`)
 parks the window on the hidden `special:minimized` workspace. `Super+Alt+Shift+M` peeks at
 that workspace — focus a window there and pull it back with any move-to-workspace bind
-(`Ctrl+Super+Shift+↓` moves it to the current workspace). One honest exception: inside
-GTK apps, the minimise button in their *own* headerbar still does nothing — it sends the
-same minimise request Hyprland cannot honour. That is a platform limitation, not a
-theming miss; `Super+Alt+M` works on every window, GTK apps included.
+(`Ctrl+Super+Shift+↓` moves it to the current workspace).
+
+That is also why GTK apps' headerbars show **only the close disc**. Their own − / ▢
+buttons send xdg requests into the compositor, and neither can ever land on Hyprland:
+a minimise request is received and dropped (Hyprland has no minimised state to put a
+window in, and doesn't even advertise the minimise capability to clients), and
+maximise requests are suppressed by this config's own global rule
+(`suppress_event = "maximize"` in `rules.lua`) because the tiling layout decides
+window sizes. There is no supported way to move those apps onto the hyprbar instead —
+GTK4 ignores `GTK_CSD` on Wayland, libadwaita's headerbar *is* app content (Calculator's
+mode switcher and undo/redo live there), and Hyprland has no rule to force a client
+into server-side decorations — so the headerbar stays, and the dead buttons go: the
+decoration layout renders close only. For GTK apps, minimise / maximise / fullscreen
+live on the keyboard, firing the same dispatchers as the bar buttons:
+`Super+Alt+M` parks, `Super+Alt+F` maximises, `Super+F` fullscreens.
 
 Parked windows are listed in the **deck** (bottom edge): a fixed **minimised** section at
 its right end, behind a thin line, shows each parked window's icon and name — click one

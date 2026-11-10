@@ -169,8 +169,10 @@ links() {
     # dark mode for Zen, Electron and libadwaita (through the portal) and a dark gtk3 base for our gtk.css
     gsettings set org.gnome.desktop.interface color-scheme prefer-dark
     gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark
-    # window buttons on the left for apps that read it from here (the rest read settings.ini)
-    gsettings set org.gnome.desktop.wm.preferences button-layout 'close,minimize,maximize:appmenu'
+    # window buttons for apps that read it from here (the rest read settings.ini):
+    # close only, on the left -- minimise/maximise are not rendered in GTK headerbars
+    # because their clicks cannot work on Hyprland (see term/gtk-3.0/settings.ini)
+    gsettings set org.gnome.desktop.wm.preferences button-layout 'close:appmenu'
 }
 
 browser_prefs() { # firefox/zen: built-in window buttons off (config/browser/user.js) -- hyprbars draws them instead
