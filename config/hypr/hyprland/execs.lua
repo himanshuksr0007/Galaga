@@ -2,6 +2,17 @@ local vars = require("variables")
 local fn   = require("hyprland.functions")
 
 hl.on("hyprland.start", function()
+    -- Plugins first (hyprpm): titlebars.lua loads hyprbars in-config during
+    -- evaluation and verifies it; when that check fails (the load refused at
+    -- evaluation time), titlebars and rules register NOTHING plugin-shaped,
+    -- so this pass is what brings the bars in: hyprpm loads the plugin, and
+    -- the config reload right behind it -- same exec, so the order is
+    -- guaranteed -- re-runs the config with the plugin in and every key,
+    -- button and no_bar rule lands, error-free. It is also the recovery
+    -- path after a Hyprland upgrade, once `hyprpm update` has rebuilt the
+    -- .so. First, so even the fallback lands before anything visual.
+    hl.exec_cmd("sh -c 'hyprpm reload -n; hyprctl reload'")
+
     -- Shell: whichever one is selected in rice
     hl.exec_cmd(vars.rice .. " start")
 
@@ -34,11 +45,6 @@ hl.on("hyprland.start", function()
 
     -- background kitty without a window: the first Super+Q opens instantly too
     hl.exec_cmd(vars.terminal .. " --start-as=hidden")
-
-    -- Plugins (hyprpm): loads hyprbars, the window title bars. Its init reloads the
-    -- config, which is what registers the buttons in hyprland/titlebars.lua.
-    -- After a Hyprland upgrade the plugin is stale until rebuilt: `hyprpm update`
-    hl.exec_cmd("hyprpm reload -n")
 end)
 
 -- Resizer listener

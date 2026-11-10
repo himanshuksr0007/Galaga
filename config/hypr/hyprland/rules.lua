@@ -162,9 +162,15 @@ hl.window_rule({ match = { class = "Todoist|io\\.github\\.alainm23\\.planify" },
 -- above makes their maximise land. Chromium, Chrome and Brave are NOT in the
 -- list: with their "Use system title bar and borders" setting on they draw no
 -- buttons of their own and take the hyprbar instead -- see README "Window buttons".
-hl.window_rule({ match = { fullscreen = true }, ["hyprbars:no_bar"] = true })
-hl.window_rule({ match = { tag = "xwl_popup" }, ["hyprbars:no_bar"] = true })
-hl.window_rule({ match = { title = "Picture(-| )in(-| )[Pp]icture" }, ["hyprbars:no_bar"] = true })
+-- The no_bar prop itself is gated on _G.GLYPH_HYPRBARS, which titlebars.lua
+-- (required before this file) sets from its verified plugin check: while the
+-- plugin is not in, the value is nil and Lua drops the key from the table, so
+-- the rule registers without it -- an unknown plugin prop here errors exactly
+-- like an unknown config key did at login. The start-time reload pass
+-- (execs.lua) re-registers the full form once hyprbars is in.
+hl.window_rule({ match = { fullscreen = true }, ["hyprbars:no_bar"] = _G.GLYPH_HYPRBARS or nil })
+hl.window_rule({ match = { tag = "xwl_popup" }, ["hyprbars:no_bar"] = _G.GLYPH_HYPRBARS or nil })
+hl.window_rule({ match = { title = "Picture(-| )in(-| )[Pp]icture" }, ["hyprbars:no_bar"] = _G.GLYPH_HYPRBARS or nil })
 -- The own-buttons exclusion rides a TAG, the same two-step the float and opaque
 -- rules above use -- not the class match alone. The class rule by itself held
 -- only until the window changed state: maximise an own-buttons app with its own
@@ -175,10 +181,10 @@ hl.window_rule({ match = { title = "Picture(-| )in(-| )[Pp]icture" }, ["hyprbars
 -- exactly when the class-matched prop was being lost. Both rules stay: the
 -- direct class rule covers map time, the tag rule covers every change after.
 hl.window_rule({ match = { class = ownButtonsNoBar }, tag = "+own_buttons" })
-hl.window_rule({ match = { tag = "own_buttons" }, ["hyprbars:no_bar"] = true })
+hl.window_rule({ match = { tag = "own_buttons" }, ["hyprbars:no_bar"] = _G.GLYPH_HYPRBARS or nil })
 hl.window_rule({
     match = { class = ownButtonsNoBar }, -- every entry anchored on its own -- see the note at the list
-    ["hyprbars:no_bar"] = true,
+    ["hyprbars:no_bar"] = _G.GLYPH_HYPRBARS or nil,
 })
 
 ---------------------

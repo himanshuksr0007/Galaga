@@ -1,10 +1,23 @@
 -- Window title bars with mac-style traffic-light buttons, drawn by the hyprbars plugin
 -- (hyprland-plugins, installed and enabled by install.sh through hyprpm).
 --
--- Loading: hyprpm loads the plugin from execs.lua (`hyprpm reload`), and the plugin's init
--- reloads this config -- so on the very first pass hl.plugin.hyprbars does not exist yet.
--- The pcall below keeps that pass silent; the reload right after registers the buttons.
--- After a Hyprland upgrade the plugin is stale until rebuilt: `hyprpm update`.
+-- Loading: the plugin is loaded HERE, during config evaluation -- hl.plugin.load
+-- registers hyprbars (and with it the plugin.hyprbars.* keys) before the hl.config
+-- block below runs. The load is then VERIFIED (the wiki's own pattern,
+-- hl.get_loaded_plugins): the keys and buttons are registered only when the
+-- plugin is actually in. Configuring an absent plugin is what painted the red
+-- unknown-key errors at login until the exec'd `hyprpm reload` landed it --
+-- the bare pcall could fail quietly and the config below could not tell
+-- (reported twice, last on 2026-11-11). When the plugin is not in yet, this
+-- file registers nothing plugin-shaped at all, and execs.lua's start pass
+-- (hyprpm reload, then a config reload right behind it) re-runs this file
+-- with the check green, so the bars arrive whole and error-free. A plugin
+-- that is genuinely stale or missing still fails loudly -- in hyprpm's own
+-- reload notification and in this file's log line -- never as a wall of
+-- unknown-key errors for what is only a load-order problem.
+-- The .so is the one hyprpm built (install.sh: hyprpm add hyprland-plugins,
+-- enable hyprbars); hyprpm keeps it under ~/.local/share/hyprpm/<repo>/hyprbars/.
+-- The known repo path is tried first, then any other repo dir there.
 --
 -- Apps that draw their own headerbar buttons (GTK apps, VS Code, ...) are excluded
 -- in rules.lua (hyprbars:no_bar) and themed by term/gtk-3.0 + term/gtk-4.0 instead.
@@ -24,9 +37,51 @@
 -- white/black from Theme.qml (the same values as term/gtk.css). hyprbars draws each
 -- button as a plain disc -- there is no per-button border -- so the white disc gets its
 -- edge from the dark glyph on it and the bar being a warm step darker than the disc.
+local function hyprbars_so()
+    local home = os.getenv("HOME")
+    local known = home .. "/.local/share/hyprpm/hyprland-plugins/hyprbars/hyprbars.so"
+    local f = io.open(known)
+    if f then
+        f:close()
+        return known
+    end
+    -- pcall'd: this fallback must never be able to break the rest of the file
+    local ok, line = pcall(function()
+        local ls = io.popen("ls " .. home .. "/.local/share/hyprpm/*/hyprbars/hyprbars.so 2>/dev/null")
+        if not ls then return nil end
+        local l = ls:read("*l")
+        ls:close()
+        return l
+    end)
+    if ok and line and line ~= "" then return line end
+    return nil
+end
+
+-- hyprpm is an external process: the config must grant it the plugin
+-- permission, or its loads stall on a prompt nobody can see at login
+-- (Hyprland wiki, "Using plugins"). The config's own load below needs no
+-- grant; this one covers execs.lua's `hyprpm reload` fallback.
+hl.permission("/usr/(bin|local/bin)/hyprpm", "plugin", "allow")
+
+local function is_plugin_loaded(name)
+    for _, v in pairs(hl.get_loaded_plugins()) do
+        if v.name == name then return true end
+    end
+    return false
+end
+
+local so = hyprbars_so()
+if so then pcall(hl.plugin.load, so) end -- already loaded (a re-parse) or stale: either way, not fatal here
+
+local loaded = is_plugin_loaded("hyprbars")
+_G.GLYPH_HYPRBARS = loaded -- rules.lua gates its hyprbars:no_bar props on this, the same check
+if not loaded then
+    print("glyph: hyprbars is not loaded at config time -- its keys and buttons wait for the hyprpm reload pass")
+end
+
 local scheme = require("scheme.demonshot")
 
-hl.config({
+if loaded then hl.config({
     plugin = {
         hyprbars = {
             bar_height                 = 32,
@@ -50,6 +105,7 @@ hl.config({
         },
     },
 })
+end
 
 -- Left to right: close, minimise, maximise. With bar_buttons_alignment = "left" the
 -- plugin lays the buttons out in the order they are added here.
@@ -61,7 +117,9 @@ hl.config({
 -- workspace, bar and gaps stay) -- true fullscreen is the bar double-click above.
 -- Minimise does not exist in Hyprland: the window is parked on special:minimized with
 -- follow = false (we stay here). Restore: Super+Alt+Shift+M, see functions.lua.
-pcall(function()
+-- The buttons register only when the load above verified (the `loaded` gate, the
+-- same one the config block uses); the pcall still guards the call itself.
+if loaded then pcall(function()
     hl.plugin.hyprbars.add_button({
         bg_color = "rgb(D71921)", -- close: the one red
         fg_color = "rgb(000000)",
@@ -84,3 +142,4 @@ pcall(function()
         action   = [[hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })']],
     })
 end)
+end
