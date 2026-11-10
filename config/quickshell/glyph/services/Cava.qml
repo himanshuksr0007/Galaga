@@ -24,7 +24,14 @@ Singleton {
         running: root.active
         command: ["cava", "-p", Qt.resolvedUrl("cava.conf").toString().replace("file://", "")]
         stdout: SplitParser {
-            onRead: line => root.bars = line.split(";").filter(s => s !== "").map(v => v / 100)
+            onRead: line => {
+                const v = line.split(";").filter(s => s !== "").map(s => Number(s) / 100);
+                // a cava that can't open its input (PipeWire not up yet at login) prints only its title
+                // escape "\e]0;cava\a": NaN bars would stick in consumers' running averages for good and
+                // paint derived levels black (Isaqdn03's find) -- such a frame is skipped, bars stay
+                if (!v.length || v.some(x => !isFinite(x))) return;
+                root.bars = v;
+            }
         }
         onRunningChanged: if (!running) root.bars = Array(8).fill(0)
     }
