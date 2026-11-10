@@ -152,7 +152,7 @@ PanelWindow {
         const q = query.trim();
         if (mode !== 0 || !Theme.state.featLauncher || q.length < 2) { fileItems = []; return; }
         findProc.exec(["sh", "-c", 'find "$1" -maxdepth 3 -not -path "*/.*" -type f -iname "*$2*" 2>/dev/null | head -24',
-                       "glyph-find", Quickshell.env("HOME"), q.replace(/["$`\\]/g, "")]);
+                       "glyph-find", Quickshell.env("HOME"), q.split("").filter(c => !"\"$`\\".includes(c)).join("")]); // quotes and dollars stay out of the shell line
     }
     Process {
         id: findProc
