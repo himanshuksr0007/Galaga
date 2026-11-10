@@ -184,11 +184,28 @@ into server-side decorations — so the headerbar stays, its working buttons ren
 and for GTK apps minimise lives on the keyboard, firing the same dispatchers as the
 bar buttons: `Super+Alt+M` parks, `Super+Alt+F` maximises, `Super+F` fullscreens.
 
-Parked windows are listed in the **deck** (bottom edge): a fixed **minimised** section at
-its right end, behind a thin line, shows each parked window's icon and name — click one
-and it moves back to the current workspace, focused. The list is live (it reads the
-Hyprland window model directly), scrolls when full, and reads "nothing minimised" in
-dots when empty.
+Parked windows are listed in the **deck** (bottom edge): a **minimised** section (last
+by default — it sits wherever you place it in the deck's section order), behind a
+dotted separator, shows each parked window's icon and name — click one and it moves
+back to the current workspace, focused. The list is live (it reads the Hyprland
+window model directly), scrolls when full, and reads "nothing minimised" in dots
+when empty.
+
+**The genie effect.** Parking a window warps it — macOS magic-lamp style — down
+into that minimised section. Hyprland's own animations cannot bend a window, so
+the shell does it with the window's pixels: every park path (the white button,
+`Super+Alt+M`, show-desktop) runs one entry point, `hypr/scripts/minimise.sh`,
+which hands the window to the shell *before* parking it. The shell snapshots the
+window's rect (`grim`, the screenshot module's capture), lays the snapshot over
+the still-live window, parks the real one, and collapses the snapshot into the
+minimised section — into the section's **current** place in the deck, computed
+from the section order on every park: reorder the sections in settings and the
+windows follow the section. Show-desktop's windows warp as a short cascade. If
+the shell is not running, or the snapshot fails, the park is a plain park,
+exactly as before — the effect can never eat a minimise. Restore has no reverse
+warp, deliberately: a parked window is unmapped, so there are no fresh pixels to
+un-warp — only the stale snapshot from park time, and animating stale content
+would be a fake. Turn the effect off in **Prefs → DECK → genie · minimise**.
 
 Exceptions and notes:
 
