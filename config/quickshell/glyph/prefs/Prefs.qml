@@ -1269,6 +1269,17 @@ PanelWindow {
                 Toggle { text: "ultra on battery"; on: root.r.powerAuto; onFlip: root.r.powerAuto = !root.r.powerAuto }
                 Lb { anchors.verticalCenter: parent.verticalCenter; px: 10; text: "unplug — ultra takes over by itself · plug in — the mode you had comes back · a mode picked by hand on battery cancels the return" }
             }
+            // shell performance (Theme.perf): a different thing from the modes above -- those set the
+            // cpu through the daemon; this sets what the glyph shell itself spends on polling and
+            // ambient motion. Every number below is the cadence the code actually runs at
+            Column {
+                spacing: 12
+                Lb { text: "shell performance · what the shell itself spends — not the cpu profile above" }
+                Pick { label: "shell"; opts: ["full", "trim", "lite"]; cur: Theme.state.perf; onPicked: i => Theme.state.perf = i }
+                Lb { visible: Theme.state.perf === 0; px: 11; color: Theme.grey; text: "full · stats every 2 s · recording/airplane check every 3 s · monitor read-back every 5 s · visualisers and ambient motion as set" }
+                Lb { visible: Theme.state.perf === 1; px: 11; color: Theme.grey; text: "trim · stats every 4 s · check every 6 s · read-back every 10 s · the orb breathes at half rate" }
+                Lb { visible: Theme.state.perf === 2; px: 11; color: Theme.grey; text: "lite · stats every 8 s · check every 12 s · read-back every 20 s · visualisers off, the cat and the spinning covers stand still, the orb frozen" }
+            }
         }
 
         // ---- INPUT: hold a key -- first dot immediately, delay pause, then rate per second; on live rings ----
