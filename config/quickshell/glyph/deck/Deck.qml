@@ -390,7 +390,7 @@ Scope {
                         id: minCol
                         width: parent.width
                         spacing: 8
-                        Lb { id: minLabel; text: "minimised"; px: 10 }
+                        Lb { id: minLabel; text: minCol.mins.length > 0 ? `minimised · ${minCol.mins.length}` : "minimised"; px: 10 }
                         readonly property var mins: Hyprland.toplevels.values
                             .filter(t => t.workspace?.name === "special:minimized")
                             .map(t => {
@@ -431,6 +431,15 @@ Scope {
                             spacing: 4
                             boundsBehavior: Flickable.StopAtBounds
                             model: minCol.mins
+                            // rows fade in as windows park; on the way out (restore
+                            // from the menu, close) they fade and collapse, and
+                            // the rows below glide up into the gap
+                            add: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 200; easing.type: Easing.OutCubic } }
+                            remove: Transition {
+                                NumberAnimation { property: "opacity"; to: 0; duration: 150; easing.type: Easing.InCubic }
+                                NumberAnimation { property: "height"; to: 0; duration: 150; easing.type: Easing.InCubic }
+                            }
+                            displaced: Transition { NumberAnimation { properties: "x,y"; duration: 200; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
                             delegate: Rectangle {
                                 id: minRow
                                 required property var modelData
