@@ -131,7 +131,8 @@ WlSessionLockSurface {
                 transform: Translate { y: 16 * (1 - root.ph(0.4, 0.75)) }
             }
 
-            // field: entered -- dots, after the caret -- dimmed up to six
+            // field: one white dot per entered character and the caret -- nothing pre-rendered,
+            // so the dot count is always the password length (empty field -- no dots at all)
             Rectangle {
                 id: pwd
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -162,10 +163,6 @@ WlSessionLockSurface {
                         }
                     }
                     Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 2; height: 24; color: Theme.red; opacity: root.blink ? 1 : 0 }
-                    Repeater {
-                        model: Math.max(0, 6 - root.auth.buffer.length)
-                        Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 11; height: 11; radius: 5.5; color: Theme.s3 }
-                    }
                 }
 
                 SequentialAnimation {
