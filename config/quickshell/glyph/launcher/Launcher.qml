@@ -6,6 +6,7 @@ import Quickshell.Services.SystemTray
 import Quickshell.Wayland
 import qs
 import qs.components
+import qs.services
 
 // launcher: tap Super or Super+Space. Panel 860 centered, screen dims to 74%. Search pill with a red caret,
 // modes as chips (Tab): apps / run / windows / calc / style. No query -- "recent" and all apps in a grid of 6, alphabet on the right.
@@ -217,6 +218,7 @@ PanelWindow {
         sel = 0;
         flick.contentY = 0;
         shown = true;
+        Sounds.play("pop");
         input.forceActiveFocus();
     }
     function close() { shown = false; }

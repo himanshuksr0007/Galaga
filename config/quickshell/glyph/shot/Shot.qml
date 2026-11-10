@@ -6,6 +6,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import qs
 import qs.components
+import qs.services
 
 // screenshot: the screen freezes (grim to a file, the frame under the overlay) and dims; region -- a white 1px frame with dots at the corners
 // and Doto size, a magnifier at the cursor -- pixels as dots in a circle and the color. Modes -- chips in the pill at the bottom.
@@ -122,8 +123,9 @@ Scope {
         id: take
         stdout: StdioCollector {
             onStreamFinished: {
-                if (!text) return;
+                if (!text) return; // empty -- the shot failed, and failure stays silent
                 root.shot = text;
+                Sounds.play("shot");
                 fx.restart();
             }
         }
@@ -133,7 +135,10 @@ Scope {
         stdout: StdioCollector {
             onStreamFinished: {
                 root.shotText = text.replace(/\s+$/, "");
-                if (root.shotText) Quickshell.execDetached(["wl-copy", root.shotText]); // argv, not a shell line: the text is data
+                if (root.shotText) {
+                    Quickshell.execDetached(["wl-copy", root.shotText]); // argv, not a shell line: the text is data
+                    Sounds.play("shot"); // read something -- a capture like any other; nothing read -- silent
+                }
                 fx.restart();
             }
         }

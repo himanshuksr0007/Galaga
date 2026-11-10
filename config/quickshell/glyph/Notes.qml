@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Services.Notifications
+import qs.services
 
 // notifications: new -- island at the top and a Glyph flash, history -- cards in quick settings
 Singleton {
@@ -37,7 +38,10 @@ Singleton {
         onNotification: n => {
             n.tracked = true;
             root.times = Object.assign({}, root.times, { [n.id]: Date.now() });
-            if ((!Theme.state.dnd || n.urgency === NotificationUrgency.Critical) && root.essential(n)) root.arrived(n);
+            if ((!Theme.state.dnd || n.urgency === NotificationUrgency.Critical) && root.essential(n)) {
+                root.arrived(n);
+                Sounds.play("notify"); // here, not at a consumer: arrived is post-gating -- dnd and essential already decided
+            }
         }
     }
 

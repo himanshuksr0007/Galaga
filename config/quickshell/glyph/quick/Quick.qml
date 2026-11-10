@@ -34,7 +34,7 @@ PanelWindow {
     property string pick: ""
     // Brightness then changes this very monitor (Sys.panelMon); on an external one a fresh DDC value is
     // asked for only once the open has settled, so the panel never waits on ddcutil (see Backlight)
-    onOpenChanged: if (open) { Sys.panelMon = Hyprland.focusedMonitor?.name ?? ""; if (Sys.panelBriExternal) Backlight.ddcRefreshSoon(); Sys.earRun([]); } else pick = ""
+    onOpenChanged: if (open) { Sys.panelMon = Hyprland.focusedMonitor?.name ?? ""; if (Sys.panelBriExternal) Backlight.ddcRefreshSoon(); Sys.earRun([]); if (!peeked) Sounds.play("pop"); } else pick = ""
     // cursor 500 ms outside the panel and the Hot strip -- close. seen: Hyprland does not report the cursor to a fresh surface until the mouse moves --
     // until the first movement it is unknown where it is, and the panel waits (otherwise with a still cursor it would open and immediately close)
     Timer { interval: 500; running: root.open && root.peeked && seen.hovered && !keep.hovered && !edge.hovered; onTriggered: root.close() }

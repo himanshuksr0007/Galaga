@@ -108,6 +108,7 @@ Scope {
         target: UPower
         function onOnBatteryChanged() {
             root.warned = 100;
+            if (root.armed && (root.bat?.isLaptopBattery ?? false)) Sounds.play("charge"); // the same edge the island tile below reports
             if (UPower.onBattery) root.power("On battery", "\u{F0079}", false, root.bat.timeToEmpty ? `${root.hm(root.bat.timeToEmpty)} left` : "");
             else root.power("Charging", "\u{F0084}", false, root.bat.timeToFull ? `full in ${root.hm(root.bat.timeToFull)}` : "");
         }

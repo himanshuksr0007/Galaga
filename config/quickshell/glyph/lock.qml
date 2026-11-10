@@ -4,6 +4,7 @@ import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Services.Pam
 import Quickshell.Wayland
+import qs.services
 import "lock"
 
 // lock -- a separate process, as in demonshot: qs -p .../glyph/lock.qml (called by `rice lock`). Unlocked -- we exit.
@@ -34,12 +35,17 @@ ShellRoot {
         onCompleted: res => {
             gate.buffer = "";
             if (res === PamResult.Success) {
+                Sounds.play("unlock"); // the lock process has its own Sounds -- the settings ride the shared state file
                 gate.leaving = true;
                 unlockT.start();
             } else gate.fail = true;
         }
     }
     Timer { id: unlockT; interval: 470; onTriggered: lock.locked = false }
+    // engaged: a breath after the process starts, so the players (services/SoundFx)
+    // have had their moment to decode. The greeter never runs this file -- no sounds there
+    Timer { id: lockSnd; interval: 200; onTriggered: Sounds.play("lock") }
+    Component.onCompleted: lockSnd.start()
 
     property string layout: "en"
     function short(name) { return name.slice(0, 2).toLowerCase(); }
