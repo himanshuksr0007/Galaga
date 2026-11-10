@@ -13,7 +13,9 @@ import qs.components
 Scope {
     id: root
 
-    readonly property var modes: ["region", "window", "screen", "record"]
+    readonly property var modes: ["region", "window", "screen", "record", "text", "qr"]
+    // text/qr ride along only while their switch is on (prefs FEATURES); the first four never move
+    readonly property var modeList: Theme.state.featShot ? modes : modes.slice(0, 4)
     readonly property var delays: [0, 3, 13]
     readonly property string run: Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"
 
@@ -36,11 +38,15 @@ Scope {
     property string shot: ""
     property string shotWhat: ""
     property string shotDims: ""
+    // text/qr results: no image -- the decoded text, and which reader produced it
+    property string shotText: ""
+    property string shotKind: ""
     property rect shotRect
     property bool shotRec: false
 
     function open() {
         if (aim.visible) return;
+        if (mode >= modeList.length) mode = 0; // text/qr switched off since the last run
         const mon = Hyprland.focusedMonitor;
         scr = Quickshell.screens.find(s => s.name === mon?.name) ?? Quickshell.screens[0];
         Hyprland.refreshToplevels();
@@ -72,6 +78,18 @@ Scope {
         // vips, unlike magick, fails on a frame border one pixel past the edge -- fractional scale, so we clamp
         const cx = Math.round(r.x * k), cy = Math.round(r.y * k);
         const crop = `${cx} ${cy} ${Math.min(Math.round(r.width * k), frozenImg.sourceSize.width - cx)} ${Math.min(Math.round(r.height * k), frozenImg.sourceSize.height - cy)}`;
+        if (mode === 4 || mode === 5) {
+            // read the frame instead of saving it: the same frozen crop, to a temp png, then
+            // tesseract (text) or zbarimg (codes). The result lands on the clipboard and on the
+            // card; the timer does not apply -- the frozen frame is already the moment you picked
+            shot = "";
+            shotText = "";
+            shotKind = modes[mode];
+            read.exec(["sh", "-c", `vips crop "$1" "$3" $2 2>/dev/null && { if [ "$4" = text ]; then tesseract "$3" stdout 2>/dev/null; else zbarimg --quiet "$3" 2>/dev/null | sed 's/^[^:]*://'; fi; } | head -c 2000`,
+                "sh", frozen, crop, `${run}/glyph-shot-read.png`, modes[mode]]);
+            return;
+        }
+        shotKind = "";
         take.exec(["sh", "-c", `d="$(xdg-user-dir PICTURES)/shots"; mkdir -p "$d"; f="$d/shot-$(date +%F_%H-%M-%S).png"
             if [ "$1" = 0 ]; then vips crop "$4" "$f[compression=1]" $2 2>/dev/null; else sleep "$1"; grim -g "$3" "$f"; fi \
                 && wl-copy -t image/png < "$f" && printf '%s' "$f"`,
@@ -109,6 +127,16 @@ Scope {
             }
         }
     }
+    Process {
+        id: read
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.shotText = text.replace(/\s+$/, "");
+                if (root.shotText) Quickshell.execDetached(["wl-copy", root.shotText]); // argv, not a shell line: the text is data
+                fx.restart();
+            }
+        }
+    }
 
     Editor { id: editor }
 
@@ -139,8 +167,8 @@ Scope {
                 if (e.key === Qt.Key_Escape) root.close();
                 else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) root.fire();
                 else if (e.key === Qt.Key_Space) root.mode = 1;
-                else if (e.key === Qt.Key_Tab) root.mode = (root.mode + 1) % 4;
-                else if (e.key === Qt.Key_Backtab) root.mode = (root.mode + 3) % 4;
+                else if (e.key === Qt.Key_Tab) root.mode = (root.mode + 1) % root.modeList.length;
+                else if (e.key === Qt.Key_Backtab) root.mode = (root.mode + root.modeList.length - 1) % root.modeList.length;
                 else if (e.key === Qt.Key_T) root.delay = (root.delay + 1) % 3;
                 else return;
                 e.accepted = true;
@@ -295,7 +323,7 @@ Scope {
                 onPositionChanged: e => {
                     root.mx = e.x;
                     root.my = e.y;
-                    if (pressed && (root.mode === 0 || root.mode === 3))
+                    if (pressed && (root.mode === 0 || root.mode === 3 || root.mode === 4 || root.mode === 5))
                         root.drag = Qt.rect(Math.min(from.x, e.x), Math.min(from.y, e.y), Math.abs(e.x - from.x), Math.abs(e.y - from.y));
                 }
                 onPressed: e => {
@@ -314,7 +342,7 @@ Scope {
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 6
                     Repeater {
-                        model: root.modes
+                        model: root.modeList
                         Chip {
                             required property string modelData
                             required property int index
@@ -403,6 +431,7 @@ Scope {
                     width: parent.width - 32
                     spacing: 16
                     Item {
+                        visible: !!root.shot
                         width: parent.width
                         height: 184
                         layer.enabled: true
@@ -422,11 +451,37 @@ Scope {
                         Num { id: cdims; x: 8; text: root.shotDims; font.pixelSize: 30 }
                         Lb { anchors { right: parent.right; rightMargin: 8; bottom: parent.bottom } text: root.shotWhat; px: 11 }
                     }
-                    Lb { x: 8; text: "copied · click to edit"; px: 10; color: Theme.mute }
+                    Text {
+                        visible: !root.shot && !!root.shotKind
+                        x: 8
+                        width: parent.width - 16
+                        text: root.shotText || "nothing read -- try a tighter frame"
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 4
+                        elide: Text.ElideRight
+                        font { family: Theme.ui; pixelSize: 13 }
+                        color: Theme.fg
+                    }
+                    Lb {
+                        x: 8
+                        px: 10
+                        color: Theme.mute
+                        text: root.shot ? "copied · click to edit"
+                            : root.shotKind === "qr" && /^https?:\/\//.test(root.shotText) ? "copied · click to open"
+                            : root.shotText ? "copied to clipboard" : "nothing was copied"
+                    }
                 }
                 Rectangle { id: thumbMask; width: 328; height: 184; radius: 24; visible: false; layer.enabled: true }
 
-                TapHandler { onTapped: { fx.stop(); fired.visible = false; editor.open(root.shot, root.scr); } }
+                TapHandler {
+                    onTapped: {
+                        fx.stop();
+                        fired.visible = false;
+                        if (root.shot) editor.open(root.shot, root.scr);
+                        else if (root.shotKind === "qr" && /^https?:\/\//.test(root.shotText)) Quickshell.execDetached(["xdg-open", root.shotText]); // a scanned link opens
+                        else if (root.shotText) Quickshell.execDetached(["wl-copy", root.shotText]);
+                    }
+                }
                 HoverHandler { cursorShape: Qt.PointingHandCursor }
             }
         }
