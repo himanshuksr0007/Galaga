@@ -134,6 +134,7 @@ PanelWindow {
                         Image {
                             anchors.fill: parent
                             source: photo.source
+                            sourceSize: photo.sourceSize // the same decode as the photo below, not a second full-size one
                             fillMode: Image.PreserveAspectFit
                             mipmap: true
                             layer.enabled: true
@@ -144,6 +145,8 @@ PanelWindow {
                         id: photo
                         anchors.fill: parent
                         source: root.art
+                        // the box is 190x220; covers arrive at full album size -- decode at twice the box, not at 3000x3000
+                        sourceSize: Qt.size(380, 440)
                         fillMode: Image.PreserveAspectFit
                         mipmap: true
                         opacity: root.res
