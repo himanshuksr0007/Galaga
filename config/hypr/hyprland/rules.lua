@@ -6,8 +6,29 @@ local vars = require("variables")
 
 hl.window_rule({ match = { fullscreen = false }, opacity = vars.windowOpacity .. " override" })
 
--- apps (kitty) request maximize on open -- ignore it, tiling decides by itself
-hl.window_rule({ match = { class = ".*" }, suppress_event = "maximize" })
+-- Apps that draw their own window buttons (GTK headerbars, Electron, ...). The list
+-- drives two rules: these apps get no hyprbars bar (the no_bar rule at the bottom of
+-- this file -- their own buttons are themed by term/gtk.css instead), and they are
+-- the one exception to the maximise suppression below, so a click on their own
+-- maximise button actually maximises. There is no protocol way to detect "draws
+-- its own buttons", so the list is curated by hand: ONE CLASS PER LINE. Find an
+-- app's class with `hyprctl activewindow` (or `hyprctl clients`), add a line here,
+-- and both rules follow -- see README "Window buttons".
+local ownButtons =
+    "org\\.gnome\\..*|" .. -- GNOME apps: headerbars (Nautilus, Settings, Text Editor, Loupe, ...)
+    "gnome-control-center|" ..
+    "Code|VSCodium|codium|" .. -- VS Code: own titlebar, see README "Window buttons"
+    "steam|" .. -- own titlebar; the games themselves are fullscreen anyway
+    "discord|vesktop|equibop|" .. -- own titlebars
+    "org\\.quickshell" -- the shell's own windows (Rice switcher)
+
+-- apps (kitty) request maximize on open -- ignore it, tiling decides by itself.
+-- The own-buttons apps above are exempt (negative: match): for them the same
+-- request is a user clicking their maximise button, not an app presuming.
+-- Suppression is a per-window set that matching rules only ever add to -- no
+-- later rule can take an event back out -- so the exception has to live in this
+-- rule's own match.
+hl.window_rule({ match = { class = "negative:^(" .. ownButtons .. ")$" }, suppress_event = "maximize" })
 
 hl.window_rule({ match = { float = true, xwayland = false }, center = true }) -- Center all floating windows (not xwayland cause popups)
 
@@ -117,9 +138,9 @@ hl.window_rule({ match = { initial_title = "Spotify( \\(?Free\\)?)?" }, workspac
 hl.window_rule({ match = { class = "discord|equibop|vesktop|whatsapp|org\\.telegram\\.desktop|TelegramDesktop" }, workspace = "special:communication" })
 hl.window_rule({ match = { class = "Todoist|io\\.github\\.alainm23\\.planify" }, workspace = "special:todo" })
 
--- Window buttons (hyprbars, hyprland/titlebars.lua): windows that draw their own buttons
--- (GTK headerbars, Electron) keep theirs -- themed by term/gtk.css -- and get no second
--- bar here; fullscreen, PiP and XWayland popups lose the bar too.
+-- Window buttons (hyprbars, hyprland/titlebars.lua): the own-buttons apps (the
+-- ownButtons list at the top of this file) keep theirs -- themed by term/gtk.css --
+-- and get no second bar here; fullscreen, PiP and XWayland popups lose the bar too.
 -- Browsers are NOT excluded: they draw their buttons inside their own UI, where gtk.css
 -- cannot reach them, and the requests behind those buttons go nowhere on Hyprland
 -- (minimise does not exist, maximise is suppressed above), so only their close worked.
@@ -130,17 +151,19 @@ hl.window_rule({ match = { class = "Todoist|io\\.github\\.alainm23\\.planify" },
 hl.window_rule({ match = { fullscreen = true }, ["hyprbars:no_bar"] = true })
 hl.window_rule({ match = { tag = "xwl_popup" }, ["hyprbars:no_bar"] = true })
 hl.window_rule({ match = { title = "Picture(-| )in(-| )[Pp]icture" }, ["hyprbars:no_bar"] = true })
+-- The own-buttons exclusion rides a TAG, the same two-step the float and opaque
+-- rules above use -- not the class match alone. The class rule by itself held
+-- only until the window changed state: maximise an own-buttons app with its own
+-- button, unmaximise it, and our bar appeared over its headerbar and stayed
+-- (reported 2026-11-11, Firefox first, then every own-buttons app). A tag, once
+-- set at map time, stays on the window for its whole life, and tag-matched rules
+-- are the ones re-run on every state change -- so the exclusion is re-asserted
+-- exactly when the class-matched prop was being lost. Both rules stay: the
+-- direct class rule covers map time, the tag rule covers every change after.
+hl.window_rule({ match = { class = ownButtonsNoBar }, tag = "+own_buttons" })
+hl.window_rule({ match = { tag = "own_buttons" }, ["hyprbars:no_bar"] = true })
 hl.window_rule({
-    match = {
-        class = "^(" ..
-            "org\\.gnome\\..*|" .. -- GNOME apps: headerbars (Nautilus, Settings, Text Editor, Loupe, ...)
-            "gnome-control-center|" ..
-            "Code|VSCodium|codium|" .. -- VS Code: own titlebar, see README "Window buttons"
-            "steam|" .. -- own titlebar; the games themselves are fullscreen anyway
-            "discord|vesktop|equibop|" .. -- own titlebars
-            "org\\.quickshell" .. -- the shell's own windows (Rice switcher)
-            ")$",
-    },
+    match = { class = "^(" .. ownButtons .. ")$" },
     ["hyprbars:no_bar"] = true,
 })
 
