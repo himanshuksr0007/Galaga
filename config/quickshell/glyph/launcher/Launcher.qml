@@ -197,6 +197,7 @@ PanelWindow {
     Behavior on t { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
 
     function open() {
+        focusT.stop(); // a window from the last opening doesn't steal this one's focus
         input.text = "";
         mode = 0;
         sel = 0;

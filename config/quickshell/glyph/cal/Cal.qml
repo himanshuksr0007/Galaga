@@ -4,7 +4,7 @@ import Quickshell.Wayland
 import qs
 import qs.components
 
-// calendar and focus timer: click the bar clock. Panel 440 to the right of the bar, centered -- opposite the clock, slides in from the left.
+// calendar and focus timer: click the bar clock. Panel 440 by the bar (on the screen side), centered -- opposite the clock, slides in from the bar.
 // Month as a 7x6 grid (today -- white circle), arrows and left/right scroll, click on the month -- back to today. Below the timer:
 // ring of dots fills clockwise, minute presets, start/pause (and space), reset. While running -- Glyph fills the bottom strip.
 // Esc or click outside -- close
