@@ -394,18 +394,71 @@ set_file_manager() { # the guided choice, applied (AMM021's set_file_manager): t
     esac
 }
 
+pacman_hook() { # after a system update, pacman says if the rice has news. It runs as you, never
+    # as root: the script lives in your home, and root shouldn't execute that (AMM021's hook)
+    [ -e /etc/pacman.d/hooks/glyph-rice.hook ] && return 0
+    run sudo mkdir -p /etc/pacman.d/hooks
+    if [ "$DRY" = 1 ]; then note "would add the pacman hook"; return 0; fi
+    printf '[Trigger]\nOperation = Upgrade\nType = Package\nTarget = *\n\n[Action]\nDescription = Checking for rice updates...\nWhen = PostTransaction\nExec = /usr/bin/runuser -u %s -- /usr/bin/env HOME=%s /usr/bin/bash %s/config/pacman/rice-notify.sh\n' "$USER" "$HOME" "$DOTS" \
+        | sudo tee /etc/pacman.d/hooks/glyph-rice.hook >/dev/null || say "could not add the pacman hook -- ./install.sh --update still works"
+}
+
+kernel_note() { # the update replaced the running kernel: its modules are gone, so anything
+    # module-shaped (wifi, gpu) breaks until a reboot -- say so instead of looking broken
+    [ "$DRY" = 1 ] && return 0
+    [ -d "/usr/lib/modules/$(uname -r)" ] || say "note: the running kernel ($(uname -r)) was replaced -- reboot before judging anything broken"
+}
+
+update() { # step 1: the new code. Bash reads a script as it runs, so step 2 starts fresh from the new file
+    local old; old=$(git -C "$DOTS" rev-parse HEAD)
+    say "getting the newest version"
+    if ! git -C "$DOTS" pull --ff-only; then
+        say "could not update: local changes or no connection, see above. Nothing changed."
+        exit 1
+    fi
+    exec "$DOTS/install.sh" --update-rest "$old"
+}
+
+update_rest() { # step 2: whatever the new version needs. Asks for a password only if something needs it
+    local old=$1 missing aur_missing
+    if [ "$old" = "$(git -C "$DOTS" rev-parse HEAD)" ]; then say "already up to date."; return 0; fi
+    git -C "$DOTS" log --format='  · %s' "$old..HEAD" | cut -c1-100
+    # pacman -T lists what isn't installed, and needs no password
+    missing=$(pacman -T "${PACMAN[@]}" || true)
+    aur_missing=$(pacman -T "${AUR[@]}" || true)
+    # the greeters run from copies, which only change when their own inputs do
+    local greeter_changed="" watch='^config/greetd/|^config/quickshell/glyph/(greet\.qml|lock/|Theme\.qml|components/)'
+    local dm=""
+    if [ -L /etc/systemd/system/display-manager.service ]; then dm="$(basename "$(readlink -f /etc/systemd/system/display-manager.service)" .service)"; fi
+    if [ "$dm" = greetd ] && git -C "$DOTS" diff --name-only "$old" HEAD | grep -qE "$watch"; then greeter_changed=1; fi
+    local hook_missing=""
+    [ -e /etc/pacman.d/hooks/glyph-rice.hook ] || hook_missing=1
+    if [ -n "$missing$aur_missing$greeter_changed$hook_missing" ]; then sudo_once; fi
+    [ -n "$hook_missing" ] && pacman_hook
+    # shellcheck disable=SC2086 # one package per word
+    [ -z "$missing" ] || run sudo pacman -S --needed --noconfirm $missing
+    # shellcheck disable=SC2086
+    [ -z "$aur_missing" ] || run yay -S --needed --noconfirm $aur_missing || say "aur: not everything installed, see above"
+    links
+    [ -z "$greeter_changed" ] || greeter
+    if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then run "$DOTS/config/quickshell/rice/rice" restart; fi
+    kernel_note
+    say "updated. Your choices and settings are as they were."
+}
+
 install_flow() { # the guided install: questions, one password, then straight through
     ask_setup
     extras
     [ "$FILES" = dolphin ] && EXT+=(dolphin kio-extras ffmpegthumbs kdegraphics-thumbnailers archlinux-xdg-menu kde-cli-tools)
     sudo_once
-    packages; plugins; services; links; browser_cleanup; flatpak_gtk; tmux_theme
+    packages; plugins; services; links; browser_cleanup; flatpak_gtk; tmux_theme; pacman_hook
     [ -n "$FILES" ] && set_file_manager
     case "$LOGIN" in
         greeter) if [ "$DRY" = 1 ]; then note "would run the greeter step (./install.sh --greeter)"; else greeter; fi ;;
     esac
     # spicetify needs Spotify already downloaded and logged in, so there is nothing to apply before the first launch
     [[ " ${WITH//,/ } " == *" spotify "* ]] && say "spotify: launch it, log in, then spicetify config custom_apps marketplace && spicetify backup apply"
+    kernel_note
     if [ "$DRY" = 1 ]; then say "dry run done -- nothing was changed"; else say "done. reboot and pick Hyprland in sddm"; fi
 }
 
@@ -503,8 +556,10 @@ case "${1:-}" in
         greeter ;;
     --dry-run) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
         DRY=1; install_flow ;;
+    --update) update ;;
+    --update-rest) update_rest "${2:-}" ;;
     ""|--with) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
         [ "${1:-}" = --with ] && WITH="${*:2}" # both comma- and space-separated
         install_flow ;;
-    *) echo "usage: $0 [--with telegram,spotify,clash,pywalfox | --links | --greeter | --dry-run]"; exit 1 ;;
+    *) echo "usage: $0 [--with telegram,spotify,clash,pywalfox | --links | --greeter | --dry-run | --update]"; exit 1 ;;
 esac
