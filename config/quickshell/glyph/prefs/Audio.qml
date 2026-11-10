@@ -2,13 +2,14 @@ import QtQuick
 import Quickshell.Services.Pipewire
 import qs
 import qs.components
+import qs.services
 
 // AUDIO page of prefs. Output and input side by side: a volume ring, mute, a live level row, then every
 // device on the machine. The white pill is the default; click or ←→ moves it (Pipewire.preferredDefault*,
 // which wireplumber remembers across reboots)
 // The level meter is opt-in (Theme.state.audioMeter): it runs on PwNodePeakMonitor, which crashes
 // quickshell 0.3.0 -- on 0.3.1+ turn it on here and it just works
-Row {
+Column {
     id: root
 
     property bool live: true // the meters capture only while the page is on screen
@@ -32,10 +33,40 @@ Row {
         return { card: "", port: d };
     }
 
-    spacing: 70
+    spacing: 44
 
-    Side { out: true; label: "output"; node: Sys.sink; list: root.outs } // Sys tracks both
-    Side { out: false; label: "input"; node: Sys.mic; list: root.ins }
+    Row {
+        spacing: 70
+
+        Side { out: true; label: "output"; node: Sys.sink; list: root.outs } // Sys tracks both
+        Side { out: false; label: "input"; node: Sys.mic; list: root.ins }
+    }
+
+    // the shell's own sounds (services/Sounds): how loud, and which kinds.
+    // The master switch lives in FEATURES with the other features; turning the
+    // ring answers with a tick at the new volume, so you hear what you picked
+    Row {
+        spacing: 26
+        Dial {
+            size: 118
+            n: 32
+            live: true
+            label: "sounds"
+            value: Theme.state.soundVol
+            onMoved: v => { Theme.state.soundVol = Math.round(v); Sounds.play("tick"); }
+        }
+        Column {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 12
+            Row {
+                spacing: 12
+                Toggle { width: 220; text: "interface"; on: Theme.state.soundUi; onFlip: Theme.state.soundUi = !Theme.state.soundUi }
+                Toggle { width: 220; text: "alerts"; on: Theme.state.soundAlerts; onFlip: Theme.state.soundAlerts = !Theme.state.soundAlerts }
+                Toggle { width: 220; text: "system"; on: Theme.state.soundSys; onFlip: Theme.state.soundSys = !Theme.state.soundSys }
+            }
+            Lb { text: "interface -- panels and the volume tick · alerts -- a notification · system -- lock, screenshot, charger"; px: 10; color: Theme.mute }
+        }
+    }
 
     component Side: Column {
         id: side

@@ -1460,8 +1460,9 @@ PanelWindow {
                 Toggle { width: 250; text: "theme · auto"; on: Theme.state.themeMode === 1; onFlip: Theme.state.themeMode = Theme.state.themeMode === 1 ? 0 : 1 }
                 Toggle { width: 250; text: "auto game mode"; on: Theme.state.featGameAuto; onFlip: Theme.state.featGameAuto = !Theme.state.featGameAuto }
                 Toggle { width: 250; text: "essential only"; on: Theme.state.featEssential; onFlip: Theme.state.featEssential = !Theme.state.featEssential }
+                Toggle { width: 250; text: "sounds"; on: Theme.state.sounds; onFlip: { Theme.state.sounds = !Theme.state.sounds; if (Theme.state.sounds) Sounds.play("pop"); } }
             }
-            Lb { text: "theme times -- LOOK · desktops -- DESKTOPS · photo -- LOOK · essential apps -- below"; px: 10; color: Theme.mute }
+            Lb { text: "theme times -- LOOK · desktops -- DESKTOPS · photo -- LOOK · sound -- AUDIO · essential apps -- below"; px: 10; color: Theme.mute }
 
             // essential apps: only these light the edges while "essential only" is on; the rest
             // still land in quick settings, muted. The list is kept even with the mode off.

@@ -26,7 +26,7 @@ PACMAN=(
     base-devel git curl jq python cmake meson
     # session (hyprpm is its own package -- it no longer ships inside hyprland)
     hyprland hyprpm hypridle hyprsunset hyprpicker xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
-    sddm quickshell polkit-gnome gnome-keyring geoclue upower xdg-user-dirs
+    sddm quickshell qt6-multimedia polkit-gnome gnome-keyring geoclue upower xdg-user-dirs
     # audio, network, bluetooth
     pipewire pipewire-pulse pipewire-alsa wireplumber networkmanager bluez bluez-utils power-profiles-daemon
     # utilities called by keybinds and the shell
