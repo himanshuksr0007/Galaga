@@ -208,7 +208,7 @@ PanelWindow {
                                 required property var modelData
                                 spacing: 8
                                 width: parent.width
-                                Image { width: 14; height: 14; anchors.verticalCenter: parent.verticalCenter; source: modelData.src; visible: !!modelData.src }
+                                Image { width: 14; height: 14; anchors.verticalCenter: parent.verticalCenter; source: modelData.src; visible: !!modelData.src; sourceSize: Qt.size(14, 14) }
                                 Text {
                                     width: parent.width - 22
                                     text: modelData.title || modelData.cls
