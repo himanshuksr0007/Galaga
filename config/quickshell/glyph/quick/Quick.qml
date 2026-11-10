@@ -444,8 +444,23 @@ PanelWindow {
             rotation: pill.picked ? 180 : 0
             Behavior on rotation { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
         }
-        TapHandler { onTapped: { root.pin(); pill.clicked(); } }
-        TapHandler { acceptedButtons: Qt.RightButton; onTapped: { root.pin(); pill.menu(); } }
+        // one area over the whole pill -- disc, label and chevron zone alike:
+        // left click toggles the radio, right click opens the list (menu, the
+        // same toggle the chevron advertises). Both buttons are routed here, in
+        // one handler, so a right click anywhere on the pill can never fall
+        // through to the toggle -- a misclick on the chevron used to kill the
+        // radio it was meant to expand.
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: mouse => {
+                root.pin();
+                if (mouse.button === Qt.RightButton)
+                    pill.menu();
+                else
+                    pill.clicked();
+            }
+        }
     }
     // round tile 68: on -- white circle. Right click -- menu (for record -- recording settings), open -- label white
     component Tile: Column {
