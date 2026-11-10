@@ -77,7 +77,7 @@ PanelWindow {
     property var kept: ["System Proxy", "TUN Mode"] // what to restore on enable
     property int want: -1                           // while verge has not caught up: 1 -- enabling, 0 -- disabling
     readonly property bool connected: want >= 0 ? want === 1 : live
-    onLiveChanged: want = -1
+    onLiveChanged: { want = -1; wall(); }
     Timer { id: wantT; interval: 5000; onTriggered: root.want = -1 } // verge stayed silent -- show as is
     function flip() {
         if (!verge) return Quickshell.execDetached(["clash-verge"]); // asleep -- wake it
@@ -96,27 +96,35 @@ PanelWindow {
     onConnectedChanged: if (connected) since = new Date()
 
     // public network with a login page: the tunnel will not let it through (dns-hijack, MATCH,PROXY) -- disable it and open the portal;
-    // the network let us through (Full) -- enable it back. NM checks connectivity outside the tunnel (bound to wlan0), so it sees Portal honestly
-    property bool portal: false
+    // the network let us through (Full) -- enable it back. NM checks connectivity outside the tunnel (bound to wlan0), so it sees Portal honestly.
+    // A tunnel raised already behind a portal (verge starts after the shell) is taken down the same way; turned back on by hand after that -- left alone.
+    // The flag lives in glyph.json: verge remembers being switched off, so a reboot in the middle of a portal would otherwise
+    // leave the tunnel off for good. Restore -- once verge's menu is up (live and flip() are real there)
+    readonly property bool portal: Theme.state.vpnPortal
+    readonly property bool ready: child(tray, "System Proxy") !== null
+    onReadyChanged: wall()
+    function wall() {
+        if (Networking.connectivity === NetworkConnectivity.Portal && live && connected && !portal) {
+            Theme.state.vpnPortal = true;
+            flip();
+            Quickshell.execDetached(["notify-send", "-a", "vpn", "Portal", "tunnel off until you sign in"]);
+        } else if (Networking.connectivity === NetworkConnectivity.Full && portal) {
+            if (!ready) return verge || Quickshell.execDetached(["clash-verge"]); // asleep -- wake it, restore on ready
+            Theme.state.vpnPortal = false;
+            if (!connected) flip();
+        }
+    }
     Connections {
         target: Networking
         function onConnectivityChanged() {
-            if (Networking.connectivity === NetworkConnectivity.Portal && !root.portal) {
-                root.portal = root.connected;
-                if (root.connected) {
-                    root.flip();
-                    Quickshell.execDetached(["notify-send", "-a", "vpn", "Portal", "tunnel lifted until network login"]);
-                }
-                gate.restart(); // browser -- when verge has already dropped system proxy
-            } else if (Networking.connectivity === NetworkConnectivity.Full && root.portal) {
-                root.portal = false;
-                if (!root.connected) root.flip();
-            }
+            const fresh = !root.portal; // the browser -- once per portal, not on every Portal<->Limited hop
+            root.wall();
+            if (Networking.connectivity === NetworkConnectivity.Portal && fresh) gate.restart(); // when verge has already dropped system proxy
         }
     }
     Timer { id: gate; interval: 1500; onTriggered: Qt.openUrlExternally("http://neverssl.com") }
-    // after login NM rechecks connectivity with a growing interval up to 5 minutes -- we hurry it ourselves
-    Timer { running: root.portal; interval: 5000; repeat: true; onTriggered: Networking.checkConnectivity() }
+    // after login NM rechecks connectivity with a growing interval up to 5 minutes -- we hurry it ourselves; turned on by hand -- nothing to wait for
+    Timer { running: root.portal && !root.connected; interval: 5000; repeat: true; onTriggered: Networking.checkConnectivity() }
 
     // ---- verge: profile (name, source, when updated, how much used) ----
     readonly property string home: (Quickshell.env("XDG_DATA_HOME") || Quickshell.env("HOME") + "/.local/share") + "/io.github.clash-verge-rev.clash-verge-rev"
@@ -163,9 +171,10 @@ PanelWindow {
                 } catch (e) {}
             }
         }
-        onExited: retry.start() // verge asleep -- knock later
+        onExited: if (root.verge) retry.start() // the core is not up yet -- knock later; no verge -- wait for it in the tray
     }
     Timer { id: retry; interval: 5000; onTriggered: traffic.running = true }
+    onVergeChanged: if (verge && !traffic.running) retry.restart()
 
     property int links: 0
     Process {

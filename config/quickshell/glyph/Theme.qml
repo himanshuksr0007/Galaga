@@ -115,6 +115,7 @@ Singleton {
             property int recFps: 60
             property int recQuality: 2     // medium, high, very_high, ultra
             property bool recCursor: true
+            property bool vpnPortal: false // tunnel taken down for a captive portal, restore it in the open (vpn/Vpn)
         }
     }
 
