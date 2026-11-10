@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
 import QtQuick
+import qs
 
 // screen backlight, like caelestia -- the device is not hardcoded: whatever brightnessctl takes by default (the first backlight).
 // Value -- from sysfs: inotify on it is silent, but writing to brightness sends a uevent change -- we wait for it from udev instead of polling.
@@ -61,5 +62,91 @@ Singleton {
         running: !!root.dev
         command: ["udevadm", "monitor", "--udev", "--subsystem-match=backlight"]
         stdout: SplitParser { onRead: l => { if (l.includes(" change ")) { if (!sync.running) root.read(); root.moved(); } } }
+    }
+
+    // ---- an external monitor over DDC (ddcutil), after AMM021's rice_nothing: buses come in pairs
+    // "I2C bus -> DRM_connector", external -- a connector without eDP. logind's udev rule gives the active
+    // user rw on /dev/i2c-*, no sudo needed. There are no change events -- we keep our own value, check
+    // getvcp every 5 s, and on a panel drag set it through one process ----
+    property string ddcBus: ""      // /dev/i2c-N, empty -- no external monitor with DDC
+    property real ddc: 0.5          // last known 0...1
+    property bool ddcOk: false
+    signal ddcMoved()
+    readonly property string ddcBusNo: ddcBus.slice(ddcBus.lastIndexOf("-") + 1) // for --bus
+    // --skip-ddc-checks on every call (Isaqdn03's find): detect already checked the buses, and ddcutil's
+    // startup checks were half of every call -- reads 675 -> 310 ms, writes 370 -> 145 ms there
+    readonly property var ddcArgs: ["--skip-ddc-checks", "--noverify", "--sleep-multiplier", "0.05", "--bus", ddcBusNo]
+    // setvcp goes through one process: on slow monitors a write takes hundreds of ms, and parallel calls
+    // (execDetached) finish out of order -- the result stuck at a random brightness from mid-drag and flickered.
+    // We always set the latest value (ddcWant), and polling after our own write stays quiet until it has settled
+    property int ddcWant: -1        // what to set, -1 -- nothing
+    property real ddcSetAt: 0       // when the last write went: reading right after it isn't possible
+    Timer {
+        running: !!root.ddcBus
+        interval: 5000
+        repeat: true
+        onTriggered: root.ddcRead()
+    }
+    function ddcRead() {
+        if (!ddcBus) return;
+        // our own write is read back only once it has had time to apply (slow panels need time)
+        if (ddcWant >= 0 || (ddcSetAt && Date.now() - ddcSetAt < 1200))
+            return;
+        ddcGet.exec(["ddcutil", ...ddcArgs, "--brief", "getvcp", "10"]);
+    }
+    // a panel asking for a fresh value waits until its open is done (Isaqdn03): on NVIDIA ddcutil's I2C
+    // holds the driver, and a window created meanwhile blocked the shell until the read was over (~600 ms)
+    function ddcRefreshSoon() { ddcReadT.restart(); }
+    Timer { id: ddcReadT; interval: Theme.t + 150; onTriggered: root.ddcRead() }
+    Process {
+        id: ddcGet
+        stdout: StdioCollector {
+            onStreamFinished: {
+                // "VCP 10 C 50 100" -- code, type, current, maximum
+                const p = text.trim().split(/\s+/);
+                const v = parseFloat(p[3]), m = parseFloat(p[4]);
+                if (!isNaN(v) && m > 0) {
+                    root.ddc = v / m;
+                    root.ddcOk = true;
+                    root.ddcMoved();
+                }
+            }
+        }
+    }
+    function setDdc(v) {
+        if (!ddcBus)
+            return;
+        const val = Math.round(Math.max(0, Math.min(1, v)) * 100);
+        ddc = val / 100;
+        ddcOk = true;
+        ddcMoved();
+        ddcWant = val;
+        ddcSetAt = Date.now();
+        ddcPump();
+    }
+    function ddcPump() {
+        if (ddcWant < 0 || ddcSet.running)
+            return;
+        const val = ddcWant;
+        ddcWant = -1;
+        ddcSetAt = Date.now();
+        ddcSet.exec(["ddcutil", ...ddcArgs, "setvcp", "10", String(val)]);
+    }
+    Process {
+        id: ddcSet
+        onExited: root.ddcPump()   // values could arrive during the write -- set the next one right after
+    }
+    Process {
+        running: true
+        command: ["sh", "-c", "ddcutil --skip-ddc-checks detect 2>/dev/null | awk '/I2C bus/{b=$NF} /DRM_connector/{c=$NF} /EDID synopsis/{if (b && c && index(c, \"eDP\") == 0) {print b; exit}}'"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const bus = text.trim();
+                if (bus.startsWith("/dev/i2c")) {
+                    root.ddcBus = bus;
+                    root.ddcRead();
+                }
+            }
+        }
     }
 }

@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Bluetooth
+import Quickshell.Hyprland
 import Quickshell.Networking
 import Quickshell.Services.Notifications
 import Quickshell.Wayland
@@ -31,7 +32,9 @@ PanelWindow {
     }
     // open list: "wifi" | "bt" -- under the pills (Picker), "rec" -- under the tiles (Rec), "" -- nothing
     property string pick: ""
-    onOpenChanged: if (open) Sys.earRun([]); else pick = ""
+    // Brightness then changes this very monitor (Sys.panelMon); on an external one a fresh DDC value is
+    // asked for only once the open has settled, so the panel never waits on ddcutil (see Backlight)
+    onOpenChanged: if (open) { Sys.panelMon = Hyprland.focusedMonitor?.name ?? ""; if (Sys.panelBriExternal) Backlight.ddcRefreshSoon(); Sys.earRun([]); } else pick = ""
     // cursor 500 ms outside the panel and the Hot strip -- close. seen: Hyprland does not report the cursor to a fresh surface until the mouse moves --
     // until the first movement it is unknown where it is, and the panel waits (otherwise with a still cursor it would open and immediately close)
     Timer { interval: 500; running: root.open && root.peeked && seen.hovered && !keep.hovered && !edge.hovered; onTriggered: root.close() }
@@ -201,7 +204,7 @@ PanelWindow {
 
                     Rec { width: parent.width; open: root.pick === "rec"; onTouched: root.pin(); onStart: { root.close(); Sys.toggleRec(); } }
 
-                    Slider { icon: "\u{F00E0}"; visible: Sys.hasBri; value: Sys.bri; onMoved: v => Sys.setBri(v) }
+                    Slider { icon: "\u{F00E0}"; visible: Sys.panelBriExternal ? Backlight.ddcOk : Sys.hasBri; value: Sys.panelBri; onMoved: v => Sys.setPanelBri(v) }
                     Slider { icon: Sys.muted ? "\u{F075F}" : "\u{F057E}"; value: Sys.muted ? 0 : Sys.vol; onMoved: v => Sys.setVol(v) }
 
                     // power mode, like caelestia: four cells, white fill slides to the selected one; ticks -- strength.

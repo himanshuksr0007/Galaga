@@ -19,7 +19,7 @@ PACMAN=(
     # audio, network, bluetooth
     pipewire pipewire-pulse pipewire-alsa wireplumber networkmanager bluez bluez-utils power-profiles-daemon
     # utilities called by keybinds and the shell
-    brightnessctl playerctl wl-clipboard cliphist grim slurp swappy imagemagick libvips libqalculate
+    brightnessctl ddcutil playerctl wl-clipboard cliphist grim slurp swappy imagemagick libvips libqalculate
     tesseract tesseract-data-eng zbar # shot: grab text (OCR) + scan QR/barcode
     gpu-screen-recorder ydotool libnotify trash-cli
     # terminal and console
