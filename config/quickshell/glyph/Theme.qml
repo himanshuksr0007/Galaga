@@ -152,6 +152,16 @@ Singleton {
     readonly property var glide: [0.25, 1, 0.5, 1, 1, 1]
     readonly property int t: 350
 
+    // ---- shell performance (state.perf): the shell's own recurring costs, derived from the one key,
+    // so a level change re-binds live everywhere and a restart just re-reads the key ----
+    // lite: the eye-candy consumers stand down (cava's two registrations, the RunCat, the spinning
+    // covers, the orb's breathing) -- consumers multiply by !perfLite, nothing here touches Rules
+    readonly property bool perfLite: st.perf === 2
+    // polling cadences, ms: full as shipped, trim half rate, lite quarter rate
+    readonly property int statsMs: [2000, 4000, 8000][st.perf] ?? 2000   // SysStats sampling (home, deck, the cat's cpu)
+    readonly property int sysPollMs: [3000, 6000, 12000][st.perf] ?? 3000 // Sys: the recording / airplane-mode check (a process spawn)
+    readonly property int ddcMs: [5000, 10000, 20000][st.perf] ?? 5000   // Backlight: the external monitor's DDC read-back (a ~300 ms ddcutil call)
+
     // wallpapers are drawn from a copy sized for the screen (the picker makes it, magick): the original can be a 40 MB png and would take seconds to load.
     // ponytail: no copy (cache wiped, path typed by hand) -- empty, grid and orb, until the picker is opened
     readonly property string wallCache: (Quickshell.env("XDG_CACHE_HOME") || Quickshell.env("HOME") + "/.cache") + "/glyph/walls"
@@ -233,6 +243,7 @@ Singleton {
             property var wsWalls: ({})         // desktop id (as string) -> wallpaper path; missing/"" -- the global wall above
             property bool featShot: true       // shot: grab text (OCR) and scan QR modes (shot/Shot.qml)
             property bool featGameAuto: true   // a fullscreen game turns on game mode (+ dnd) by itself (services/Game.qml)
+            property int perf: 0           // shell performance (prefs -> POWER): 0 full, 1 trim, 2 lite -- what the shell itself spends: polling cadences and ambient motion. The cpu profile is Rules.modes, not this
             property bool sounds: true         // interface sounds (services/Sounds): quiet synthesized blips -- lock, shots, notes, ticks
             property int soundVol: 55          // their volume, %
             property bool soundUi: true        // interface: panels opening (pop), the volume tick
