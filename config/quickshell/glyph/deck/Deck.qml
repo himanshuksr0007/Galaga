@@ -44,9 +44,10 @@ Scope {
         return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 86400000 + 1) / 7);
     }
 
-    // network over 40 s -- matrix columns, [rx, tx]. Own tick: SysStats writes rx/tx every same 2 s
+    // network history -- matrix columns, [rx, tx]. Own tick on the same cadence SysStats writes rx/tx
+    // (Theme.statsMs): 20 columns span 40 s at full, longer when the shell performance level stretches it
     property var net: []
-    Timer { running: root.on !== null; interval: 2000; repeat: true; onTriggered: root.net = root.net.concat([[SysStats.rx, SysStats.tx]]).slice(-20) }
+    Timer { running: root.on !== null; interval: Theme.statsMs; repeat: true; onTriggered: root.net = root.net.concat([[SysStats.rx, SysStats.tx]]).slice(-20) }
 
     Variants {
         model: Quickshell.screens

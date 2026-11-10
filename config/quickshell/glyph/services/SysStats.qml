@@ -3,8 +3,9 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs
 
-// system from /proc and sysfs every 2 s while the altar is open (detailed); perf -- Performance tab: also processes and frequency
+// system from /proc and sysfs on the shell's stats cadence (Theme.statsMs) while the altar is open (detailed); perf -- Performance tab: also processes and frequency
 Singleton {
     id: root
 
@@ -132,7 +133,7 @@ for g in /sys/class/drm/card*/gt/gt0; do [ -e "$g/rc6_residency_ms" ] && { echo 
     Component.onCompleted: sample()
 
     Timer {
-        interval: 2000
+        interval: Theme.statsMs
         running: root.detailed || root.cat
         repeat: true
         triggeredOnStart: true
