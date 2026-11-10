@@ -307,7 +307,11 @@ PanelWindow {
                     ListView {
                         id: notes
                         width: parent.width
-                        height: Math.min(contentHeight, stage.height - 28 - 44 - y)
+                        height: Math.min(shown, stage.height - 28 - 44 - y)
+                        // smooth -- by content (clear all, dismiss); the ceiling at once:
+                        // a Picker or the player appearing above must not push the header off the top for 350 ms
+                        property real shown: contentHeight
+                        Behavior on shown { enabled: Rules.moving; NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
                         clip: true
                         spacing: 10
                         model: Notes.list.slice().reverse()
