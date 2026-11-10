@@ -20,7 +20,7 @@ My fork of [**glyph-rice**](https://github.com/Nebelung-cloud/glyph-rice) by [**
 |---|---|:---:|
 | **Bar** | launcher, workspaces, clock, tray | |
 | **Home** | clock, greeting, widgets (cava as a round Glyph Matrix), dot grid | |
-| **Glyph** | screen edges as OSD: volume, brightness, notifications, progress | |
+| **Glyph** | screen edges as OSD: volume, brightness, mic mute, notifications, progress | |
 | **Launcher** | apps, commands, windows, calculator | `Super` |
 | **Quick** | quick settings, game mode, media, notifications; also opens from the right edge | `Super` `A` |
 | **Deck** | dashboard from the bottom edge | `Super` `Space` |
@@ -39,6 +39,10 @@ My fork of [**glyph-rice**](https://github.com/Nebelung-cloud/glyph-rice) by [**
 | **Rice** | shell switcher, if Demon's Shot is installed too | `rice switch <name>` |
 
 Also: Hyprland (Lua), hypridle, kitty, fish, starship, fastfetch, btop, cava (dots in fish; `command cava` for bars), GTK, Qt and folder colours.
+
+Motion is one register everywhere — short, with a hard stop: the compositor curves
+(windows, workspaces, the minimised park and restore) are tuned to the same glide the
+shell's surfaces use, and panels rise and fade rather than snap.
 
 <div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
 
