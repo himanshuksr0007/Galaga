@@ -53,10 +53,13 @@ ShellRoot {
             id: s
             required property var modelData
             Back { screen: s.modelData }
-            Home { screen: s.modelData }
+            // bar and home can be taken off a screen (settings -> display); the wallpaper stays. Here, not in the
+            // window: visible from its own screen is a loop (the window is recreated, screen changes)
+            Home { screen: s.modelData; visible: Theme.scr(s.modelData.name, "home") }
             Hot { screen: s.modelData; onTriggered: quick.peek() }
             Bar {
                 screen: s.modelData
+                visible: Theme.scr(s.modelData.name, "bar")
                 onMarkClicked: launcher.toggle()
                 onTrayClicked: quick.toggle()
                 onPowerClicked: power.toggle()
@@ -100,6 +103,11 @@ ShellRoot {
     Connections {
         target: Hyprland
         function onRawEvent(e) { if (e.name === "configreloaded") shell.hypr(); }
+    }
+    // a screen was plugged in -- its scale and refresh come from prefs -> display (Rules.store.outs)
+    Connections {
+        target: Quickshell
+        function onScreensChanged() { Rules.monitor(true); }
     }
     Connections {
         target: Theme

@@ -31,11 +31,35 @@ Singleton {
     readonly property string mono: "Space Mono"            // labels in caps
     readonly property string nf: "JetBrainsMono Nerd Font" // icons
 
-    // 1920x1080 layout canvas -> screen. ponytail: based on the first screen; monitors of different sizes -- compute from the window's screen
+    // 1920x1080 layout canvas -> screen. ponytail: based on the first screen; on a second screen the layout is the same
+    // (hypr's scale does the sizing), only the home bento hugs the right edge there
     readonly property real s: {
         const sc = Quickshell.screens[0];
         return sc ? Math.min(sc.width / 1920, sc.height / 1080) : 1;
     }
+
+    // a screen's own settings live in state.screens under the monitor's MODEL: it is the monitor, not the port --
+    // the same monitor through another port or a dock keeps its own. Two identical monitors, or one without a
+    // model, go by port name. The model is the same one hyprctl reports (Rules.key)
+    function sid(name) {
+        const m = Quickshell.screens.find(s => s.name === name)?.model.trim();
+        return m && Quickshell.screens.filter(s => s.model.trim() === m).length === 1 ? m : name;
+    }
+    // by name -- an old entry (from before models) or a twin that is currently alone
+    function own(name) { return st.screens[sid(name)] ?? st.screens[name]; }
+    // a screen's setting by output name: its own, else the shared one; bar and home default to on
+    function scr(name, key) { return own(name)?.[key] ?? { wall: st.wall, widgets: st.widgets }[key] ?? true; }
+    // undefined -- drop the screen's own value, it takes the shared one. An entry under a port name is copied under
+    // the model but stays: if a twin appears, that screen is looked up by port again
+    function setScr(name, key, v) {
+        const o = Object.assign({}, own(name)), all = Object.assign({}, st.screens);
+        if (v === undefined) delete o[key];
+        else o[key] = v;
+        all[sid(name)] = o;
+        st.screens = all;
+    }
+    // the first screen's wallpaper, its own or the shared one -- the colour source reads this one
+    readonly property string wall: scr(Quickshell.screens[0]?.name, "wall")
 
     // glide: ease-out-quart, no overshoot -- like the bezier glide in hypr
     readonly property var glide: [0.25, 1, 0.5, 1, 1, 1]
@@ -45,6 +69,7 @@ Singleton {
     // ponytail: no copy (cache wiped, path typed by hand) -- empty, grid and orb, until the picker is opened
     readonly property string wallCache: (Quickshell.env("XDG_CACHE_HOME") || Quickshell.env("HOME") + "/.cache") + "/glyph/walls"
     function wallSrc(p) { return p ? `${wallCache}/${p.slice(p.lastIndexOf("/") + 1)}.jpg` : ""; }
+    function url(p) { return p ? "file://" + p.split("/").map(encodeURIComponent).join("/") : ""; }
 
     function fade(c, a) { return Qt.rgba(c.r, c.g, c.b, a); }
     // clock per 12/24 setting: "09" or "9"
@@ -117,6 +142,7 @@ Singleton {
             property bool recCursor: true
             property bool vpnPortal: false // tunnel taken down for a captive portal, restore it in the open (vpn/Vpn)
             property bool audioMeter: false // AUDIO page level meter: PwNodePeakMonitor crashes quickshell 0.3.0, so it is opt-in for 0.3.1+
+            property var screens: ({})     // per-screen own settings by monitor model (Theme.sid): { bar, home, widgets, wall }
         }
     }
 

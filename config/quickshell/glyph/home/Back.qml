@@ -18,7 +18,9 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Background
     WlrLayershell.namespace: "glyph-back"
 
-    readonly property bool home: (Hyprland.focusedWorkspace?.toplevels.values.length ?? 0) === 0
+    // this screen's own workspace: the orb breathes and the wallpaper follows it, not the focused screen's
+    readonly property var ownWs: Hyprland.monitorFor(screen)?.activeWorkspace
+    readonly property bool home: (ownWs?.toplevels.values.length ?? 0) === 0
     property real phase: 0
     Timer { running: root.home && orb.visible; interval: 100; repeat: true; onTriggered: root.phase += 0.1 }
 
@@ -34,9 +36,10 @@ PanelWindow {
         Wall {
             id: wall
             anchors.fill: parent
-            // a per-desktop wallpaper (prefs DESKTOPS) wins on its desktop; unset -- the global one.
+            // two axes, one winner: a per-desktop wallpaper (prefs DESKTOPS) for THIS screen's active
+            // desktop wins; unset -- this screen's own wallpaper (prefs DISPLAY), else the shared one.
             // Same Wall, same wave: the crossfade on switch is the path change itself
-            path: Theme.wallSrc((Theme.state.featDesktops ? Theme.state.wsWalls[String(Hyprland.focusedWorkspace?.id ?? "")] : "") || Theme.state.wall)
+            path: Theme.wallSrc((Theme.state.featDesktops ? Theme.state.wsWalls[String(root.ownWs?.id ?? "")] : "") || Theme.scr(root.screen?.name, "wall"))
             animate: !Sys.wallOpen
         }
     }

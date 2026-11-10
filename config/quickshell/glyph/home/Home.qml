@@ -19,13 +19,20 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Bottom
     WlrLayershell.namespace: "glyph-home"
 
-    readonly property bool home: (Hyprland.focusedWorkspace?.toplevels.values.length ?? 0) === 0
-    Binding { target: SysStats; property: "detailed"; value: root.home || Sys.deckOpen }
-    // cava is shared now (the glyph edges register as "edges"): register by name (per
-    // screen -- Home is one instance per screen), and unregister on the way out -- a
-    // Binding here used to own Cava.active outright
+    // home is alive while its OWN screen's workspace is empty, not the focused one: you work on the
+    // second screen -- the first one's home stays alive
+    function idle(s) { return (Hyprland.monitorFor(s)?.activeWorkspace?.toplevels.values.length ?? 0) === 0; }
+    readonly property bool home: visible && idle(screen)
+    // the values are shared by all homes (of the screens where home is on and visible): otherwise the
+    // Bindings of neighbouring homes would overwrite each other. Not in a delegate: a destroyed Binding
+    // does not give the value back -- remove a widget and cava would run forever.
+    // ponytail: cava counts if it is in the set, even one that did not fit the 3x3
+    readonly property var homes: Quickshell.screens.filter(s => Theme.scr(s.name, "home") && idle(s))
+    Binding { target: SysStats; property: "detailed"; value: root.homes.length > 0 || Sys.deckOpen }
+    // cava is shared (the glyph edges register as "edges"): register by name (per screen), unregister on
+    // the way out -- a Binding here used to own Cava.active outright
     readonly property string cavaKey: "home:" + (root.screen?.name ?? "?")
-    readonly property bool cavaWant: root.home && bento.model.some(w => w.id === "cava")
+    readonly property bool cavaWant: root.homes.some(s => Theme.scr(s.name, "widgets").includes("cava"))
     onCavaWantChanged: Cava.use(cavaKey, cavaWant)
     Component.onCompleted: Cava.use(cavaKey, cavaWant)
     Component.onDestruction: Cava.use(cavaKey, false)
@@ -86,27 +93,28 @@ PanelWindow {
             Meta { visible: !!root.buds; icon: "\u{F02CB}"; text: `${root.buds?.name ?? ""} · ${Math.round((root.buds?.battery ?? 0) * 100)}%` }
         }
 
-        // bento: cells 220, gap 20, 3x3 grid. Which widgets and in what order -- Theme.state.widgets (settings), widths --
-        // Theme.kinds. We place left to right: does not fit in a row -- next row, does not fit in three rows -- not shown.
+        // bento: cells 220, gap 20, 3x3 grid, its right edge 80 from the screen's edge (on 1920 -- from 1140, on a
+        // wider screen -- further right). Which widgets and in what order -- this screen's set (Theme.scr, settings),
+        // widths -- Theme.kinds. Left to right: does not fit in a row -- next row, does not fit in three rows -- not shown.
         // A square with 40 rounding or a circle -- no other shapes
         Repeater {
             id: bento
             model: {
                 const out = [];
                 let r = 0, c = 0;
-                for (const id of Theme.state.widgets ?? []) {
+                for (const id of Theme.scr(root.screen?.name, "widgets") ?? []) {
                     const w = Theme.kinds[id];
                     if (!w) continue;
                     if (c + w > 3) { r++; c = 0; }
                     if (r > 2) break;
-                    out.push({ id, x: 1140 + c * 240, y: 150 + r * 240 });
+                    out.push({ id, x: c * 240, y: 150 + r * 240 });
                     c += w;
                 }
                 return out;
             }
             Loader {
                 required property var modelData
-                x: modelData.x
+                x: stage.width - 780 + modelData.x
                 y: modelData.y
                 sourceComponent: ({ weather: weatherW, calendar: calendarW, cpu: cpuW, ram: ramW, gpu: gpuW, disk: diskW,
                                     battery: batteryW, buds: budsW, player: playerW, system: systemW, cat: catW, cava: cavaW })[modelData.id] ?? null

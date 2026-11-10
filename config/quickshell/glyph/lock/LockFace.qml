@@ -29,6 +29,9 @@ Item {
     // summary live there. The greeter shares this face but has no session to read a
     // player or a summary from, so it leaves this false and its face is unchanged
     property bool session: false
+    // the wallpaper behind the face: the session lock passes its own screen's (LockSurface);
+    // empty -- the shared one, which is also all the greeter knows
+    property string wallPath: ""
     property bool switcher: false
     property var users: []
     property bool usersOpen: false
@@ -75,7 +78,7 @@ Item {
         Item {
             opacity: root.ph(0, 0.6)
             Orb { visible: Theme.state.orb; x: stage.width - 720; y: stage.height - 580 }
-            Wall { width: stage.width; height: stage.height; path: Theme.wallSrc(Theme.state.wall) }
+            Wall { width: stage.width; height: stage.height; path: Theme.wallSrc(root.wallPath || Theme.state.wall) }
         }
 
         Lb {
