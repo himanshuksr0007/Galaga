@@ -407,12 +407,21 @@ Scope {
                             const ws = Hyprland.focusedWorkspace;
                             minSec.menuAddr = "";
                             if (ws) {
+                                // the genie gets first refusal (FEATURES -> genie restore): it kept the
+                                // park-time snapshot and expands it back into the live window, doing its
+                                // own move. False -- nothing kept for this window -- the plain restore
+                                // below runs, byte-identical to before
+                                if (Theme.state.featGenieBack && GenieLink.handler && GenieLink.handler(addr, ws.id)) {
+                                    root.on = null;
+                                    return;
+                                }
                                 Hyprland.dispatch(`hl.dsp.window.move({ window = "address:0x${addr}", workspace = "${ws.id}", follow = true })`);
                                 root.on = null;
                             }
                         }
                         function closeWin(addr) {
                             minSec.menuAddr = "";
+                            if (GenieLink.drop) GenieLink.drop(addr); // its kept snapshot goes with it
                             Hyprland.dispatch(`hl.dsp.window.close({ window = "address:0x${addr}" })`);
                         }
                         ListView {

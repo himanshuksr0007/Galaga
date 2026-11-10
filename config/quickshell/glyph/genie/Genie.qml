@@ -23,11 +23,17 @@ import qs.components
 // follow it. The deck itself is always bottom-centre in this shell.
 // Safety: the shell owns the park only after answering "go"; inside, a
 // fallback timer parks the window even if grim hangs or fails, so a minimise
-// can never be lost to the effect. Off: Prefs -> DECK -> genie (the IPC then
-// answers "plain" and minimise.sh parks directly, as before).
-// Restore has no reverse warp, deliberately: a parked window is unmapped, so
-// there are no fresh pixels to un-warp -- only the stale snapshot from park
-// time, and animating stale content would be a fake. Restore stays instant.
+// can never be lost to the effect. Off: Prefs -> FEATURES -> genie · minimise
+// (the IPC then answers "plain" and minimise.sh parks directly, as before).
+// Restore (FEATURES -> genie · restore): the reverse lamp, honestly labelled --
+// a parked window is unmapped, so there are no fresh pixels to un-warp. What
+// expands is the park-time snapshot, kept per parked window
+// (glyph-genie-keep-*.ppm in the runtime dir, at most 12, swept when a window
+// leaves special:minimized any other way or the shell restarts). The real
+// window is moved back FIRST, underneath the ghost, and the ghost's last
+// frames crossfade into it: the end state is the live window, not the picture.
+// The deck offers restores through GenieLink; no snapshot (feature off at park
+// time, evicted, swept) -- the plain instant restore, exactly as before.
 Scope {
     id: root
 
@@ -102,6 +108,99 @@ Scope {
         }
     }
 
+    // ---- restore: snapshots kept per parked window, and the reverse warp ----
+    property var kept: ({}) // address -> { file, gx, gy, gw, gh, tx, scr } (layout px + screen name)
+    property var keepOrder: [] // park order, for eviction past the cap
+    property var backPending: null
+
+    Component.onCompleted: {
+        GenieLink.handler = (addr, ws) => root.restore(addr, ws);
+        GenieLink.drop = addr => root.dropKept(addr);
+        // snapshots from a previous shell run are orphans -- their windows have new addresses
+        Quickshell.execDetached(["sh", "-c", 'rm -f "$1"/glyph-genie-keep-*.ppm', "sh", run]);
+    }
+
+    function keep(addr, file, gx, gy, gw, gh, tx) {
+        dropKept(addr); // an older snapshot of the same window, if any
+        const kf = `${run}/glyph-genie-keep-${addr.slice(2)}.ppm`;
+        Quickshell.execDetached(["mv", "-f", file, kf]);
+        const k = Object.assign({}, kept);
+        k[addr] = { file: kf, gx: gx, gy: gy, gw: gw, gh: gh, tx: tx, scr: scr?.name ?? "" };
+        kept = k;
+        keepOrder = keepOrder.concat(addr);
+        while (keepOrder.length > 12) dropKept(keepOrder[0]); // the cap: oldest first
+    }
+    function dropKept(addr) {
+        if (!kept[addr] && kept["0x" + addr]) addr = "0x" + addr; // callers hold either address form
+        if (kept[addr]) Quickshell.execDetached(["rm", "-f", kept[addr].file]);
+        const k = Object.assign({}, kept);
+        delete k[addr];
+        kept = k;
+        keepOrder = keepOrder.filter(a => a !== addr);
+    }
+    function unkeep(addr) { // registry only -- the file changes owner (a restore ghost)
+        const k = Object.assign({}, kept);
+        delete k[addr];
+        kept = k;
+        keepOrder = keepOrder.filter(a => a !== addr);
+    }
+    // a window that left special:minimized any other way (closed, moved by hand)
+    // takes its snapshot with it; checked on a slow beat, and the deck's close
+    // calls GenieLink.drop directly
+    Timer {
+        interval: 15000
+        repeat: true
+        running: true
+        onTriggered: {
+            for (const addr of Object.keys(root.kept)) {
+                const t = Hyprland.toplevels.values.find(t => t.address === addr.replace(/^0x/, ""));
+                if (!t || t.workspace?.name !== "special:minimized") root.dropKept(addr);
+            }
+        }
+    }
+
+    function restore(addr, wsId) {
+        // the deck hands over Quickshell's bare address; the registry is keyed by
+        // the IPC form (0x...) the park arrived in -- resolve the key first, or the
+        // lookup misses and every restore silently declines to the plain move
+        const key = kept[addr] ? addr : "0x" + addr;
+        const k = kept[key];
+        if (!k) return false;
+        unkeep(key);
+        // the real window comes back FIRST, underneath: it maps at its resting place
+        // while the snapshot expands over it, and the ghost's last frames crossfade
+        // into it -- the end state is the live window, not the picture
+        Hyprland.dispatch(`hl.dsp.window.move({ window = "address:${key}", workspace = "${wsId}", follow = true })`);
+        Hyprland.refreshToplevels();
+        backPending = { k: k, addr: key };
+        backT.restart();
+        return true;
+    }
+    Timer { id: backT; interval: 45; onTriggered: root.spawnBack() } // a beat for the fresh geometry
+    function spawnBack() {
+        const bp = backPending;
+        backPending = null;
+        if (!bp) return;
+        if (root.ghosts.length === 0)
+            root.scr = Quickshell.screens.find(s => s.name === bp.k.scr) ?? Quickshell.screens[0];
+        let gx = bp.k.gx, gy = bp.k.gy, gw = bp.k.gw, gh = bp.k.gh;
+        const t = Hyprland.toplevels.values.find(t => t.address === bp.addr.replace(/^0x/, ""));
+        const o = t?.lastIpcObject;
+        if (o?.at && o?.size) { // fresher than park time: the rect the window actually landed in
+            const s = Theme.s, sx = root.scr?.x ?? 0, sy = root.scr?.y ?? 0;
+            gx = (o.at[0] - sx) / s;
+            gy = (o.at[1] - sy) / s;
+            gw = o.size[0] / s;
+            gh = o.size[1] / s;
+        }
+        const g = ghostC.createObject(stage, {
+            addr: bp.addr, file: bp.k.file, gx: gx, gy: gy, gw: gw, gh: gh,
+            tx: stage.width > 0 ? root.targetX(stage.width) : bp.k.tx, back: true, p: 1
+        });
+        if (!g) { Quickshell.execDetached(["rm", "-f", bp.k.file]); return; }
+        root.ghosts = root.ghosts.concat(g);
+    }
+
     PanelWindow {
         id: win
         screen: root.scr
@@ -124,8 +223,10 @@ Scope {
             id: ghost
             anchors.fill: parent
             visible: ready
-            // the last sliver fades as it collapses into the point
-            opacity: p > 0.9 ? 1 - (p - 0.9) * 8.1 : 1
+            // forward: the last sliver fades as it collapses into the point. Back: the
+            // same fade on the way out of the point, and another at p -> 0, where the
+            // picture crossfades into the live window already mapped beneath it
+            opacity: back && p < 0.15 ? p / 0.15 : p > 0.9 ? 1 - (p - 0.9) * 8.1 : 1
 
             property string addr: ""
             property string file: ""
@@ -137,6 +238,7 @@ Scope {
             property real tx: 0 // target x, layout px; the target y is the stage's bottom edge
             property int stagger: 0
             property real p: 0
+            property bool back: false // restore ghost: p runs 1 -> 0 over the kept snapshot
             property bool ready: false
             property bool parked: false
             property bool gone: false
@@ -190,7 +292,10 @@ Scope {
                     }
                 }
             }
-            Component.onCompleted: cap.exec(["sh", "-c", 'grim -t ppm -g "$1" "$2" && echo ok', "sh", raw, file])
+            Component.onCompleted: {
+                if (back) { ready = true; backAnim.start(); } // the file already exists -- it is the kept snapshot
+                else cap.exec(["sh", "-c", 'grim -t ppm -g "$1" "$2" && echo ok', "sh", raw, file]);
+            }
 
             // the ghost is up at p = 0, pixel-identical over the live window:
             // one beat for the overlay to present, then park + warp together
@@ -199,14 +304,18 @@ Scope {
                 interval: ghost.stagger + 30
                 onTriggered: { ghost.doPark(); anim.start(); }
             }
-            onReadyChanged: if (ready) parkDelay.start()
+            onReadyChanged: if (ready && !back) parkDelay.start()
 
             // whatever happened above -- a hung grim, a lost process -- the
             // park lands. Minimising never depends on the effect.
             Timer {
                 running: true
                 interval: ghost.stagger + 650
-                onTriggered: { ghost.doPark(); if (!ghost.ready) ghost.finish(); }
+                onTriggered: {
+                    if (ghost.back) { ghost.finish(); return; } // the window is already back; only a stuck ghost can be lost
+                    ghost.doPark();
+                    if (!ghost.ready) ghost.finish();
+                }
             }
 
             NumberAnimation {
@@ -220,6 +329,17 @@ Scope {
                 easing.bezierCurve: Theme.glide
                 onFinished: ghost.finish()
             }
+            NumberAnimation {
+                id: backAnim
+                target: ghost
+                property: "p"
+                from: 1
+                to: 0
+                duration: 380
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Theme.glide
+                onFinished: ghost.finish()
+            }
 
             function doPark() {
                 if (parked) return;
@@ -229,7 +349,11 @@ Scope {
             function finish() {
                 if (gone) return;
                 gone = true;
-                Quickshell.execDetached(["rm", "-f", file]);
+                // a forward ghost that actually parked hands its snapshot to the kept
+                // registry when genie restore is on -- that file is the reverse warp's
+                // pixels. Everything else: the file goes, as before
+                if (!back && parked && Theme.state.featGenieBack) root.keep(addr, file, gx, gy, gw, gh, tx);
+                else Quickshell.execDetached(["rm", "-f", file]);
                 root.ghosts = root.ghosts.filter(g => g !== ghost);
                 destroy(50);
             }
