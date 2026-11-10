@@ -265,33 +265,13 @@ PanelWindow {
             }
         }
 
-        // cat: gif as a matrix in the theme tone via the wallpaper shader (like Wall in look 0). Dances only while home is visible
+        // cat: a gif as a matrix in the theme tone via the wallpaper shader (like Wall in look 0); which gif --
+        // services/Gifs, the tile itself is Gif. Dances only while home is visible
         Component {
             id: catW
             W {
                 id: cw
-                AnimatedImage { id: cat; anchors.fill: fx; opacity: 0; source: "cat.gif"; playing: root.home } // texture for fx, see Wall
-                ShaderEffect {
-                    id: fx
-                    anchors { fill: parent; margins: 12 }
-                    readonly property size size: Qt.size(width, height)
-                    readonly property point origin: Qt.point(0, 0)
-                    readonly property size cropA: Qt.size(1, 1)
-                    readonly property size cropB: cropA
-                    readonly property color lo: Theme.light ? Theme.fg : Theme.bg
-                    readonly property color hi: Theme.light ? Theme.bg : Theme.fg
-                    readonly property color bg: cw.color // transparent in the gif -- into the tile color
-                    readonly property real pitch: 6
-                    readonly property real dots: 1
-                    readonly property real mono: 1
-                    readonly property real bright: 1
-                    readonly property real wave: 0
-                    readonly property real hasA: cat.status === Image.Ready ? 1 : 0
-                    readonly property real hasB: 0
-                    readonly property var srcA: cat
-                    readonly property var srcB: cat
-                    fragmentShader: Qt.resolvedUrl("../components/shaders/wall.frag.qsb")
-                }
+                Gif { anchors.fill: parent; playing: root.home; bg: cw.color }
             }
         }
 

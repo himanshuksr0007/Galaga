@@ -7,6 +7,7 @@ import Quickshell.Services.UPower
 import Quickshell.Wayland
 import qs
 import qs.components
+import qs.services
 import qs.settings
 
 // glyph settings: Super+I. Not a form but objects. On the left a column of Doto words, as in the power menu -- the selected one large, with a red
@@ -289,6 +290,59 @@ PanelWindow {
                         width: parent.width
                         elide: Text.ElideRight
                         text: !home.cur_ ? "empty · ↵ adds one" : `${home.cur_.id} · ${home.cur_.span} cell${home.cur_.span > 1 ? "s" : ""}${home.cur_.fits ? "" : " · off grid"}`
+                    }
+                    // the cat's gif (services/Gifs) -- shown while the cat is selected. Click or ←→ when focused
+                    Column {
+                        id: gifPick
+                        visible: home.cur_?.id === "cat"
+                        topPadding: 28
+                        spacing: 12
+                        Lb {
+                            width: 404
+                            elide: Text.ElideRight
+                            text: `gif · ${Gifs.name(Gifs.cur)} · ${Gifs.sel + 1} of ${Gifs.list.length}`
+                            color: gifStrip.activeFocus ? Theme.fg : Theme.grey
+                        }
+                        ListView {
+                            id: gifStrip
+                            width: 404
+                            height: 58
+                            orientation: ListView.Horizontal
+                            spacing: (width - 6 * 58) / 5 // exactly six across
+                            clip: true
+                            snapMode: ListView.SnapToItem
+                            boundsBehavior: Flickable.StopAtBounds
+                            keyNavigationEnabled: false
+                            activeFocusOnTab: true
+                            model: Gifs.list
+                            currentIndex: Gifs.sel
+                            onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+                            Keys.onPressed: e => {
+                                if (e.key === Qt.Key_Left) Gifs.step(-1);
+                                else if (e.key === Qt.Key_Right) Gifs.step(1);
+                                else return;
+                                e.accepted = true;
+                            }
+                            delegate: Rectangle {
+                                id: th
+                                required property string modelData
+                                required property int index
+                                readonly property bool on: index === Gifs.sel
+                                width: 58
+                                height: 58
+                                radius: Theme.corner(width * 0.18)
+                                color: Theme.s1
+                                border { width: on ? 2 : 1; color: on ? Theme.fg : Theme.s2 }
+                                GifDots { anchors { fill: parent; margins: 6 } path: th.modelData; bg: th.color; playing: gifPick.visible && root.visible }
+                                TapHandler {
+                                    onTapped: {
+                                        Gifs.pick(th.modelData);
+                                        gifStrip.forceActiveFocus();
+                                    }
+                                }
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                            }
+                        }
                     }
                     Item { width: 1; height: 40 }
                     Lb { text: home.off.length ? `off grid · ${home.off.length}` : "everything fits" }

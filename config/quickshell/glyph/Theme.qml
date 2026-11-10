@@ -198,7 +198,9 @@ Singleton {
             property string wallDir: ""    // empty -- ~/Pictures/Wallpapers
             property int wallLook: 0       // 0 dots, 1 grey photo, 2 color
             property int wallPitch: 10     // dot pitch, px
-            property int wallBright: 85    // %, from background to image
+            property int wallBright: 85
+            property string gif: ""       // the cat tile's gif (services/Gifs), a path; empty -- the first in the folder
+            property string gifDir: ""    // empty -- ~/Pictures/Gifs    // %, from background to image
             property int rounding: 20      // hypr windows
             property int corners: 100      // the shell panels' corners, % of their own; round things stay round (Theme.corner)
             property bool edges: true      // Glyph strips at the edges (volume/brightness, flashes, progress)
