@@ -1225,6 +1225,7 @@ PanelWindow {
         Page {
             k: 8
             caption: `power · ${Rules.modes[Rules.mode].what} · ${Rules.hz} hz`
+            onVisibleChanged: if (visible) Rules.checkPower() // the daemon answer can change (installed, stopped) -- ask again
 
             Row {
                 spacing: 32
@@ -1260,7 +1261,14 @@ PanelWindow {
                 }
             }
             Lb { text: Rules.store.ultra ? `ultra · ${Rules.rates[0]} hz, no motion, no blur, no shadows — your settings come back when you leave` : "cpu profile only · hz, motion and looks stay yours" }
-            Lb { visible: !PowerProfiles.hasPerformanceProfile; text: "no performance profile on this machine" }
+            Lb { visible: Rules.powerOk && !PowerProfiles.hasPerformanceProfile; text: "no performance profile on this machine" }
+            Lb { visible: !Rules.powerOk; px: 10; color: Theme.red; text: "power-profiles-daemon isn't answering — the cpu profile can't change (ultra's screen and looks still apply). fix: sudo systemctl enable --now power-profiles-daemon" }
+            Row {
+                visible: UPower.displayDevice?.isLaptopBattery ?? false
+                spacing: 20
+                Toggle { text: "ultra on battery"; on: root.r.powerAuto; onFlip: root.r.powerAuto = !root.r.powerAuto }
+                Lb { anchors.verticalCenter: parent.verticalCenter; px: 10; text: "unplug — ultra takes over by itself · plug in — the mode you had comes back · a mode picked by hand on battery cancels the return" }
+            }
         }
 
         // ---- INPUT: hold a key -- first dot immediately, delay pause, then rate per second; on live rings ----
