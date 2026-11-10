@@ -420,11 +420,13 @@ PanelWindow {
             height: 52
             radius: 26
             color: pill.on ? Theme.ink : Theme.s3
+            Behavior on color { ColorAnimation { duration: Theme.t } }
             Icon { anchors.centerIn: parent; text: pill.icon; font.pixelSize: 22 }
         }
         Column {
             anchors { left: pi.right; leftMargin: 12; right: chev.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
-            Text { text: pill.name; font { family: Theme.ui; pixelSize: 16; weight: Font.DemiBold } color: pill.on ? Theme.ink : Theme.fg }
+            Text { text: pill.name; font { family: Theme.ui; pixelSize: 16; weight: Font.DemiBold } color: pill.on ? Theme.ink : Theme.fg
+                Behavior on color { ColorAnimation { duration: Theme.t } } }
             Text {
                 width: parent.width
                 elide: Text.ElideRight
@@ -432,6 +434,7 @@ PanelWindow {
                 font { family: Theme.mono; pixelSize: 11; letterSpacing: 0.9; capitalization: Font.AllUppercase }
                 color: pill.on ? Theme.ink : Theme.fg
                 opacity: 0.6
+                Behavior on color { ColorAnimation { duration: Theme.t } }
             }
         }
         Icon {
@@ -512,6 +515,10 @@ PanelWindow {
             height: parent.height
             radius: 27
             color: Theme.fg
+            // key-driven changes (volume/brightness keys while the panel is open)
+            // glide to the new level; while dragging the behaviour is off, so
+            // the fill stays glued to the cursor
+            Behavior on width { enabled: !area.pressed; NumberAnimation { duration: 220; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
             Icon { x: 18; anchors.verticalCenter: parent.verticalCenter; text: sl.icon; font.pixelSize: 21; color: Theme.ink }
         }
         Rectangle {
