@@ -45,6 +45,7 @@ declare -A EXTRA=(
     [telegram]="telegram-desktop"                                        # Super+D
     [spotify]="spotify-launcher spicetify-cli spicetify-marketplace-bin" # Super+M
     [clash]="clash-verge-rev-bin"                                        # VPN panel, Super+P
+    [pywalfox]="python-pywalfox"                                         # Firefox follows the palette (with the Pywalfox add-on)
 )
 
 G=config/quickshell/glyph
@@ -270,6 +271,20 @@ browser_cleanup() { # firefox/zen: take OUT the inTitlebar user.js snippet older
     fi
 }
 
+tmux_theme() { # tmux follows the palette: Theme.apps() writes ~/.config/tmux/theme.conf, but it only
+    # colours anything if tmux.conf sources it -- add that line to an existing config (either home).
+    # No tmux, or no config, or the line already there: nothing to do (AMM021's installer does the same)
+    command -v tmux >/dev/null || return 0
+    local conf
+    for conf in "$HOME/.config/tmux/tmux.conf" "$HOME/.tmux.conf"; do
+        [ -f "$conf" ] || continue
+        grep -qs 'tmux/theme.conf' "$conf" && return 0
+        echo 'source-file -q ~/.config/tmux/theme.conf # glyph: colors written by the shell' >> "$conf"
+        echo "  $conf (+ theme.conf source)"
+        return 0
+    done
+}
+
 flatpak_gtk() { # flatpak apps are sandboxed off from ~/.config/gtk-* -- grant the installed ones read access,
     # or their headerbar buttons never see the gtk.css discs (GNOME Calculator is usually a flatpak).
     # Read-only and per-app; the button-layout the apps already show comes from gsettings, which does reach them.
@@ -380,12 +395,12 @@ greeter() { # boot login: greetd + the lock's face as the greeter (./install.sh 
 [ "$EUID" -eq 0 ] && { echo "run as your user, sudo will ask by itself"; exit 1; }
 
 case "${1:-}" in
-    --links) links; browser_cleanup; flatpak_gtk ;; # on any distribution (NixOS, Fedora...): packages are up to you then, list in README
+    --links) links; browser_cleanup; flatpak_gtk; tmux_theme ;; # on any distribution (NixOS, Fedora...): packages are up to you then, list in README
     --greeter) command -v pacman >/dev/null || { echo "the greeter step installs greetd with pacman (Arch only)"; exit 1; }
         greeter ;;
     ""|--with) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
         [ "${1:-}" = --with ] && WITH="${*:2}" # both comma- and space-separated
-        extras; packages; plugins; services; links; browser_cleanup; flatpak_gtk
+        extras; packages; plugins; services; links; browser_cleanup; flatpak_gtk; tmux_theme
         # spicetify needs Spotify already downloaded and logged in, so there is nothing to apply before the first launch
         [[ " ${WITH//,/ } " == *" spotify "* ]] && say "spotify: launch it, log in, then spicetify config custom_apps marketplace && spicetify backup apply"
         say "done. reboot and pick Hyprland in sddm" ;;

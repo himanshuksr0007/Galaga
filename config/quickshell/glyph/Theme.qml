@@ -319,5 +319,56 @@ done
 # resolve too, or the hover glyphs vanish under any non-nothing palette
 if [ $# -gt 0 ]; then for d in gtk-3.0 gtk-4.0; do ln -sfn "$t/window-buttons" "$o/$d/window-buttons"; done; fi`,
             "bash", Quickshell.shellPath("term"), riceState + "/glyph"].concat(sed));
+        tmux();
+        fox();
+        vesk(p);
+    }
+
+    // tmux follows the palette too (Isaqdn03's idea, AMM021's form): theme.conf carries the whole status
+    // styling, tmux.conf sources it (the installer adds that line), running servers re-read it live.
+    function tmux() {
+            const accent = hex(pal.accent), conf = `# glyph: written by Theme.apps(), don't edit by hand
+    set -g status-style "bg=#${hex(s1)},fg=#${hex(grey)}"
+    set -g status-left-style "fg=#${accent}"
+    set -g window-status-current-style "fg=#${hex(fg)},bold"
+    set -g pane-border-style "fg=#${hex(s3)}"
+    set -g pane-active-border-style "fg=#${accent}"
+    set -g message-style "bg=#${hex(s2)},fg=#${hex(fg)}"
+    set -g mode-style "bg=#${hex(s3)},fg=#${hex(fg)}"
+    setw -g clock-mode-colour "#${accent}"
+    `;
+            Quickshell.execDetached(["sh", "-c", 'command -v tmux >/dev/null || exit 0; d=$HOME/.config/tmux; mkdir -p "$d" && printf "%s" "$1" > "$d/theme.conf"; '
+                + 'tmux source-file -q "$d/theme.conf" 2>/dev/null; tmux refresh-client -S 2>/dev/null; true', "sh", conf]);
+    }
+
+    // Firefox through Pywalfox (AUR python-pywalfox + its add-on), which themes the browser live from pywal's colors.json. Its default template
+    // reads a few slots: dark — frame 0, toolbar and field are 0 lightened, text 15, icons and highlight pills 10, attention 13; light — frame 7, toolbar
+    // white, text 0, icons 3, attention 5. Frame is s1 like the bar, icons and pills fg, the accent only what wants attention. Firefox closed — pywalfox
+    // can't connect, quietly. Not installed — nothing is written. The AUR package registers the native host in /usr/lib/mozilla: never `pywalfox install`
+    // as the user, it makes ~/.mozilla and that sends Firefox back to a fresh, empty profile. From Isaqdn03/glyph-rice
+    function fox() {
+        const h = c => "#" + hex(c), a = pal.ansi.map(h), [bg, s1, , , , , fg] = greys;
+        Object.assign(a, pal.light ? { 0: h(fg), 3: h(fg), 5: h(pal.accent), 7: h(bg) } : { 0: h(s1), 10: h(fg), 13: h(pal.accent), 15: h(fg) });
+        const colors = {};
+        a.forEach((c, i) => colors["color" + i] = c);
+        const json = JSON.stringify({ wallpaper: st.wall, alpha: "100", special: { background: h(bg), foreground: h(fg), cursor: h(fg) }, colors }, null, 2);
+        Quickshell.execDetached(["sh", "-c", `command -v pywalfox >/dev/null || exit 0
+mkdir -p "$1" && printf '%s\\n' "$2" > "$1/colors.json.tmp" && mv -f "$1/colors.json.tmp" "$1/colors.json" || exit
+{ pywalfox "$3"; pywalfox update; } >/dev/null 2>&1; true`,
+            "sh", (Quickshell.env("XDG_CACHE_HOME") || Quickshell.env("HOME") + "/.cache") + "/wal", json, pal.light ? "light" : "dark"]);
+    }
+
+    // Vesktop's "rice" theme = term/vesktop.css (Glyph on top of midnight) + this palette's --g-* in a :root after it,
+    // so they win. The dark pair, as gtk: Discord's own dark theme sits underneath. Vencord watches themes/ and reloads live.
+    // No ~/.config/vesktop — Vesktop isn't used, nothing to write
+    function vesk(p) {
+        const h = c => "#" + hex(Qt.lighter(c, 1)), c = p.c;
+        const vars = [["bg", c[0]], ["s1", c[1]], ["s2", c[2]], ["s3", c[3]], ["mute", c[4]], ["grey", c[5]], ["fg", c[6]], ["ink", c[0]],
+                      ["accent", p.accent], ["red", p.red], ["on-red", on(p.red)], ["yellow", p.ansi[3]]];
+        const css = `\n/* Theme.apps(): the palette now */\n:root {\n${vars.map(([k, v]) => `    --g-${k}: ${h(v)};`).join("\n")}\n}\n`;
+        Quickshell.execDetached(["sh", "-c", `[ -d "$HOME/.config/vesktop" ] || exit 0
+d=$HOME/.config/vesktop/themes
+mkdir -p "$d" && { cat "$1" && printf '%s' "$2"; } > "$d/.rice.tmp" && mv -f "$d/.rice.tmp" "$d/rice.theme.css"`,
+            "sh", Quickshell.shellPath("term/vesktop.css"), css]);
     }
 }
