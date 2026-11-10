@@ -71,6 +71,10 @@ Singleton {
             property int palette: 0
             property bool paintHypr: true
             property bool paintKitty: true
+            // hands off (SenulMapa's guards, as prefs): off -- the shell never writes that part of
+            // the hypr config; for a rotated screen or a hand-built input setup it would fight you
+            property bool manageMonitor: true
+            property bool manageInput: true
             // Input -- as in hyprland/input.lua
             property int kbSwitch: 0      // index in switches
             property int repeatDelay: 250
@@ -163,6 +167,7 @@ Singleton {
     // first (a screen was plugged in): a burst of screensChanged collapses into one read 500 ms later, and the reply
     // already has the new screen. Only shell.qml calls this
     function monitor(fresh) {
+        if (!store.manageMonitor) return; // prefs -> DISPLAY -> arrange screens off: monitors are the hypr config's
         driving = true;
         if (fresh || !mons.length) {
             monWanted = true;
@@ -258,6 +263,7 @@ Singleton {
     function motion() { hypr(`hl.config({ animations = { enabled = ${moving} } })`); }
     readonly property var switches: [["alt+shift", "grp:alt_shift_toggle"], ["caps", "grp:caps_toggle"], ["ctrl+shift", "grp:ctrl_shift_toggle"]]
     function input() {
+        if (!store.manageInput) return; // prefs -> INPUT -> shell sets input off: keyboard/mouse are the hypr config's
         const s = store;
         hypr(`hl.config({ input = { kb_options = "${switches[s.kbSwitch]?.[1] ?? switches[0][1]}", repeat_delay = ${s.repeatDelay}, repeat_rate = ${s.repeatRate}, `
            + `sensitivity = ${s.sens / 100}, accel_profile = "${s.flat ? "flat" : "adaptive"}", touchpad = { natural_scroll = ${s.natural}, `

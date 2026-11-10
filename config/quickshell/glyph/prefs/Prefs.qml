@@ -1197,6 +1197,11 @@ PanelWindow {
                 Act { visible: Object.keys(Rules.store.outs).length > 0; icon: "\u{F0450}"; text: "hypr config"; onHit: Rules.forget() }
             }
             Row {
+                spacing: 20
+                Toggle { text: "arrange screens"; on: root.r.manageMonitor; onFlip: { root.r.manageMonitor = !root.r.manageMonitor; if (root.r.manageMonitor) Rules.monitor(true); } }
+                Lb { anchors.verticalCenter: parent.verticalCenter; text: "off — monitors stay in your hypr config (a rotated screen, a hand-built layout)"; px: 10; color: Theme.mute }
+            }
+            Row {
                 spacing: 40
                 Toggle { anchors.verticalCenter: parent.verticalCenter; text: "night light"; on: Sys.night; onFlip: Sys.toggleNight() }
                 Dial { label: "warmth · k · all screens"; from: 2500; to: 6500; step: 100; value: root.r.warmth; onMoved: v => { root.r.warmth = v; if (root.r.night) Rules.night(); } }
@@ -1309,6 +1314,7 @@ PanelWindow {
                 Toggle { text: "tap to click"; on: root.r.tap; onFlip: { root.r.tap = !root.r.tap; Rules.input(); } }
                 Toggle { text: "off while typing"; on: root.r.typingOff; onFlip: { root.r.typingOff = !root.r.typingOff; Rules.input(); } }
                 Toggle { text: "flat accel"; on: root.r.flat; onFlip: { root.r.flat = !root.r.flat; Rules.input(); } }
+                Toggle { text: "shell sets input"; on: root.r.manageInput; onFlip: { root.r.manageInput = !root.r.manageInput; if (root.r.manageInput) Rules.input(); } }
             }
             Pick { label: "layout switch"; opts: Rules.switches.map(s => s[0]); cur: root.r.kbSwitch; onPicked: i => { root.r.kbSwitch = i; Rules.input(); } }
         }

@@ -46,7 +46,10 @@ Singleton {
     // (hypr's scale does the sizing), only the home bento hugs the right edge there
     readonly property real s: {
         const sc = Quickshell.screens[0];
-        return sc ? Math.min(sc.width / 1920, sc.height / 1080) : 1;
+        if (!sc) return 1;
+        // orientation-agnostic (SenulMapa's fix): a portrait first screen made this 0.5625 and shrank everything
+        const long = Math.max(sc.width, sc.height), short = Math.min(sc.width, sc.height);
+        return Math.min(long / 1920, short / 1080);
     }
 
     // a screen's own settings live in state.screens under the monitor's MODEL: it is the monitor, not the port --
