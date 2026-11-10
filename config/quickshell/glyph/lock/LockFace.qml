@@ -49,6 +49,9 @@ Item {
     Behavior on t { NumberAnimation { duration: root.auth.leaving ? 450 : 1100 } }
     Component.onCompleted: t = Qt.binding(() => root.auth.leaving ? 0 : 1)
     function ph(a, b) { const x = Math.max(0, Math.min(1, (t - a) / (b - a))); return 1 - Math.pow(1 - x, 4); }
+    // hide the password's length (prefs LOOK, off by default): three fixed dots that pulse
+    // on each key instead of one dot per character. Off -- the dot count is the length, exactly
+    readonly property bool hideLen: Theme.state.lockHideLen
     // password check: a wave runs over the entered dots
     property real wave: 0
     NumberAnimation on wave { running: root.auth.busy; from: 0; to: 1; duration: 700; loops: Animation.Infinite }
@@ -279,7 +282,8 @@ Item {
             }
 
             // field: one white dot per entered character and the caret -- nothing pre-rendered,
-            // so the dot count is always the password length (empty field -- no dots at all)
+            // so the dot count is always the password length (empty field -- no dots at all).
+            // With "hide length" on: three fixed dots once typing starts, pulsing per key
             Rectangle {
                 id: pwd
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -296,7 +300,7 @@ Item {
                     opacity: root.ph(0.75, 1)
                     Repeater {
                         id: typed
-                        model: Math.min(root.auth.buffer.length, 16)
+                        model: root.hideLen ? (root.auth.buffer.length ? 3 : 0) : Math.min(root.auth.buffer.length, 16)
                         // a new dot clicks in; while auth is thinking -- a wave runs over the dots
                         Rectangle {
                             required property int index
@@ -307,6 +311,17 @@ Item {
                             color: root.auth.fail ? Theme.red : Theme.fg
                             opacity: root.auth.busy && Math.abs(root.wave * (typed.count + 2) - 1 - index) > 1.2 ? 0.3 : 1
                             NumberAnimation on scale { from: 0.2; to: 1; duration: 180; easing.type: Easing.OutCubic }
+                            // hide length: the three fixed dots pulse on each key instead
+                            SequentialAnimation on scale {
+                                id: pulse
+                                running: false
+                                NumberAnimation { to: 0.55; duration: 50 }
+                                NumberAnimation { to: 1; duration: 160; easing.type: Easing.OutCubic }
+                            }
+                            Connections {
+                                target: root.auth
+                                function onBufferChanged() { if (root.hideLen && root.auth.buffer.length) pulse.restart(); }
+                            }
                         }
                     }
                     Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 2; height: 24; color: Theme.red; opacity: root.blink ? 1 : 0 }
