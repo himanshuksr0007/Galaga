@@ -6,6 +6,7 @@ import Quickshell.Services.UPower
 import Quickshell.Wayland
 import qs
 import qs.components
+import qs.services
 
 // Glyph: screen edges as LEDs on the back, instead of OSDs and popups in the middle of the screen.
 // At the top -- a flash for a notification (red for critical ones) and an "island" with it, on the right -- volume/brightness bottom-up,
@@ -16,13 +17,14 @@ Scope {
     // ---- right: volume and brightness ----
     property string kind: "vol"
     property real value: 0
+    property bool flash: false // a vol/bri/mic flash owns the right strip while it is up
     property bool armed: false // do not show the first values at startup
     Timer { running: true; interval: 1500; onTriggered: root.armed = true }
     function level(k, v) {
         if (!armed || !Theme.state.edges) return;
         kind = k;
         value = v;
-        side.shown = true;
+        flash = true;
         sideT.restart();
     }
     Connections {
@@ -40,7 +42,31 @@ Scope {
         target: Sys
         function onBriChanged() { root.level("bri", Sys.bri); }
     }
-    Timer { id: sideT; interval: 3000; onTriggered: side.shown = false }
+    Timer { id: sideT; interval: 3000; onTriggered: root.flash = false }
+
+    // ---- reactive edges (prefs FEATURES): the strips get standing jobs ----
+    // music: while something plays, the right strip is a VU meter fed by cava -- the same
+    // process home's Glyph Matrix uses (services/Cava registers consumers by name, one
+    // process for all). The vol/bri/mic flash takes the strip while it is up; the meter
+    // returns when it fades. The level leans on the low bands, like the matrix does.
+    readonly property bool vuOn: Theme.state.edges && Theme.state.featEdges && Media.playing
+    onVuOnChanged: Cava.use("edges", vuOn)
+    Component.onCompleted: Cava.use("edges", vuOn)
+    Component.onDestruction: Cava.use("edges", false)
+    readonly property real vuRaw: {
+        const b = Cava.bars;
+        return Math.max(0, Math.min(1, (b[0] + b[1] * 0.9 + b[2] * 0.75 + b[3] * 0.6 + b[4] * 0.45 + b[5] * 0.3 + b[6] * 0.2 + b[7] * 0.1) / 3.2));
+    }
+    property real vu: vuOn ? vuRaw : 0
+    Behavior on vu { NumberAnimation { duration: 90 } } // cava lands in steps; the strip glides
+    // charging: plugged in -- the bottom strip fills with the battery (below task/focus)
+    readonly property bool charging: (bat?.isLaptopBattery ?? false) && !UPower.onBattery
+    readonly property bool chargeJob: Theme.state.featEdges && charging
+    // ...but only on the home screen: an app on the focused monitor's workspace
+    // puts the charging fill and its pill away (Home.idle decides the same way).
+    // The task and focus jobs above it in the strip are working overlays -- they stay
+    readonly property bool homeIdle: (Hyprland.focusedMonitor?.activeWorkspace?.toplevels.values.length ?? 0) === 0
+    readonly property bool chargeShown: chargeJob && homeIdle
 
     // ---- top: new notification -- a strip flash and a tile into the island stack ----
     property var note: null // the last one, for the flash
@@ -260,9 +286,10 @@ Scope {
         }
     }
 
-    // ---- right ----
+    // ---- right: the vol/bri/mic flash, and under it the music VU ----
     Edge {
         id: side
+        shown: root.flash || root.vuOn
         anchors.right: true
         implicitWidth: Math.ceil(160 * Theme.s)
         implicitHeight: Math.ceil(520 * Theme.s)
@@ -273,9 +300,10 @@ Scope {
             height: 500
             n: 20
             vertical: true
-            f: root.value
+            f: root.flash ? root.value : root.vu
         }
         Tag {
+            visible: root.flash // the VU needs no capsule -- it is a meter, not a value
             vertical: true // the capsule stands upright for a vertical strip too: icon above the number
             anchors { right: parent.right; rightMargin: 26; verticalCenter: parent.verticalCenter }
             Icon { text: root.kind === "bri" ? "\u{F00E0}" : root.kind === "mic" ? (Sys.micOn ? "\u{F036C}" : "\u{F036D}") : Sys.muted ? "\u{F075F}" : "\u{F057E}" }
@@ -283,15 +311,18 @@ Scope {
         }
     }
 
-    // ---- bottom: task progress, without it -- a running focus timer (one strip, no capsule: hangs for tens of minutes) ----
+    // ---- bottom: task progress first, then the focus drain, then the charging fill
+    // (one strip, no capsule for the timer: it hangs for tens of minutes) ----
     readonly property var task: Notes.task
-    readonly property real progress: task ? Math.max(0, Math.min(100, task.hints.value ?? 0)) / 100 : Focus.f
+    readonly property bool focusJob: Focus.running && Theme.state.featEdges
+    readonly property real progress: task ? Math.max(0, Math.min(100, task.hints.value ?? 0)) / 100
+        : focusJob ? Focus.f : pct / 100
     Connections {
         target: Focus
         function onDone() { root.push({ app: "focus", summary: "Focus done", body: `${Focus.minutes} min`, glyph: "\u{F13AB}" }); }
     }
     Edge {
-        shown: (!!root.task || Focus.running) && Theme.state.edges
+        shown: (!!root.task || root.focusJob || root.chargeShown) && Theme.state.edges
         anchors.bottom: true
         implicitWidth: Math.ceil(1100 * Theme.s)
         implicitHeight: Math.ceil(110 * Theme.s)
@@ -309,6 +340,13 @@ Scope {
             Icon { text: "\u{F01DA}" }
             Lb { text: root.task?.summary ?? ""; color: Theme.fg }
             Num { text: Math.round(root.progress * 100) + "%"; font.pixelSize: 26 }
+        }
+        Tag {
+            visible: !root.task && !root.focusJob && root.chargeShown
+            anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 26 }
+            Icon { text: "\u{F0084}" }
+            Num { text: root.pct; font.pixelSize: 26 }
+            Lb { text: "% · charging"; color: Theme.fg }
         }
     }
 

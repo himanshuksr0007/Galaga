@@ -21,8 +21,14 @@ PanelWindow {
 
     readonly property bool home: (Hyprland.focusedWorkspace?.toplevels.values.length ?? 0) === 0
     Binding { target: SysStats; property: "detailed"; value: root.home || Sys.deckOpen }
-    // not in a delegate: a destroyed Binding does not return the value -- remove the widget and cava would run forever
-    Binding { target: Cava; property: "active"; value: root.home && bento.model.some(w => w.id === "cava") }
+    // cava is shared now (the glyph edges register as "edges"): register by name (per
+    // screen -- Home is one instance per screen), and unregister on the way out -- a
+    // Binding here used to own Cava.active outright
+    readonly property string cavaKey: "home:" + (root.screen?.name ?? "?")
+    readonly property bool cavaWant: root.home && bento.model.some(w => w.id === "cava")
+    onCavaWantChanged: Cava.use(cavaKey, cavaWant)
+    Component.onCompleted: Cava.use(cavaKey, cavaWant)
+    Component.onDestruction: Cava.use(cavaKey, false)
 
     SystemClock { id: clock; precision: SystemClock.Minutes }
     readonly property var en: Qt.locale("en_US")

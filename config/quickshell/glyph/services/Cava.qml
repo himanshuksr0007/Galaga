@@ -4,11 +4,20 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// cava in the background while someone is watching (active): 8 mono bands 0...1, from bass to highs (count -- in cava.conf)
+// cava in the background while someone is watching: consumers register by name (home's
+// Glyph Matrix, the glyph edges' VU) and one process serves them all -- it runs only
+// while at least one is registered. 8 mono bands 0...1, from bass to highs (cava.conf)
 Singleton {
     id: root
 
-    property bool active: false
+    property var users: ({})
+    readonly property bool active: Object.keys(users).length > 0
+    function use(name, on) {
+        if (!!users[name] === on) return;
+        const u = Object.assign({}, users);
+        if (on) u[name] = true; else delete u[name];
+        users = u;
+    }
     property var bars: Array(8).fill(0)
 
     Process {
