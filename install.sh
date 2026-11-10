@@ -176,9 +176,16 @@ links() {
     gsettings set org.gnome.desktop.wm.preferences button-layout 'close,maximize:appmenu'
 }
 
-browser_prefs() { # firefox/zen: built-in window buttons off (config/browser/user.js) -- hyprbars draws them instead
-    say "browser prefs (firefox/zen user.js)"
-    local src="$DOTS/config/browser/user.js"
+browser_cleanup() { # firefox/zen: take OUT the inTitlebar user.js snippet older installs deployed.
+    # Browsers are own-buttons apps now (rules.lua): they keep their built-in buttons, so the
+    # pref must not be set anywhere -- a profile that kept it would draw no buttons of its own
+    # AND get no hyprbar: a buttonless window. This removes exactly what the old step shipped:
+    # the whole user.js where it consists of the snippet alone, and just the snippet where it
+    # was appended to the user's own file (the rest stays byte-identical). Safe to re-run:
+    # a profile without the snippet is left untouched.
+    say "browser cleanup (firefox/zen user.js)"
+    local marker='// glyph -- window buttons (see README: "Window buttons")'
+    local pref='user_pref("browser.tabs.inTitlebar", 0);'
     # everywhere firefox/zen keep profiles: the native homes, and the flatpak homes --
     # a flatpak's profile store sits under ~/.var/app/<app id>/, invisible to a plain
     # ~/.mozilla glob (a flatpak firefox is the common CachyOS install). Zen's flatpak
@@ -207,36 +214,52 @@ browser_prefs() { # firefox/zen: built-in window buttons off (config/browser/use
             done < <(awk -F= '$1 == "Path" || $1 == "Default" { sub(/^[^=]*=/, ""); print }' "$base/profiles.ini" || true)
         fi
     done
-    local uniq=() seen target patched=0 already=0
+    local uniq=() seen target cleaned=0 removed=0 clean=0 tmp
     for d in "${dirs[@]}"; do
-        # the same dir can arrive via a glob and via profiles.ini -- patch it once
+        # the same dir can arrive via a glob and via profiles.ini -- clean it once
         seen=0
         for p in "${uniq[@]}"; do [ "$p" = "$d" ] && { seen=1; break; }; done
         [ "$seen" -eq 0 ] && uniq+=("$d")
     done
     for d in "${uniq[@]}"; do
         target="$d/user.js"
-        if [ -f "$target" ]; then
-            # the pref is already set (by us, or by hand): leave the file exactly as it is
-            if grep -q 'browser\.tabs\.inTitlebar' "$target"; then
-                already=$((already + 1))
-                continue
-            fi
-            # the user's own user.js stays in place; a copy goes to the backup before we append
-            mkdir -p "$BACKUP/$(dirname "${target#"$HOME"/}")"
-            cp "$target" "$BACKUP/${target#"$HOME"/}"
-            { echo; cat "$src"; } >>"$target"
-        else
-            cp "$src" "$target"
+        [ -f "$target" ] || continue
+        if ! grep -qF "$pref" "$target" && ! grep -qF "$marker" "$target"; then
+            clean=$((clean + 1)) # nothing of ours in there -- leave the file exactly as it is
+            continue
         fi
-        patched=$((patched + 1))
-        echo "  $target"
+        # a copy goes to the backup before the file is touched, like every other edit here
+        mkdir -p "$BACKUP/$(dirname "${target#"$HOME"/}")"
+        cp "$target" "$BACKUP/${target#"$HOME"/}"
+        tmp="$(mktemp)"
+        # drop our block (the marker line, its comment lines, the pref line, and the blank
+        # line the old step put in front of the block) plus any lone pref line; keep the rest
+        awk -v marker="$marker" -v pref="$pref" '
+            $0 == marker { inblock = 1; if (n > 0 && buf[n] == "") n--; next }
+            inblock && $0 == pref { inblock = 0; next }
+            inblock && /^\/\// { next }
+            inblock { inblock = 0 }
+            $0 == pref { next }
+            { buf[++n] = $0 }
+            END { for (i = 1; i <= n; i++) print buf[i] }
+        ' "$target" >"$tmp"
+        if [ -s "$tmp" ]; then
+            cat "$tmp" >"$target" # in place: same file, its permissions survive
+            cleaned=$((cleaned + 1))
+            echo "  $target (snippet removed)"
+        else
+            rm "$target" # the file was the snippet alone
+            removed=$((removed + 1))
+            echo "  $target (was only the snippet -- deleted)"
+        fi
+        rm -f "$tmp"
     done
-    if [ $((patched + already)) -eq 0 ]; then
-        say "browser prefs: NO firefox/zen profiles found -- if the browser still draws its"
-        say "own buttons, set browser.tabs.inTitlebar to 0 in about:config by hand"
+    if [ ${#uniq[@]} -eq 0 ]; then
+        say "browser cleanup: no firefox/zen profiles found -- nothing to remove"
+    elif [ $((cleaned + removed)) -eq 0 ]; then
+        say "browser cleanup: $clean profile(s) already clean"
     else
-        say "browser prefs: $patched profile(s) patched, $already already ok -- restart the browser"
+        say "browser cleanup: $cleaned cleaned, $removed removed, $clean already clean -- restart the browser"
     fi
 }
 
@@ -336,12 +359,12 @@ greeter() { # boot login: greetd + the lock's face as the greeter (./install.sh 
 [ "$EUID" -eq 0 ] && { echo "run as your user, sudo will ask by itself"; exit 1; }
 
 case "${1:-}" in
-    --links) links; browser_prefs; flatpak_gtk ;; # on any distribution (NixOS, Fedora...): packages are up to you then, list in README
+    --links) links; browser_cleanup; flatpak_gtk ;; # on any distribution (NixOS, Fedora...): packages are up to you then, list in README
     --greeter) command -v pacman >/dev/null || { echo "the greeter step installs greetd with pacman (Arch only)"; exit 1; }
         greeter ;;
     ""|--with) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
         [ "${1:-}" = --with ] && WITH="${*:2}" # both comma- and space-separated
-        extras; packages; plugins; services; links; browser_prefs; flatpak_gtk
+        extras; packages; plugins; services; links; browser_cleanup; flatpak_gtk
         # spicetify needs Spotify already downloaded and logged in, so there is nothing to apply before the first launch
         [[ " ${WITH//,/ } " == *" spotify "* ]] && say "spotify: launch it, log in, then spicetify config custom_apps marketplace && spicetify backup apply"
         say "done. reboot and pick Hyprland in sddm" ;;

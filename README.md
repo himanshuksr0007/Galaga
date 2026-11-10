@@ -134,25 +134,20 @@ cannot be made real there, for the reasons under "Minimise is not real"):
   two gtk config dirs via `flatpak override --user`; by hand it is
   `flatpak override --user org.gnome.Calculator --filesystem=xdg-config/gtk-3.0:ro --filesystem=xdg-config/gtk-4.0:ro`,
   then restart the app.
-- **Browsers** get the bar too — but their built-in buttons had to be switched off first.
-  Firefox, Zen, Chromium and friends draw small grey buttons inside their own UI, where
-  `gtk.css` cannot reach them, and the requests behind those buttons go nowhere on
-  Hyprland: minimise does not exist and maximise is suppressed, so only their close did
-  anything. For **Firefox and Zen**, `install.sh` deploys `config/browser/user.js` into
-  every existing profile: `browser.tabs.inTitlebar = 0` — the "Title Bar" switch — so the
-  browser draws no buttons of its own and the bar above takes over (restart the browser
-  once after installing; by hand it is the same pref in `about:config`, or tick
-  *Title Bar* under Customize Toolbar). The deploy covers every place profiles live:
-  native (`~/.mozilla/firefox`, `~/.zen`, `~/.config/zen`) **and the flatpak homes**
-  (`~/.var/app/org.mozilla.firefox/.mozilla/firefox`,
-  `~/.var/app/app.zen_browser.zen/.zen`) — a Flatpak Firefox never sees
-  `~/.mozilla`, which is the usual reason the buttons survive an install. The
-  installer prints how many profiles it patched; to verify, open `about:config`,
-  search `browser.tabs.inTitlebar` and check it reads **0** — if it is missing
-  entirely, that profile was not found and the manual route above is the fix.
-  For **Chromium, Chrome and Brave** there is no
-  file to deploy — turn on **Use system title bar and borders** once (Settings →
-  Appearance) and the bar takes over there too.
+- **Browsers** split in two. **Firefox and Zen** are own-buttons apps, on the same
+  `rules.lua` list as the GTK apps: they keep their built-in buttons and get no
+  hyprbar. Their button box follows the decoration layout this rice ships for GTK
+  (`close,maximize` — no minimise, whose click could not work here), so what they
+  draw is exactly the buttons that work: close, and a maximise the suppression
+  exemption lets land. Minimise is `Super+Alt+M`, like every own-buttons app.
+  (Earlier versions tried the opposite — a `user.js` in every profile switching
+  the built-ins off so the hyprbar could take over; the pref kept not reaching
+  the profiles that mattered, the Flatpak's above all. `install.sh` now removes
+  that snippet from every profile it was ever deployed to — it has to: a profile
+  that kept it would draw no buttons of its own *and* get no hyprbar.) For
+  **Chromium, Chrome and Brave** nothing changes: there is no file to deploy —
+  turn on **Use system title bar and borders** once (Settings → Appearance) and
+  they draw no buttons of their own, so the hyprbar takes over there.
 
 **Minimise is not real.** Hyprland has no minimise: the white button (and `Super+Alt+M`)
 parks the window on the hidden `special:minimized` workspace. `Super+Alt+Shift+M` peeks at

@@ -8,9 +8,10 @@
 --
 -- Apps that draw their own headerbar buttons (GTK apps, VS Code, ...) are excluded
 -- in rules.lua (hyprbars:no_bar) and themed by term/gtk-3.0 + term/gtk-4.0 instead.
--- Browsers get this bar like everyone else: their built-in buttons are switched off
--- on their side first (config/browser/user.js for Firefox/Zen, a setting in
--- Chromium) -- see README: "Window buttons".
+-- Chromium-family browsers get this bar too, once their "Use system title bar and
+-- borders" setting switches their built-in buttons off; Firefox and Zen instead
+-- keep their own buttons and are excluded in rules.lua like the other
+-- own-buttons apps -- see README: "Window buttons".
 --
 -- The title is centred in Doto, the rice's dot-matrix font (config/fonts), bold --
 -- hyprbars centres the title texture between the buttons on both sides.

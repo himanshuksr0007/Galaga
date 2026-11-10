@@ -8,7 +8,7 @@ hl.window_rule({ match = { fullscreen = false }, opacity = vars.windowOpacity ..
 
 -- Apps that draw their own window buttons (GTK headerbars, Electron, ...). The list
 -- drives two rules: these apps get no hyprbars bar (the no_bar rule at the bottom of
--- this file -- their own buttons are themed by term/gtk.css instead), and they are
+-- this file), and they are
 -- the one exception to the maximise suppression below, so a click on their own
 -- maximise button actually maximises. There is no protocol way to detect "draws
 -- its own buttons", so the list is curated by hand: ONE CLASS PER LINE. Find an
@@ -20,6 +20,8 @@ local ownButtons = {
     "Code", "VSCodium", "codium", -- VS Code: own titlebar, see README "Window buttons"
     "steam", -- own titlebar; the games themselves are fullscreen anyway
     "discord", "vesktop", "equibop", -- own titlebars
+    "firefox", "org\\.mozilla\\.firefox", "firefox-esr", -- Firefox: own titlebar buttons (see README "Window buttons")
+    "zen", "app\\.zen_browser\\.zen", "io\\.github\\.zen_browser\\.zen", -- Zen: same engine, same buttons
     "org\\.quickshell", -- the shell's own windows (Rice switcher)
 }
 
@@ -152,15 +154,14 @@ hl.window_rule({ match = { class = "discord|equibop|vesktop|whatsapp|org\\.teleg
 hl.window_rule({ match = { class = "Todoist|io\\.github\\.alainm23\\.planify" }, workspace = "special:todo" })
 
 -- Window buttons (hyprbars, hyprland/titlebars.lua): the own-buttons apps (the
--- ownButtons list at the top of this file) keep theirs -- themed by term/gtk.css --
--- and get no second bar here; fullscreen, PiP and XWayland popups lose the bar too.
--- Browsers are NOT excluded: they draw their buttons inside their own UI, where gtk.css
--- cannot reach them, and the requests behind those buttons go nowhere on Hyprland
--- (minimise does not exist, maximise is suppressed above), so only their close worked.
--- Browsers get the bar like everyone else, and their own buttons are switched off on
--- their side: Firefox/Zen via user.js (install.sh deploys config/browser/user.js),
--- Chromium/Chrome/Brave via their "Use system title bar and borders" setting --
--- see README "Window buttons".
+-- ownButtons list at the top of this file) keep theirs -- GTK apps' are themed by
+-- term/gtk.css -- and get no second bar here; fullscreen, PiP and XWayland popups
+-- lose the bar too. Firefox and Zen are in the list: they keep their built-in
+-- buttons, whose box follows the decoration layout this rice ships (close and
+-- maximise -- no minimise, whose click could not work here), and the exemption
+-- above makes their maximise land. Chromium, Chrome and Brave are NOT in the
+-- list: with their "Use system title bar and borders" setting on they draw no
+-- buttons of their own and take the hyprbar instead -- see README "Window buttons".
 hl.window_rule({ match = { fullscreen = true }, ["hyprbars:no_bar"] = true })
 hl.window_rule({ match = { tag = "xwl_popup" }, ["hyprbars:no_bar"] = true })
 hl.window_rule({ match = { title = "Picture(-| )in(-| )[Pp]icture" }, ["hyprbars:no_bar"] = true })
