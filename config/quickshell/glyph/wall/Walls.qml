@@ -16,7 +16,8 @@ PanelWindow {
     id: root
 
     readonly property string dir: Theme.state.wallDir || Quickshell.env("HOME") + "/Pictures/Wallpapers"
-    readonly property var looks: ["dots", "mono", "color"]
+    readonly property var looks: ["dots", "vivid", "mono", "color"]
+    readonly property var order: [0, 3, 1, 2] // wallLook by pill place: vivid came later, the saved numbers in glyph.json stay the same
     // copies -- in physical screen pixels, with headroom for cropping
     readonly property string res: {
         const s = Quickshell.screens[0];
@@ -142,8 +143,8 @@ magick "$1[0]" -resize "$3" -quality 90 "$2/.$b.jpg" 2>/dev/null && mv "$2/.$b.j
             if (e.key === Qt.Key_Left || e.key === Qt.Key_H) root.go(-1);
             else if (e.key === Qt.Key_Right || e.key === Qt.Key_L) root.go(1);
             else if (e.key === Qt.Key_Home) root.pick = "";
-            else if (e.key === Qt.Key_Tab) root.look = (root.look + 1) % 3;
-            else if (e.key === Qt.Key_Backtab) root.look = (root.look + 2) % 3;
+            else if (e.key === Qt.Key_Tab) root.look = root.order[(root.order.indexOf(root.look) + 1) % 4];
+            else if (e.key === Qt.Key_Backtab) root.look = root.order[(root.order.indexOf(root.look) + 3) % 4];
             else if ((up || down) && e.modifiers & Qt.ShiftModifier) root.bright = Math.max(10, Math.min(100, root.bright + (up ? 5 : -5)));
             else if (up || down) root.pitch = Math.max(4, Math.min(32, root.pitch + (up ? 1 : -1)));
             else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) root.apply();
@@ -228,7 +229,7 @@ magick "$1[0]" -resize "$3" -quality 90 "$2/.$b.jpg" 2>/dev/null && mv "$2/.$b.j
             y: 110
             spacing: 30
             Pick { visible: Quickshell.screens.length > 1; anchors.right: parent.right; label: "for"; opts: ["all", root.mon.toLowerCase()]; cur: root.own ? 1 : 0; onPicked: i => root.own = i === 1 }
-            Pick { label: "look"; opts: root.looks; cur: root.look; onPicked: i => root.look = i }
+            Pick { label: "look"; opts: root.looks; cur: root.order.indexOf(root.look); onPicked: i => root.look = root.order[i] }
             Row {
                 anchors.right: parent.right
                 spacing: 36

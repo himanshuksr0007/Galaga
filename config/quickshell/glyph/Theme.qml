@@ -196,7 +196,7 @@ Singleton {
             // wallpaper (picker wall/Walls, drawn by components/Wall): path to the image; empty -- grid and orb. The picker folder can be changed here
             property string wall: ""
             property string wallDir: ""    // empty -- ~/Pictures/Wallpapers
-            property int wallLook: 0       // 0 dots, 1 grey photo, 2 color
+            property int wallLook: 0       // 0 dots, 1 grey photo, 2 color, 3 vivid dots (the pixel's own colour)
             property int wallPitch: 10     // dot pitch, px
             property int wallBright: 85
             property string gif: ""       // the cat tile's gif (services/Gifs), a path; empty -- the first in the folder
