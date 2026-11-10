@@ -321,6 +321,21 @@ Singleton {
         }
     }
 
+    // is anything serving the profiles? PowerProfiles (Quickshell.Services.UPower) is only a proxy:
+    // with no daemon behind it the profile reads a stale default and setting it goes nowhere, silently.
+    // powerprofilesctl is the daemon's own tool and answers only when a daemon does (power-profiles-daemon
+    // itself, or tuned's ppd emulation) -- sh -c so a missing tool is a plain nonzero exit, not a spawn
+    // failure. Probed at startup and whenever prefs -> POWER opens (checkPower); prefs says when it's out
+    property bool powerOk: true
+    Process {
+        id: powerProbe
+        running: true
+        command: ["sh", "-c", "powerprofilesctl get 2>/dev/null"]
+        stdout: StdioCollector { onStreamFinished: if (/power-saver|balanced|performance/.test(text)) root.powerOk = true; }
+        onExited: code => { if (code !== 0) root.powerOk = false; }
+    }
+    function checkPower() { powerProbe.running = true; }
+
     // power modes, like caelestia: power-profiles-daemon profile. ultra on top -- 60 Hz, no animations, blur or shadows,
     // on top of your settings without touching them: exit -- they return. 0 ultra . 1 saver . 2 balanced . 3 performance.
     // Windows (blur, shadows) are applied by the caller: demonshot -- windows(), glyph -- Theme.apply() (windows() would remove its rounding)
