@@ -44,7 +44,11 @@ Singleton {
             id: adapter
             // Display
             property real monScale: 0      // 0 -- auto, hypr decides
-            property int refresh: 120
+            property int refresh: 0        // 0 -- the screen's highest rate, like mode = "highres" in hyprland.lua
+            property string main: ""       // whose monScale and refresh are (Rules.mon); empty -- the first monitor read decides
+            // the other screens, if prefs touched them, by Rules.key: { "TS2700-S6-1": { scale: 1, refresh: 144, pos: [-560, -1440] } };
+            // pos is relative to the main screen, which then sits at 0x0
+            property var outs: ({})
             property int brightness: 62
             property bool night: false
             property int warmth: 4300
@@ -90,40 +94,155 @@ Singleton {
 
     function hypr(lua) { Quickshell.execDetached(["hyprctl", "eval", lua]); }
 
-    // the monitor is not hardcoded, as in caelestia: from hyprctl monitors -- the built-in one (eDP), if none -- the first; native mode -- the
-    // largest of its modes, refresh rates -- those of the native one. ponytail: settings for one screen, the rest -- a line each in hyprland.lua
-    property var mon: ({ name: "", w: 0, h: 0, scale: 1, rates: [] })
+    // monitors from hyprctl monitors all -- enabled and not mirrors: w x h and rates are the current mode and its rates,
+    // x, y, lw x lh -- where it is and how many logical px it spans (rotated -- swapped)
+    property var mons: []
+    // the main one -- the one monScale and refresh apply to (demonshot reads them too): the built-in, even disabled
+    // (lid shut in a dock), else the first. Remembered in store.main by MODEL (no model -- by port): on a desktop the
+    // screen order changes as things plug in, and a cable moves to another port or a dock -- the scale must not land
+    // on another screen. An old store.main holding a port name is still found
+    property string first: ""
+    readonly property var mon: mons.find(m => m.name === (store.main || first)) ?? mons.find(m => m.model && m.model === (store.main || first))
+        ?? { name: "", w: 0, h: 0, x: 0, y: 0, lw: 0, lh: 0, transform: 0, scale: 1, hz: 0, rates: [] }
     property bool monWanted: false // monitor() was called before the hyprctl reply arrived
+    property bool driving: false   // this process drives the monitors (monitor() called by shell.qml); the lock only reads
     Process {
         id: monProc
         running: true
-        command: ["hyprctl", "monitors", "-j"]
+        command: ["hyprctl", "monitors", "all", "-j"]
         stdout: StdioCollector {
             onStreamFinished: {
-                const all = JSON.parse(text), m = all.find(x => x.name.startsWith("eDP")) ?? all[0];
-                if (!m) return;
-                const modes = m.availableModes.map(s => /(\d+)x(\d+)@([\d.]+)/.exec(s)).filter(Boolean).map(r => [+r[1], +r[2], Math.round(+r[3])]);
-                const [w, h] = modes.reduce((a, b) => b[0] * b[1] > a[0] * a[1] ? b : a, [m.width, m.height]);
-                const rates = [...new Set(modes.filter(r => r[0] === w && r[1] === h).map(r => r[2]))].sort((a, b) => a - b);
-                root.mon = { name: m.name, w, h, scale: m.scale, rates: rates.length ? rates : [Math.round(m.refreshRate)] };
+                const all = JSON.parse(text);
+                const f = all.find(m => /^(eDP|LVDS|DSI)/.test(m.name)) ?? all.find(m => !m.disabled);
+                root.first = f ? f.model.trim() || f.name : "";
+                root.mons = all.filter(m => !m.disabled && m.mirrorOf === "none").map(m => {
+                    const rates = [...new Set(m.availableModes.map(s => /(\d+)x(\d+)@([\d.]+)/.exec(s))
+                        .filter(r => r && +r[1] === m.width && +r[2] === m.height).map(r => Math.round(+r[3])))].sort((a, b) => a - b);
+                    const t = m.transform % 2, lw = Math.round(m.width / m.scale), lh = Math.round(m.height / m.scale);
+                    return { name: m.name, model: m.model.trim(), desc: m.description, w: m.width, h: m.height, x: m.x, y: m.y, lw: t ? lh : lw, lh: t ? lw : lh,
+                             transform: m.transform, scale: m.scale, hz: Math.round(m.refreshRate), rates: rates.length ? rates : [Math.round(m.refreshRate)] };
+                });
                 if (root.monWanted) root.monitor();
+                else root.settle();
             }
         }
     }
     // auto -- hypr chooses the scale; which one it got, we learn by re-reading the monitors
     Timer { id: monReread; interval: 500; onTriggered: monProc.running = true }
-    function monitor() {
-        if (!mon.name) { monWanted = true; return; }
+    // what a screen is recorded under in outs: its model -- it is the monitor, not the port (a projector in the same HDMI
+    // does not take the home monitor's place and rates; the home one through another port keeps its own); two identical
+    // monitors, or one without a model -- the port name. Like Theme.sid
+    function key(m) { return m.model && mons.filter(x => x.model === m.model).length === 1 ? m.model : m.name; }
+    // a screen's own entry; by name -- the entry of a twin currently alone (its key became the model)
+    function out(m) { return store.outs[key(m)] ?? store.outs[m.name]; }
+    // what is chosen for a screen: scale (0 -- auto) and refresh
+    function want(m) {
+        if (m.name === mon.name) return { scale: store.monScale, refresh: refreshHz };
+        const o = out(m);
+        return { scale: o?.scale ?? m.scale, refresh: o?.refresh ?? m.hz };
+    }
+    // the hypr rule for a screen. It replaces the config's rule entirely -- the mode (current resolution) and the
+    // rotation are carried as they are. Externals sit at pos relative to the main, the main then at 0x0: on auto hypr
+    // would put it right of the explicit ones. The output is key()'s: desc: of the monitor, not the port -- a shell
+    // rule lives in hypr until reload, and a projector in the same port would take this monitor's place and its mode
+    // ponytail: vrr, 10-bit and hdr from user.lua are dropped by a shell rule; if needed, carry them from hyprctl like transform
+    function rule(m) {
+        const own = m.name === mon.name, w = want(m), pos = out(m)?.pos;
+        const at = own ? (mons.some(x => x.name !== m.name && out(x)?.pos) ? "0x0" : "auto") : pos ? `${pos[0]}x${pos[1]}` : "auto";
+        const output = key(m) !== m.name && m.desc ? `desc:${m.desc}` : m.name;
+        return `hl.monitor({ output = ${JSON.stringify(output)}, mode = "${m.w}x${m.h}@${own ? hz : w.refresh}", position = "${at}", `
+             + `scale = ${w.scale || '"auto"'}, transform = ${m.transform} })`;
+    }
+    // the main and the externals from outs -- in one eval, the main first: the rest stand relative to it. fresh -- re-read
+    // first (a screen was plugged in): a burst of screensChanged collapses into one read 500 ms later, and the reply
+    // already has the new screen. Only shell.qml calls this
+    function monitor(fresh) {
+        driving = true;
+        if (fresh || !mons.length) {
+            monWanted = true;
+            if (fresh) monReread.restart();
+            return;
+        }
         monWanted = false;
-        hypr(`hl.monitor({ output = "${mon.name}", mode = "${mon.w}x${mon.h}@${hz}", position = "auto", scale = ${store.monScale || '"auto"'} })`);
+        if (!store.main && first) store.main = first;
+        const ms = mons.filter(m => m.name === mon.name || out(m)).sort((a, b) => (b.name === mon.name) - (a.name === mon.name));
+        if (ms.length) hypr(ms.map(rule).join("\n"));
         monReread.restart();
     }
+    // prefs -> display: scale (0 -- auto) or refresh of the screen name. The main -- monScale and refresh, an external --
+    // outs (place). A scale changes the size -- settle fixes the edge to the neighbour after the re-read
+    function set(name, k, v) {
+        const m = mons.find(x => x.name === name);
+        if (!m) return;
+        if (m.name !== mon.name) return place(name, m.x, m.y, { [k]: v });
+        store[k === "scale" ? "monScale" : "refresh"] = v;
+        monitor();
+    }
+    // screen name -- at x, y (hypr logical px), extra -- its fields in outs. Every external is pinned with an explicit pos
+    // relative to the main where it stands: a rule without a position would let hypr auto-place it and the neighbours shift
+    function place(name, x, y, extra) {
+        const b = name === mon.name ? { x, y } : mon, o = Object.assign({}, store.outs);
+        for (const m of mons) {
+            if (m.name === mon.name) continue;
+            const p = m.name === name ? { x, y } : m;
+            // an entry by port name is not deleted: if a twin returns, that screen is looked up by port again
+            o[key(m)] = Object.assign({}, out(m), m.name === name ? extra : null, { pos: [p.x - b.x, p.y - b.y] });
+        }
+        store.outs = o;
+        monitor();
+    }
+    // prefs -> display "reset": forget the externals' places, scales and rates -- back to the hypr config (user.lua). The
+    // shell's rules live in hypr until the config is re-read -- ask for that; the rest returns via configreloaded (shell.qml)
+    function forget() {
+        store.outs = {};
+        Quickshell.execDetached(["hyprctl", "reload"]);
+    }
+
+    function hits(a, b) { return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h; }
+    // where screen r ({ x, y, w, h }, hypr logical px) lands if dropped as-is: flush against a neighbour's side, no
+    // overlap, the shared edge at least a quarter of the shorter of the two; along the edge -- where it was dropped, but
+    // sticking to the neighbour's edges and centre within near. Of all such places -- the nearest; none -- null
+    function dock(r, others, near) {
+        const stick = (v, lo, hi, to) => {
+            v = Math.max(lo, Math.min(hi, v));
+            return to.find(t => Math.abs(t - v) < near) ?? v;
+        };
+        let best = null, bd = Infinity;
+        for (const o of others) {
+            const kx = Math.min(r.w, o.w) / 4, ky = Math.min(r.h, o.h) / 4;
+            const x = stick(r.x, o.x - r.w + kx, o.x + o.w - kx, [o.x, o.x + o.w - r.w, o.x + (o.w - r.w) / 2]);
+            const y = stick(r.y, o.y - r.h + ky, o.y + o.h - ky, [o.y, o.y + o.h - r.h, o.y + (o.h - r.h) / 2]);
+            for (const c of [{ x: o.x - r.w, y }, { x: o.x + o.w, y }, { x, y: o.y - r.h }, { x, y: o.y + o.h }]) {
+                const p = { x: Math.round(c.x), y: Math.round(c.y), w: r.w, h: r.h }, d = Math.hypot(p.x - r.x, p.y - r.y);
+                if (d < bd && !others.some(q => hits(p, q))) {
+                    best = p;
+                    bd = d;
+                }
+            }
+        }
+        return best;
+    }
+    // an external with an explicit pos overlapped a neighbour or floats in the air (scale changed, a screen returned, a
+    // neighbour was dragged) -- to the nearest free edge, one per read. If we already asked for exactly there and hypr
+    // did not put it -- do not insist, or it loops every half second. Tolerance 2 px -- logical-size rounding
+    function settle() {
+        if (!driving || mons.length < 2) return;
+        const box = m => ({ x: m.x, y: m.y, w: m.lw, h: m.lh }), near = (a, b) => Math.abs(a - b) <= 2;
+        const touch = (a, b) => (near(a.x + a.w, b.x) || near(b.x + b.w, a.x)) && a.y < b.y + b.h && b.y < a.y + a.h
+                             || (near(a.y + a.h, b.y) || near(b.y + b.h, a.y)) && a.x < b.x + b.w && b.x < a.x + a.w;
+        for (const m of mons) {
+            const pos = out(m)?.pos;
+            if (m.name === mon.name || !pos) continue;
+            const r = box(m), rest = mons.filter(x => x !== m).map(box);
+            if (!rest.some(o => hits({ x: r.x + 2, y: r.y + 2, w: r.w - 4, h: r.h - 4 }, o)) && rest.some(o => touch(r, o))) continue;
+            const d = dock(r, rest, 0);
+            if (d && (d.x - mon.x !== pos[0] || d.y - mon.y !== pos[1])) return place(m.name, d.x, d.y);
+        }
+    }
     readonly property var rates: mon.rates.length ? mon.rates : [60, 120]
-    readonly property int refreshHz: rates.reduce((a, b) => Math.abs(b - store.refresh) < Math.abs(a - store.refresh) ? b : a)
+    readonly property int refreshHz: store.refresh ? rates.reduce((a, b) => Math.abs(b - store.refresh) < Math.abs(a - store.refresh) ? b : a) : rates[rates.length - 1]
     readonly property real scale: store.monScale || mon.scale || 1 // what is actually set, including with auto
     readonly property var scales: ["auto", "1", "1.25", "1.5", "2"]
-    readonly property int scaleIdx: store.monScale ? scales.indexOf(String(store.monScale)) : 0
-    function setScale(i) { store.monScale = i ? +scales[i] : 0; monitor(); }
     function windows() {
         const s = store;
         hypr(`hl.config({ general = { gaps_in = ${s.gapsIn}, gaps_out = ${s.gapsOut}, border_size = ${s.border} }, `
@@ -206,8 +325,12 @@ Singleton {
         const hz0 = hz, moving0 = moving;
         store.ultra = i === 0;
         PowerProfiles.profile = i === 0 ? PowerProfile.PowerSaver : i - 1;
-        // monitor -- only if the refresh rate is really different: reconfiguring the output blinks the screen and resets hover (panels go dark)
-        if (hz !== hz0) monitor();
+        // monitor -- only the main one and only if the refresh rate is really different: reconfiguring the output
+        // blinks the screen and resets hover (panels go dark)
+        if (hz !== hz0 && mon.name) {
+            hypr(rule(mon));
+            monReread.restart();
+        }
         if (moving !== moving0) motion();
     }
     // what is actually set: ultra overrides the settings -- the lowest screen refresh rate, otherwise the closest to the selected
