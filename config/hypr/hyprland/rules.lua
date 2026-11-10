@@ -14,13 +14,26 @@ hl.window_rule({ match = { fullscreen = false }, opacity = vars.windowOpacity ..
 -- its own buttons", so the list is curated by hand: ONE CLASS PER LINE. Find an
 -- app's class with `hyprctl activewindow` (or `hyprctl clients`), add a line here,
 -- and both rules follow -- see README "Window buttons".
-local ownButtons =
-    "org\\.gnome\\..*|" .. -- GNOME apps: headerbars (Nautilus, Settings, Text Editor, Loupe, ...)
-    "gnome-control-center|" ..
-    "Code|VSCodium|codium|" .. -- VS Code: own titlebar, see README "Window buttons"
-    "steam|" .. -- own titlebar; the games themselves are fullscreen anyway
-    "discord|vesktop|equibop|" .. -- own titlebars
-    "org\\.quickshell" -- the shell's own windows (Rice switcher)
+local ownButtons = {
+    "org\\.gnome\\..*", -- GNOME apps: headerbars (Nautilus, Settings, Text Editor, Loupe, ...)
+    "gnome-control-center",
+    "Code", "VSCodium", "codium", -- VS Code: own titlebar, see README "Window buttons"
+    "steam", -- own titlebar; the games themselves are fullscreen anyway
+    "discord", "vesktop", "equibop", -- own titlebars
+    "org\\.quickshell", -- the shell's own windows (Rice switcher)
+}
+
+-- The two rules build their patterns from the list SEPARATELY, on purpose -- they
+-- must never share one pattern string. When they did (a single joined local feeding
+-- both), the no_bar rule silently stopped matching the listed classes: Calculator
+-- grew a hyprbar over its headerbar while the suppression exemption on the very
+-- same list kept working. The matched set is identical either way; only the shape
+-- differs. Suppression joins the list into one negative group:
+local ownButtonsJoined = table.concat(ownButtons, "|")
+-- ...and no_bar (bottom of this file) anchors every entry on its own:
+local ownButtonsEach = {}
+for i, class in ipairs(ownButtons) do ownButtonsEach[i] = "^(" .. class .. ")$" end
+local ownButtonsNoBar = table.concat(ownButtonsEach, "|")
 
 -- apps (kitty) request maximize on open -- ignore it, tiling decides by itself.
 -- The own-buttons apps above are exempt (negative: match): for them the same
@@ -28,7 +41,7 @@ local ownButtons =
 -- Suppression is a per-window set that matching rules only ever add to -- no
 -- later rule can take an event back out -- so the exception has to live in this
 -- rule's own match.
-hl.window_rule({ match = { class = "negative:^(" .. ownButtons .. ")$" }, suppress_event = "maximize" })
+hl.window_rule({ match = { class = "negative:^(" .. ownButtonsJoined .. ")$" }, suppress_event = "maximize" })
 
 hl.window_rule({ match = { float = true, xwayland = false }, center = true }) -- Center all floating windows (not xwayland cause popups)
 
@@ -163,7 +176,7 @@ hl.window_rule({ match = { title = "Picture(-| )in(-| )[Pp]icture" }, ["hyprbars
 hl.window_rule({ match = { class = ownButtonsNoBar }, tag = "+own_buttons" })
 hl.window_rule({ match = { tag = "own_buttons" }, ["hyprbars:no_bar"] = true })
 hl.window_rule({
-    match = { class = "^(" .. ownButtons .. ")$" },
+    match = { class = ownButtonsNoBar }, -- every entry anchored on its own -- see the note at the list
     ["hyprbars:no_bar"] = true,
 })
 
