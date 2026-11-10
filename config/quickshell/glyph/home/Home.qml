@@ -237,6 +237,7 @@ PanelWindow {
             id: budsW
             W {
                 round: true
+                Notch { onNotch: d => Sys.setVol(Sys.vol + d * 0.05) } // the wheel is volume -- with buds on, their charge is not what it turns
                 Ring { anchors { fill: parent; margins: 12 } f: root.buds ? root.buds.battery : Sys.muted ? 0 : Sys.vol }
                 Column {
                     anchors.centerIn: parent

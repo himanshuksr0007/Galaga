@@ -537,11 +537,31 @@ PanelWindow {
         MouseArea {
             id: area
             property real v
+            property real wacc: 0
             anchors.fill: parent
             preventStealing: true
             function set(x) { v = Math.max(0, Math.min(1, x / width)); sl.moved(v); }
-            onPressed: e => { root.pin(); set(e.x); }
+            // pin on release: pressed in a hover-opened panel, the pin hands it the
+            // keyboard (None -> Exclusive), and Hyprland lets go of every mouse
+            // button when a layer takes it -- the first drag after a peek died
+            // right at the jump point
+            onPressed: e => set(e.x)
             onPositionChanged: e => set(e.x)
+            onReleased: root.pin()
+            // wheel: a notch is 5%, a touchpad (it has a gesture phase, a wheel
+            // doesn't) four times slower, or a swipe is half the scale. Accumulate
+            // to 2%: the touchpad's small steps would be eaten by the highlight
+            // rounding, and each one would spawn brightnessctl. No pin: a scroll
+            // is not a click, an edge-opened panel closes itself. Direction is the
+            // fingers', like Qt's Slider: natural scroll (inverted) doesn't flip
+            // it, right and away mean more
+            onWheel: e => {
+                wacc += (e.inverted ? -1 : 1) * (e.angleDelta.y || -e.angleDelta.x) / 120 * 0.05 * (e.phase === Qt.NoScrollPhase ? 1 : 0.25);
+                if (Math.abs(wacc) < 0.02)
+                    return;
+                sl.moved(Math.max(0, Math.min(1, sl.shown + wacc)));
+                wacc = 0;
+            }
         }
     }
 }

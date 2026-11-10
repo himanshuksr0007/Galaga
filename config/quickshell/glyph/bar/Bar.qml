@@ -48,7 +48,7 @@ PanelWindow {
             color: Theme.s1
             border { width: 1; color: Theme.s2 }
 
-            WheelHandler { onWheel: e => root.go(e.angleDelta.y > 0 ? "-1" : "+1") }
+            Notch { onNotch: d => root.go(d > 0 ? "-1" : "+1") }
 
             // mark: ring of dots, center -- red while something is recording
             Item {
@@ -182,7 +182,7 @@ PanelWindow {
         id: soundC
         Icon {
             text: Sys.muted ? "\u{F075F}" : "\u{F057E}"
-            WheelHandler { onWheel: e => Sys.setVol(Sys.vol + (e.angleDelta.y > 0 ? 0.05 : -0.05)) }
+            Notch { onNotch: d => Sys.setVol(Sys.vol + d * 0.05) }
         }
     }
     Component {
