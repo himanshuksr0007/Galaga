@@ -30,6 +30,12 @@ Scope {
         function onVolumeChanged() { root.level("vol", Sys.muted ? 0 : Sys.vol); }
         function onMutedChanged() { root.level("vol", Sys.muted ? 0 : Sys.vol); }
     }
+    // mic mute gets the same flash: full strip and the mic glyph for live,
+    // empty strip and the mic-off glyph for muted (no number -- it is a state, not a level)
+    Connections {
+        target: Sys.mic?.audio ?? null
+        function onMutedChanged() { root.level("mic", Sys.micOn ? 1 : 0); }
+    }
     Connections {
         target: Sys
         function onBriChanged() { root.level("bri", Sys.bri); }
@@ -272,8 +278,8 @@ Scope {
         Tag {
             vertical: true // the capsule stands upright for a vertical strip too: icon above the number
             anchors { right: parent.right; rightMargin: 26; verticalCenter: parent.verticalCenter }
-            Icon { text: root.kind === "bri" ? "\u{F00E0}" : Sys.muted ? "\u{F075F}" : "\u{F057E}" }
-            Num { text: Math.round(root.value * 100); font.pixelSize: 30 }
+            Icon { text: root.kind === "bri" ? "\u{F00E0}" : root.kind === "mic" ? (Sys.micOn ? "\u{F036C}" : "\u{F036D}") : Sys.muted ? "\u{F075F}" : "\u{F057E}" }
+            Num { visible: root.kind !== "mic"; text: Math.round(root.value * 100); font.pixelSize: 30 }
         }
     }
 
