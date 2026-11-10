@@ -24,6 +24,7 @@ My fork of [**glyph-rice**](https://github.com/Nebelung-cloud/glyph-rice) by [**
 | **Launcher** | apps, commands, windows, calculator | `Super` |
 | **Quick** | quick settings, game mode, media, notifications; also opens from the right edge | `Super` `A` |
 | **Deck** | dashboard from the bottom edge | `Super` `Space` |
+| **Desktops** | overview of every desktop that has windows | `Super` `Tab` / swipe up |
 | **Prefs** | settings, bar and home layout | `Super` `I` |
 | **Shot** | screenshots, editor, recording | `Print` |
 | **Clip** | clipboard history | `Super` `V` |
@@ -209,6 +210,31 @@ Exceptions and notes:
   same window means the app is missing from the own-buttons list: find its class with
   `hyprctl activewindow` (or `hyprctl clients`) and add one line to `ownButtons` in
   `rules.lua` — the bar goes away and the app's own maximise starts working.
+
+<div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
+
+<h2 align="center">Gestures</h2>
+
+Windows-style trackpad gestures, on the compositor's own engine, so the left/right
+switch tracks your fingers 1:1:
+
+| Gesture | |
+|---|---|
+| **3 fingers left / right** | previous / next desktop, finger-following |
+| **3 fingers up** | the desktops overview: one card per desktop that has windows — its number, a map of its windows in their real layout, their titles; pick a card to go there. Also on `Super` `Tab`; `Escape` closes it, arrows + `Enter` pick |
+| **3 fingers down** | show desktop: every window on this desktop parks into `special:minimized` — they wait in the deck's minimised section and restore from there |
+| **4-finger tap** | quick settings |
+| **5 fingers down** | sleep |
+
+The tap is the odd one out: neither Hyprland's gesture engine nor libinput has a tap
+shape, so one small daemon (libinput-gestures, AUR) watches for it alone — a short
+stationary 4-finger touch reads as a hold there, and the hold runs on release.
+Movement cancels a hold inside libinput, so it cannot fire mid-swipe; the daemon only
+reads the pad (no grab), so the native swipes are untouched, and 4 fingers have no
+native binding to collide with. It needs the `input` group, which `install.sh`
+already adds for ydotool. To turn gestures off: comment the `hl.gesture` lines in
+`config/hypr/hyprland/gestures.lua`; for the tap, the one line in
+`config/libinput-gestures.conf` (or stop starting libinput-gestures in `execs.lua`).
 
 <div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
 
