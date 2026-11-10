@@ -19,10 +19,10 @@ PanelWindow {
 
     property int sel: 0
     signal wallRequested // wallpapers -- their own screen (wall/Walls), opened by shell.qml
-    readonly property var sections: ["HOME", "DECK", "BAR", "LOOK", "WINDOWS", "DISPLAY", "POWER", "INPUT", "IDLE", "SHELL", "FEATURES", "DESKTOPS"]
+    readonly property var sections: ["HOME", "DECK", "BAR", "LOOK", "WINDOWS", "DISPLAY", "AUDIO", "POWER", "INPUT", "IDLE", "SHELL", "FEATURES", "DESKTOPS"]
     readonly property string moves: "shift ←→ move · ↵ swap · del drop · drag"
     readonly property string rings: "drag round the rings · scroll"
-    readonly property var hints: [moves, moves, moves, "", rings, rings, "↵ or click a mode", rings, "drag the marks", "", "", ""]
+    readonly property var hints: [moves, moves, moves, "", rings, rings, "click or ←→ a device", "↵ or click a mode", rings, "drag the marks", "", "", ""]
     readonly property var r: Rules.store
 
     // glyphs for home views, deck sections and the bar tray
@@ -850,10 +850,18 @@ PanelWindow {
             }
         }
 
+        // ---- AUDIO: output and input -- volume, mute, level, the default device (prefs/Audio) ----
+        Page {
+            id: audioPage
+            k: 6
+            caption: aud.caption
+            Audio { id: aud; live: audioPage.visible && root.shown }
+        }
+
         // ---- POWER: power modes (Rules.modes) -- four circles, the ring glows with strength, the selected one white.
         // ultra -- power saver plus 60 Hz, no animations, blur or shadows on top of the settings ----
         Page {
-            k: 6
+            k: 7
             caption: `power · ${Rules.modes[Rules.mode].what} · ${Rules.hz} hz`
 
             Row {
@@ -896,7 +904,7 @@ PanelWindow {
         // ---- INPUT: hold a key -- first dot immediately, delay pause, then rate per second; on live rings ----
         Page {
             id: inp
-            k: 7
+            k: 8
             caption: "input · keyboard · touchpad"
             property int n: 0 // how many "typed"; 0 -- key released
             Timer {
@@ -955,7 +963,7 @@ PanelWindow {
         // ---- IDLE: minute scale without input. Dots dim on each event: awake -> locked -> screen off -> asleep.
         // Labels stretch along, past 60 -- never ----
         Page {
-            k: 8
+            k: 9
             caption: "idle · minutes without input · hypridle"
 
             Item {
@@ -1010,7 +1018,7 @@ PanelWindow {
 
         // ---- SHELL: the rice mark and the name of the live shell; the switcher -- the Rice app ----
         Page {
-            k: 9
+            k: 10
             caption: "shell · quickshell"
 
             Row {
@@ -1050,7 +1058,7 @@ PanelWindow {
         // the profile photo in LOOK. The essential app picker is below the switches, on this page ----
         Page {
             id: feats
-            k: 10
+            k: 11
             caption: "features · one switch each · off is fully off"
 
             // installed apps for the essential picker -- built once the entry list settles,
@@ -1164,7 +1172,7 @@ PanelWindow {
         // conversion the wallpaper picker runs, so the wave crossfade has pixels to work with ----
         Page {
             id: dpage
-            k: 11
+            k: 12
             caption: "name + wallpaper per desktop"
             property int dws: 1
             property var wallFiles: []

@@ -116,6 +116,7 @@ Singleton {
             property int recQuality: 2     // medium, high, very_high, ultra
             property bool recCursor: true
             property bool vpnPortal: false // tunnel taken down for a captive portal, restore it in the open (vpn/Vpn)
+            property bool audioMeter: false // AUDIO page level meter: PwNodePeakMonitor crashes quickshell 0.3.0, so it is opt-in for 0.3.1+
         }
     }
 
