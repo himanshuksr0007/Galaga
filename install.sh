@@ -11,8 +11,8 @@ BACKUP="$HOME/.dots-backup-$(date +%F_%H-%M-%S)"
 PACMAN=(
     # base (cmake/meson: hyprpm builds the plugins from source)
     base-devel git curl jq python cmake meson
-    # session
-    hyprland hypridle hyprsunset hyprpicker xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+    # session (hyprpm is its own package -- it no longer ships inside hyprland)
+    hyprland hyprpm hypridle hyprsunset hyprpicker xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
     sddm quickshell polkit-gnome gnome-keyring geoclue upower xdg-user-dirs
     # audio, network, bluetooth
     pipewire pipewire-pulse pipewire-alsa wireplumber networkmanager bluez bluez-utils power-profiles-daemon
@@ -106,11 +106,27 @@ packages() {
 
 plugins() { # hyprbars -- the window title bars (config/hypr/hyprland/titlebars.lua), built by hyprpm
     say "plugins (hyprpm)"
-    command -v hyprpm >/dev/null || { say "no hyprpm (it ships with hyprland) -- title bars skipped"; return 0; }
+    if ! command -v hyprpm >/dev/null; then
+        # hyprpm used to ship inside the hyprland package; it is a package of its own now,
+        # and a system installed before the split (or without it) has no hyprpm at all
+        say "hyprpm missing -- installing the hyprpm package"
+        sudo pacman -S --needed hyprpm || true
+    fi
+    if ! command -v hyprpm >/dev/null; then
+        # loud on purpose: without hyprpm there are no title bars, and a silent skip here
+        # is exactly how a first login ends up with "unknown config key plugin.hyprbars.*"
+        say "WARNING: hyprpm is still not available -- window title bars will NOT work"
+        say "fix: sudo pacman -S hyprpm, then hyprpm add https://github.com/hyprwm/hyprland-plugins && hyprpm enable hyprbars"
+        return 0
+    fi
     # add errors out when the repo is already there -- that is what a re-run looks like
     hyprpm add https://github.com/hyprwm/hyprland-plugins 2>/dev/null || true
     # no session is running during install: enable only records it, execs.lua loads it at login
-    hyprpm enable hyprbars || say "hyprpm: hyprbars could not be enabled -- no title bars"
+    if hyprpm enable hyprbars; then
+        say "hyprbars enabled -- window title bars are on from the next login"
+    else
+        say "hyprpm: hyprbars could not be enabled -- no title bars"
+    fi
     say "after every Hyprland upgrade the plugin goes stale: hyprpm update (then hyprpm reload or relog)"
 }
 
@@ -174,13 +190,34 @@ browser_prefs() { # firefox/zen: built-in window buttons off (config/browser/use
     done
 }
 
+flatpak_gtk() { # flatpak apps are sandboxed off from ~/.config/gtk-* -- grant the installed ones read access,
+    # or their headerbar buttons never see the gtk.css discs (GNOME Calculator is usually a flatpak).
+    # Read-only and per-app; the button-layout the apps already show comes from gsettings, which does reach them.
+    command -v flatpak >/dev/null || return 0
+    say "flatpak gtk access"
+    local apps=(org.gnome.Calculator org.gnome.Nautilus org.gnome.TextEditor org.gnome.Loupe org.gnome.Papers
+                org.gnome.Calendar org.gnome.Clocks org.gnome.Contacts org.gnome.Weather org.gnome.Characters)
+    local installed app
+    installed="$(flatpak list --app --columns=application 2>/dev/null || true)"
+    for app in "${apps[@]}"; do
+        grep -qx "$app" <<<"$installed" || continue # not installed as a flatpak -- nothing to grant
+        # already granted (by us or by hand): a re-run changes nothing
+        flatpak override --user --show "$app" 2>/dev/null | grep -q 'gtk-4.0' && continue
+        if flatpak override --user "$app" --filesystem=xdg-config/gtk-3.0:ro --filesystem=xdg-config/gtk-4.0:ro; then
+            echo "  $app"
+        else
+            say "flatpak: could not grant gtk config access to $app"
+        fi
+    done
+}
+
 [ "$EUID" -eq 0 ] && { echo "run as your user, sudo will ask by itself"; exit 1; }
 
 case "${1:-}" in
-    --links) links; browser_prefs ;; # on any distribution (NixOS, Fedora...): packages are up to you then, list in README
+    --links) links; browser_prefs; flatpak_gtk ;; # on any distribution (NixOS, Fedora...): packages are up to you then, list in README
     ""|--with) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
         [ "${1:-}" = --with ] && WITH="${*:2}" # both comma- and space-separated
-        extras; packages; plugins; services; links; browser_prefs
+        extras; packages; plugins; services; links; browser_prefs; flatpak_gtk
         # spicetify needs Spotify already downloaded and logged in, so there is nothing to apply before the first launch
         [[ " ${WITH//,/ } " == *" spotify "* ]] && say "spotify: launch it, log in, then spicetify config custom_apps marketplace && spicetify backup apply"
         say "done. reboot and pick Hyprland in sddm" ;;

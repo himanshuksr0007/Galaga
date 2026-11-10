@@ -12,6 +12,13 @@
 -- on their side first (config/browser/user.js for Firefox/Zen, a setting in
 -- Chromium) -- see README: "Window buttons".
 --
+-- The title is centred in Doto, the rice's dot-matrix font (config/fonts), bold --
+-- hyprbars centres the title texture between the buttons on both sides.
+-- The button glyphs appear only while the cursor hovers any of the buttons
+-- (icon_on_hover), like macOS; otherwise the three discs sit plain. The plugin passes
+-- no font weight to the icon rendering, so the glyphs themselves are the heaviest
+-- forms: ✖ ━ ▢.
+--
 -- Colours: bone bar and ash inactive discs from the scheme, the rice's one red and its
 -- white/black from Theme.qml (the same values as term/gtk.css). hyprbars draws each
 -- button as a plain disc -- there is no per-button border -- so the white disc gets its
@@ -24,51 +31,55 @@ hl.config({
             bar_height                 = 32,
             bar_color                  = "rgb(" .. scheme.bone .. ")",
             ["col.text"]               = "rgb(" .. scheme.crypt .. ")",
-            bar_text_font              = "Space Grotesk",
-            bar_text_size              = 11,
-            bar_text_align             = "left", -- the plugin starts the title right after the buttons
+            bar_text_font              = "Doto",
+            bar_text_size              = 13,
+            bar_text_weight            = "bold",
+            bar_text_align             = "center",
             bar_buttons_alignment      = "left",
             bar_padding                = 10,
             bar_button_padding         = 8,
             bar_part_of_window         = true,
             bar_precedence_over_border = true, -- the window border wraps the bar too: one frame
             bar_blur                   = false, -- the bar is opaque bone
+            icon_on_hover              = true, -- glyphs only while hovering a button, plain discs otherwise
             -- unfocused windows: all three discs go ash, like macOS greying its traffic lights
             inactive_button_color      = "rgb(" .. scheme.ash .. ")",
-            -- double-clicking the bar toggles fullscreen, like a titlebar double-click should
+            -- double-clicking the bar toggles true fullscreen, like a titlebar double-click should
             on_double_click            = [[hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" })']],
         },
     },
 })
 
--- Left to right: close, minimise, fullscreen. With bar_buttons_alignment = "left" the
+-- Left to right: close, minimise, maximise. With bar_buttons_alignment = "left" the
 -- plugin lays the buttons out in the order they are added here.
 -- A click focuses the window first and only then runs the action (hyprbars barDeco.cpp),
 -- so the actions use the plain active-window dispatchers, exactly like the keybinds --
--- and with them the existing animations: close rides windowsOut, fullscreen and the
+-- and with them the existing animations: close rides windowsOut, maximise and the
 -- minimise move ride windowsMove (animations.lua; the tree has no fullscreen leaf).
+-- The black button maximises (fullscreen mode "maximized": the window fills the
+-- workspace, bar and gaps stay) -- true fullscreen is the bar double-click above.
 -- Minimise does not exist in Hyprland: the window is parked on special:minimized with
 -- follow = false (we stay here). Restore: Super+Alt+Shift+M, see functions.lua.
 pcall(function()
     hl.plugin.hyprbars.add_button({
         bg_color = "rgb(D71921)", -- close: the one red
         fg_color = "rgb(000000)",
-        size     = 15,
-        icon     = "✕",
+        size     = 16,
+        icon     = "✖",
         action   = "hyprctl dispatch 'hl.dsp.window.close()'",
     })
     hl.plugin.hyprbars.add_button({
         bg_color = "rgb(F2F2F2)", -- minimise: white
         fg_color = "rgb(000000)",
-        size     = 15,
-        icon     = "−",
+        size     = 16,
+        icon     = "━",
         action   = [[hyprctl dispatch 'hl.dsp.window.move({ workspace = "special:minimized", follow = false })']],
     })
     hl.plugin.hyprbars.add_button({
-        bg_color = "rgb(000000)", -- fullscreen: black
+        bg_color = "rgb(000000)", -- maximise: black
         fg_color = "rgb(F2F2F2)",
-        size     = 15,
-        icon     = "⤢",
-        action   = [[hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" })']],
+        size     = 16,
+        icon     = "▢",
+        action   = [[hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })']],
     })
 end)

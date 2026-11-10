@@ -78,27 +78,55 @@ scrollbar slider:hover, scrollbar slider:active { background-color: #8C8C8C; }
 
 /* ---- window buttons: the same traffic lights as the hyprbars bars (hyprland/titlebars.lua).
    Apps with headerbars draw their own buttons; settings.ini next to this file puts them on the
-   left (close, minimize, maximize), here they become the same red / white / black discs.
-   The discs are pure CSS; the stock symbolic icons are hidden and the glyphs are our svgs
-   (term/window-buttons/, linked into gtk-3.0/ and gtk-4.0/ by install.sh) ---- */
-headerbar .titlebutton, windowcontrols button {
+   left (close, minimize, maximize), here they become the same red / white / black discs, with
+   bold glyphs (term/window-buttons/, linked into gtk-3.0/ and gtk-4.0/ by install.sh) that
+   appear only while the button group is hovered -- plain discs otherwise, like the bars.
+   The two toolkits need different rules, so this file carries both:
+   GTK3 paints the disc on the button itself; in GTK4 the button is transparent and the
+   visible disc is its image node (the default theme gives it a 30px round background),
+   so GTK4 colours and glyphs go on windowcontrols button > image -- painting the button
+   there colours nothing, the image disc covers it. ---- */
+
+/* GTK3 / adw-gtk3: disc on the button, stock symbolic icon hidden inside it */
+headerbar .titlebutton {
     min-width: 15px; min-height: 15px;
     padding: 0; margin: 0 4px;
     border: none; border-radius: 999px; box-shadow: none;
     background-repeat: no-repeat; background-position: center; background-size: 15px 15px;
 }
-headerbar .titlebutton image, windowcontrols button image { opacity: 0; }
-headerbar .titlebutton.close, windowcontrols button.close {
-    background-color: #D71921; background-image: url("window-buttons/close.svg");
-}
-headerbar .titlebutton.close:hover, windowcontrols button.close:hover { background-color: #AE131B; }
-headerbar .titlebutton.minimize, windowcontrols button.minimize {
-    background-color: #F2F2F2; background-image: url("window-buttons/minimize.svg");
-}
-headerbar .titlebutton.minimize:hover, windowcontrols button.minimize:hover { background-color: #FFFFFF; }
-headerbar .titlebutton.maximize, windowcontrols button.maximize {
-    background-color: #000000; background-image: url("window-buttons/maximize.svg");
-}
-headerbar .titlebutton.maximize:hover, windowcontrols button.maximize:hover { background-color: #2A2A2A; }
+headerbar .titlebutton image { opacity: 0; }
+headerbar .titlebutton.close { background-color: #D71921; }
+headerbar .titlebutton.minimize { background-color: #F2F2F2; }
+headerbar .titlebutton.maximize { background-color: #000000; }
+headerbar:hover .titlebutton.close { background-image: url("window-buttons/close.svg"); }
+headerbar:hover .titlebutton.minimize { background-image: url("window-buttons/minimize.svg"); }
+headerbar:hover .titlebutton.maximize { background-image: url("window-buttons/maximize.svg"); }
+headerbar .titlebutton.close:hover { background-color: #AE131B; }
+headerbar .titlebutton.minimize:hover { background-color: #FFFFFF; }
+headerbar .titlebutton.maximize:hover { background-color: #2A2A2A; }
 /* unfocused window: discs dim, like the bars' ash inactive buttons */
-headerbar:backdrop .titlebutton, windowcontrols:backdrop button { opacity: 0.55; }
+headerbar:backdrop .titlebutton { opacity: 0.55; }
+
+/* GTK4 / libadwaita: the image node is the disc. color: transparent hides the stock
+   symbolic glyph (symbolic icons are tinted by color); the disc itself is the painted
+   background, so opacity would hide it too -- it is only used for the backdrop dim. */
+windowcontrols button {
+    padding: 0; margin: 0 4px;
+    border: none; box-shadow: none; background: none;
+}
+windowcontrols button > image {
+    min-width: 24px; min-height: 24px;
+    border-radius: 9999px;
+    color: transparent;
+    background-repeat: no-repeat; background-position: center; background-size: 14px 14px;
+}
+windowcontrols button.close > image { background-color: #D71921; }
+windowcontrols button.minimize > image { background-color: #F2F2F2; }
+windowcontrols button.maximize > image { background-color: #000000; }
+windowcontrols:hover button.close > image { background-image: url("window-buttons/close.svg"); }
+windowcontrols:hover button.minimize > image { background-image: url("window-buttons/minimize.svg"); }
+windowcontrols:hover button.maximize > image { background-image: url("window-buttons/maximize.svg"); }
+windowcontrols button.close:hover > image { background-color: #AE131B; }
+windowcontrols button.minimize:hover > image { background-color: #FFFFFF; }
+windowcontrols button.maximize:hover > image { background-color: #2A2A2A; }
+windowcontrols:backdrop button > image { opacity: 0.55; }

@@ -92,20 +92,32 @@ hl.bind("SUPER + G", hl.dsp.global("shell:game"))  -- game mode has no key by de
 <h2 align="center">Window buttons</h2>
 
 Every window gets the same three buttons, top-left, in the same order: **close** (red),
-**minimise** (white), **fullscreen** (black) — one look, two layers:
+**minimise** (white), **maximise** (black) — one look, two layers:
 
 - **Server-side windows** (terminals, most apps) get a bar from **hyprbars**, the
   hyprland-plugins plugin — `install.sh` adds and enables it through hyprpm, the config is
-  `hypr/hyprland/titlebars.lua`. The buttons run the same dispatchers as the keybinds, so a
-  click animates exactly like the keyboard: close rides `windowsOut`, fullscreen and the
-  minimise move ride `windowsMove` (`hypr/hyprland/animations.lua` — the animation tree has
-  no fullscreen leaf, geometry changes are `windowsMove`). Double-clicking the bar toggles
-  fullscreen.
+  `hypr/hyprland/titlebars.lua`. The window's title sits centred in the bar in **Doto**,
+  the dot-matrix font from `config/fonts`, bold. The buttons run the same dispatchers as
+  the keybinds, so a click animates exactly like the keyboard: close rides `windowsOut`,
+  maximise and the minimise move ride `windowsMove` (`hypr/hyprland/animations.lua` — the
+  animation tree has no fullscreen leaf, geometry changes are `windowsMove`). The black
+  button **maximises** — the window fills the workspace and the bar and gaps stay;
+  double-clicking the bar toggles **true fullscreen**. The glyphs are mac-style: the discs
+  sit plain and all three glyphs appear only while the cursor hovers one of the buttons
+  (hyprbars' `icon_on_hover`; on the GTK side the same reveal is done in CSS).
 - **Apps that draw their own buttons** (GTK headerbar apps, Electron) are excluded
   from the bar in `hypr/hyprland/rules.lua` (`hyprbars:no_bar`) and themed instead:
   `quickshell/glyph/term/gtk-3.0` and `gtk-4.0` ship a `settings.ini` (buttons on the left,
   `close,minimize,maximize:appmenu`) and CSS that paints the native buttons as the same
-  red/white/black discs, with glyphs from `term/window-buttons/`.
+  red/white/black discs, with glyphs from `term/window-buttons/`. GTK4 needs its own
+  rules in that CSS: there the button itself is transparent and the visible disc is its
+  image node, so colours and glyphs are painted on `windowcontrols button > image` —
+  painting the button (the GTK3 way) leaves GTK4 buttons plain grey. **Flatpak** GTK apps
+  are sandboxed off from `~/.config/gtk-*` entirely, so `install.sh` also grants the
+  installed GNOME flatpaks (Calculator, Nautilus, Text Editor, …) read-only access to the
+  two gtk config dirs via `flatpak override --user`; by hand it is
+  `flatpak override --user org.gnome.Calculator --filesystem=xdg-config/gtk-3.0:ro --filesystem=xdg-config/gtk-4.0:ro`,
+  then restart the app.
 - **Browsers** get the bar too — but their built-in buttons had to be switched off first.
   Firefox, Zen, Chromium and friends draw small grey buttons inside their own UI, where
   `gtk.css` cannot reach them, and the requests behind those buttons go nowhere on
@@ -129,12 +141,21 @@ theming miss; `Super+Alt+M` works on every window, GTK apps included.
 Exceptions and notes:
 
 - Fullscreen windows, picture-in-picture and XWayland popups get no bar.
+- **Telegram** draws its own headerbar under the bar (its settings live in a binary
+  store — there is no config file to flip). Turn on **Use system window frame** once
+  (Settings → Advanced, under System integration on some versions) and restart it:
+  its own controls disappear and only the bar remains.
 - **VS Code** draws its own titlebar and ignores both layers. Its buttons stay its own —
   or set `"window.titleBarStyle": "native"` and remove `Code` from the `no_bar` list in
   `rules.lua`, then the bar above takes over.
 - **Qt apps** need nothing: qtengine/Darkly style widgets, not decorations (no Qt setting
   carries a button layout — nothing to fake), and their windows are server-side here, so
   hyprbars draws their buttons.
+- **hyprpm is its own package** now (it used to ship inside `hyprland`). `install.sh`
+  installs it when missing and prints a loud warning if it still cannot be found —
+  without it the plugin step is skipped and the bars never appear. Note `--links` does
+  not run the plugin step: after a fresh clone, run the full install once (or the hyprpm
+  commands by hand), not just `--links`.
 - **After a Hyprland upgrade** the plugin is built against the old version and quietly
   stops loading: `hyprpm update`, then `hyprpm reload` or relog.
 - No bar on a GTK app is normal — it has its own buttons. A bar *and* native buttons on the
