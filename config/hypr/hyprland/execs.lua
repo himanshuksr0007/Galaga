@@ -27,6 +27,10 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("wl-paste --type text --watch cliphist store")
     hl.exec_cmd("wl-paste --type image --watch cliphist store")
 
+    -- Drives mount by themselves (udiskie on udisks2). A shell restart can leave the last one
+    -- running -- kill our own first (AMM021's dedupe)
+    hl.exec_cmd([[sh -c 'command -v udiskie >/dev/null || exit 0; pkill -x -u "$(id -u)" udiskie; exec udiskie -a -n -T']])
+
     -- Auto delete trash 30 days old
     hl.exec_cmd("trash-empty 30")
 

@@ -20,6 +20,8 @@ PACMAN=(
     pipewire pipewire-pulse pipewire-alsa wireplumber networkmanager bluez bluez-utils power-profiles-daemon
     # utilities called by keybinds and the shell
     brightnessctl ddcutil playerctl wl-clipboard cliphist grim slurp swappy imagemagick libvips libqalculate
+    # drives: mounting (udisks2), the file manager's sidebar and phones (gvfs), mounting by itself (udiskie), common formats
+    udisks2 gvfs gvfs-mtp gvfs-gphoto2 udiskie ntfs-3g exfatprogs dosfstools
     tesseract tesseract-data-eng zbar # shot: grab text (OCR) + scan QR/barcode
     gpu-screen-recorder ydotool libnotify trash-cli
     # terminal and console
