@@ -205,7 +205,8 @@ PanelWindow {
                     Rec { width: parent.width; open: root.pick === "rec"; onTouched: root.pin(); onStart: { root.close(); Sys.toggleRec(); } }
 
                     Slider { icon: "\u{F00E0}"; visible: Sys.panelBriExternal ? Backlight.ddcOk : Sys.hasBri; value: Sys.panelBri; onMoved: v => Sys.setPanelBri(v) }
-                    Slider { icon: Sys.muted ? "\u{F075F}" : "\u{F057E}"; value: Sys.muted ? 0 : Sys.vol; onMoved: v => Sys.setVol(v) }
+                    Slider { icon: Sys.muted ? "\u{F075F}" : "\u{F057E}"; value: Sys.muted ? 0 : Sys.vol; onMoved: v => Sys.setVol(v); picked: root.pick === "out"; onMenu: root.pick = picked ? "" : "out" }
+                    Out { width: parent.width; visible: root.pick === "out"; onTouched: root.pin() } // right-click the volume slider: the outputs
 
                     // power mode, like caelestia: four cells, white fill slides to the selected one; ticks -- strength.
                     // ultra -- also 60 Hz and no animations, blur or shadows (Rules.modes)
@@ -506,6 +507,8 @@ PanelWindow {
         id: sl
         property real value
         property string icon
+        property bool picked // right-click -> a menu (volume: the outputs), open -- the number is white
+        signal menu
         signal moved(real v)
         readonly property real shown: area.pressed ? area.v : value
         width: col.width
@@ -539,8 +542,9 @@ PanelWindow {
             height: val.height + 8
             radius: Theme.corner(10)
             color: Theme.s2
-            Lb { id: val; anchors.centerIn: parent; text: Math.round(sl.shown * 100) }
+            Lb { id: val; anchors.centerIn: parent; text: Math.round(sl.shown * 100); color: sl.picked ? Theme.fg : Theme.grey }
         }
+        TapHandler { acceptedButtons: Qt.RightButton; onTapped: { root.pin(); sl.menu(); } }
         MouseArea {
             id: area
             property real v
