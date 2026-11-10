@@ -8,7 +8,7 @@ import qs.components
 
 // launcher: tap Super or Super+Space. Panel 860 centered, screen dims to 74%. Search pill with a red caret,
 // modes as chips (Tab): apps / run / windows / calc. No query -- "recent" and all apps in a grid of 6, alphabet on the right.
-// Appears like Charms and Clip: rises 24 and fades. Icons -- monochrome glyphs in circles, unknown ones -- the icon itself as dots; selected -- white circle
+// Appears like Charms and Clip: rises 24 and fades. Icons -- the theme's icons as dots in circles; selected -- white circle
 PanelWindow {
     id: root
 
@@ -18,16 +18,10 @@ PanelWindow {
     readonly property string query: input.text
     property var uses: ({}) // app id -> how many times opened
 
-    // glyphs for known apps; key -- a lowercase piece of id/name
-    readonly property var glyphs: [
-        ["zen", "\u{F0239}"], ["firefox", "\u{F0239}"], ["chrom", "\u{F059F}"], ["kitty", "\u{F018D}"], ["foot", "\u{F018D}"],
-        ["spotify", "\u{F04C7}"], ["telegram", "\u{F2C6}"], ["codium", "\u{F0A1E}"], ["code", "\u{F0A1E}"], ["steam", "\u{F04D3}"],
-        ["discord", "\u{F066F}"], ["vesktop", "\u{F066F}"], ["equibop", "\u{F066F}"], ["calculator", "\u{F00EC}"], ["calendar", "\u{F00ED}"],
-        ["camera", "\u{F0100}"], ["thunar", "\u{F024B}"], ["nautilus", "\u{F024B}"], ["files", "\u{F024B}"], ["gimp", "\u{F02E9}"],
-        ["mail", "\u{F01EE}"], ["btop", "\u{F035B}"], ["monitor", "\u{F035B}"], ["obsidian", "\u{F082E}"], ["settings", "\u{F0493}"],
-        ["pavucontrol", "\u{F057E}"], ["mpv", "\u{F040A}"], ["vlc", "\u{F040A}"], ["clash", "\u{F0483}"], ["torrent", "\u{F01DA}"]
-    ]
-    function glyph(key) { return glyphs.find(g => key.toLowerCase().includes(g[0]))?.[1] ?? ""; }
+    // the theme icon or the path from .desktop; none (or the file is gone) -- the
+    // generic app icon, not an empty circle. Synthetic entries (files, run) keep
+    // their own glyph instead -- they have no icon file at all
+    function icon(name) { return Quickshell.iconPath(name || "application-x-executable", "application-x-executable"); }
 
     // at startup DesktopEntries adds entries one by one (~160 valuesChanged): a binding would rebuild the grid for each --
     // seconds of freeze. We build once, when the list settles
@@ -37,7 +31,7 @@ PanelWindow {
         interval: 300
         running: true
         onTriggered: root.apps = DesktopEntries.applications.values.filter(e => !e.noDisplay).map(e => ({
-            id: e.id, name: e.name, src: e.icon ? Quickshell.iconPath(e.icon, true) : "", glyph: root.glyph(`${e.id} ${e.name}`),
+            id: e.id, name: e.name, src: root.icon(e.icon),
             extra: `${e.id} ${e.genericName} ${(e.keywords ?? []).join(" ")}`.toLowerCase(), run: () => e.execute()
         })).sort((a, b) => a.name.localeCompare(b.name))
     }
@@ -48,10 +42,19 @@ PanelWindow {
     // windows -- only while the windows mode is open: otherwise any title change would rebuild the list
     readonly property var wins: !visible || mode !== 2 ? [] : Hyprland.toplevels.values.map(t => {
         const cls = t.lastIpcObject?.class ?? "";
-        const icon = DesktopEntries.heuristicLookup(cls)?.icon;
-        return { name: t.title, src: icon ? Quickshell.iconPath(icon, true) : "", glyph: glyph(cls), extra: cls.toLowerCase(),
-                 run: () => Hyprland.dispatch(`hl.dsp.focus({ window = "address:${t.address}" })`) };
+        return { name: t.title, src: icon(DesktopEntries.heuristicLookup(cls)?.icon), extra: cls.toLowerCase(),
+                 run: () => { focusT.addr = t.address; focusT.restart(); } };
     })
+    // while the launcher holds the keyboard (Exclusive), Hyprland switches the
+    // workspace but won't give the window focus -- and once the keyboard is let
+    // go it refocuses the old window with its workspace. So focus once released
+    // (it goes with the next frame). 100 ms is a frame's worth of slack
+    Timer {
+        id: focusT
+        property string addr
+        interval: 100
+        onTriggered: Hyprland.dispatch(`hl.dsp.focus({ window = "address:0x${addr}" })`) // Quickshell gives the address without 0x
+    }
 
     // subsequence: word start and consecutive -- higher. hl -- indexes of matched letters
     function match(s, q) {
@@ -434,7 +437,7 @@ PanelWindow {
                                 rowSpacing: 22
                                 Repeater {
                                     model: block.modelData.items.length
-                                    Cell { items: block.modelData.items }
+                                    Cell { items: block.modelData.items; gy: block.y + grid.y }
                                 }
                             }
                         }
@@ -487,11 +490,19 @@ PanelWindow {
         property var items: []
         readonly property var modelData: items[index] ?? ({ name: "", hl: [] })
         readonly property bool on: root.sel === modelData.k
+        // Quickshell recreates the layer-shell window on every open, and an Image
+        // uploads its texture into the new context even hidden: ~160 icons were
+        // ~60 ms of the first frame. Outside the scroll (a row of slack) the cell
+        // is empty and iconless; the height is its own, so nothing jumps
+        property real gy // the grid's y in body
+        readonly property bool near: gy + y < flick.contentY + flick.height + 140 && gy + y + height > flick.contentY - 140
         width: body.width / 6
+        height: 88 + spacing + label.implicitHeight
         spacing: 10
         onOnChanged: if (on) flick.ensure(mapToItem(body, 0, 0).y, height)
 
         Rectangle {
+            visible: cell.near
             anchors.horizontalCenter: parent.horizontalCenter
             width: 88
             height: 88
@@ -509,17 +520,19 @@ PanelWindow {
                 visible: !cell.modelData.glyph && status === Image.Ready
                 width: 44
                 height: 44
-                source: cell.modelData.src ?? ""
+                source: cell.near ? cell.modelData.src ?? "" : ""
                 sourceSize: Qt.size(44, 44)
                 asynchronous: true
                 retainWhileLoading: true // the cell's app changed -- old icon while the new one loads
-                layer.enabled: true
+                layer.enabled: cell.near // a layer draws its own Image even hidden
                 layer.effect: Dm { step: 2.5 }
             }
             TapHandler { onTapped: { root.sel = cell.modelData.k; root.launch(); } }
             HoverHandler { cursorShape: Qt.PointingHandCursor }
         }
         Text {
+            id: label
+            visible: cell.near
             width: parent.width - 8
             anchors.horizontalCenter: parent.horizontalCenter
             horizontalAlignment: Text.AlignHCenter
