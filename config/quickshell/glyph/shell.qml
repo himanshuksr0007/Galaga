@@ -8,6 +8,7 @@ import "charms"
 import "clip"
 import "deck"
 import "desktops"
+import "genie"
 import "glyph"
 import "home"
 import "launcher"
@@ -36,6 +37,7 @@ ShellRoot {
     Charms { id: charms }
     Deck { id: deck }
     Desktops { id: desktops }
+    Genie {}
     Shot { id: shot }
     Vpn { id: vpn }
     Walls { id: walls }

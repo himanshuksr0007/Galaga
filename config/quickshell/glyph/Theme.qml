@@ -87,6 +87,7 @@ Singleton {
             property int briSteps: 20      // brightness from the keys: divisions per scale, 40/20/10 -- step 2.5/5/10 %
             property bool quickHover: true // quick settings on hover at the right edge
             property bool deckHover: true  // deck -- bottom-center panel, slides out on hovering the edge
+            property bool genie: true      // minimise warps the window into the deck's minimised section (genie/Genie.qml); off -- a plain park
             property var deck: ["clock", "weather", "perf", "net", "media", "min"] // its sections in order, see decks
             property var bar: ["layout", "wifi", "bluetooth", "sound", "notes", "battery", "mode", "power"] // bar tray from top to bottom, see bars
             property bool barTitle: true   // window title stacked in the bar

@@ -416,6 +416,7 @@ PanelWindow {
                     spacing: 14
                     Toggle { width: 200; text: "deck · hover"; on: Theme.state.deckHover; onFlip: Theme.state.deckHover = !Theme.state.deckHover }
                     Toggle { width: 200; text: "quick · hover"; on: Theme.state.quickHover; onFlip: Theme.state.quickHover = !Theme.state.quickHover }
+                    Toggle { width: 200; text: "genie · minimise"; on: Theme.state.genie; onFlip: Theme.state.genie = !Theme.state.genie }
                     Lb { topPadding: 6; text: "bottom edge · right edge"; px: 10 }
                 }
             }
