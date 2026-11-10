@@ -21,7 +21,7 @@ My fork of [**glyph-rice**](https://github.com/Nebelung-cloud/glyph-rice) by [**
 | **Bar** | launcher, workspaces, clock, tray | |
 | **Home** | clock, greeting, widgets (cava as a round Glyph Matrix), dot grid | |
 | **Glyph** | screen edges as OSD: volume, brightness, mic mute, notifications, progress | |
-| **Launcher** | apps, commands, windows, calculator | `Super` |
+| **Launcher** | apps, commands, windows, calculator, styles, tray apps | `Super` |
 | **Quick** | quick settings, game mode, media, notifications; also opens from the right edge | `Super` `A` |
 | **Deck** | dashboard from the bottom edge | `Super` `Space` |
 | **Desktops** | overview of every desktop that has windows | `Super` `Tab` / swipe up |
@@ -29,7 +29,7 @@ My fork of [**glyph-rice**](https://github.com/Nebelung-cloud/glyph-rice) by [**
 | **Shot** | screenshots, editor, recording | `Print` |
 | **Clip** | clipboard history | `Super` `V` |
 | **Charms** | emoji, kaomoji, symbols | `Super` `.` |
-| **Walls** | wallpapers as dots | `Super` `Shift` `W` |
+| **Walls** | wallpapers as dots — or vivid, in their own colours | `Super` `Shift` `W` |
 | **VPN** | Clash Verge panel | `Super` `P` |
 | **Cal** | calendar, focus timer | click the clock |
 | **Buds** | Nothing / CMF earbuds: battery, ANC | |
@@ -342,6 +342,81 @@ greeter tries first. No photo anywhere → the dots, as before.
 
 <div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
 
+<h2 align="center">Screens, colour and the small things</h2>
+
+**Per-screen shell** *(Prefs → DISPLAY, HOME)*. Every monitor carries its own bar
+on/off, home on/off, widget set and wallpaper, stored under the monitor's **model**,
+not its port — the same screen through a dock or another cable keeps its settings,
+and a projector in the same port doesn't inherit them. DISPLAY shows the screens as
+Hyprland placed them: drag one and it docks to a neighbour's edge or centre, and the
+drop is applied at once; under the map are that screen's brightness (built-in only),
+logical size, scale and refresh (highest by default), and the bar/home switches.
+HOME edits the widget set of the screen picked there. The wallpaper picker sets all
+screens or just one; the lock shows each screen its own wallpaper. Per-desktop
+names and wallpapers (Prefs → DESKTOPS) are a different axis — workspace, not
+monitor — and win on their own workspace.
+
+**Bar edge** *(Prefs → BAR → edge)*. The bar lives on the **left** edge or the
+**top**. On top it is a row: workspaces run sideways, the clock gains its colon, the
+battery lies down, popups drop below their parts and the calendar slides down under
+the clock; the glyph island and the notification flash make room under it. The deck
+stays at the bottom either way, so the genie minimise still lands in the deck's
+minimised section exactly as before. The tray pool gains a **RunCat**: it runs
+faster the busier the CPU is, and the CPU is only polled while the cat is in the
+tray. The tray's Wi-Fi is drawn as two arcs and a dot now, with a slash when off.
+
+**Style: where the colour comes from** *(Prefs → STYLE, or the launcher's style
+tab)*. Three sources. **Nothing**: black, white, red. **Wallpaper**: up to four of
+its tones, read by a colour quantiser, through a Material You variant — monochrome,
+neutral, tonal spot, rainbow, content, fidelity, fruit salad, expressive, vibrant.
+**Palette**: Catppuccin, Rosé Pine, Gruvbox, Nord, Dracula, Tokyo Night, Everforest,
+Kanagawa and more, each with its light/dark pair where the family has one. The shell,
+Hyprland's borders and kitty follow at once; GTK and Qt apps are recoloured as
+copies under `~/.local/state/rice/glyph` and pick it up at their next start (the
+window buttons' discs are carried into the copies, so they survive a palette).
+STYLE shows a live mock desktop in whatever your cursor is over — hover previews,
+Enter or click sets it. Light/dark is separate and keeps the palette: the **Auto
+schedule** (Prefs → LOOK) flips the pair, never the source, and a palette with no
+pair simply doesn't flip.
+
+**Corners** *(Prefs → WINDOWS → panels)*. A 0–100 % dial scales the corner radius
+of every panel, card, pill and toggle in the shell; 100 % is what it has always
+been, 0 is square. Round things stay round — discs, dots and rings are not panels.
+The lock screen follows it too.
+
+**Audio settings** *(Prefs → AUDIO)*. Output and input side by side: a volume ring,
+mute, and every device on the machine; click or ←→ makes one the default
+(wireplumber remembers it across reboots). A duplex node appears in both lists, and
+turning the mic's ring up doesn't unmute it. Lists longer than eight scroll. The
+live level row is **off by default**: its monitor crashes quickshell 0.3.0, so it
+only exists when you switch it on there — on quickshell 0.3.1+ it just works.
+
+**The cat tile takes your gifs**. Drop any `.gif` into `~/Pictures/Gifs` and the
+home cat tile plays it — click the tile or scroll over it to flip through them,
+or pick in Prefs → HOME while the cat is selected (a strip of dotted thumbnails).
+Non-square gifs fit whole; no gifs there, the cat as before. The wallpaper picker
+also gains a **vivid** look: the dot grid in the wallpaper's own colours, between
+dots and mono on Tab.
+
+**Wheels and other people's text**. A hi-res wheel (an MX Master sends 15 ticks a
+click) steps the workspace pill, the bar's volume and the quick sliders exactly once
+per notch — 5 % a notch, a touchpad a quarter of that on the sliders, and a touchpad
+never scrolls the pill at all. And a security note: strings that come from other
+people — Wi-Fi names, Bluetooth device names, notification titles, track names,
+window titles — are rendered as **plain text** everywhere. Qt would otherwise treat
+them as HTML, and a neighbour's network name containing an `<img>` tag could make
+your shell fetch a URL of their choosing. Nothing in the shell looks lyrics up
+online any more, either.
+
+**Captive portals** *(VPN panel)*. If the network turns out to be a captive portal,
+the tunnel and proxy Clash Verge raised behind it are taken down once and come back
+by themselves when the network lets you through; turn the tunnel on by hand behind
+a portal and it stays. Bluetooth does the mirror trick: devices connected when the
+adapter goes off come back when it comes on (BlueZ drops the connections a moment
+*before* it reports the adapter off, so the shell keeps the list as it goes).
+
+<div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
+
 <h2 align="center">Gestures</h2>
 
 Windows-style trackpad gestures, on the compositor's own engine, so the left/right
@@ -429,6 +504,11 @@ sudo systemctl disable greetd && sudo systemctl enable sddm   # or whichever DM 
 
 And if the greeter ever fails to appear: Hyprland keeps VT switching alive, so
 `Ctrl+Alt+F3` → log in on the text console → run the rollback → reboot.
+
+<div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
+
+Either way, when PAM itself has something to say — a faillock lockout, say — the greeter shows PAM's own words
+instead of a generic "denied".
 
 <div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
 
