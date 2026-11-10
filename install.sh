@@ -538,6 +538,50 @@ fix_plasma() { # coming from KDE Plasma (AMM021's --fix-plasma): things that wor
     say "done. Reboot to check."
 }
 
+uninstall() { # take the links away, put the old files and the old login screen back (AMM021's
+    # --uninstall, on this installer's backups). Packages stay installed; settings stay in place
+    say "uninstalling"
+    { : </dev/tty; } 2>/dev/null || { say "needs a terminal to ask -- run it there"; return 1; }
+    local a
+    printf '  remove the links and restore your old files and login screen? Packages stay. [y/N] '
+    read -r a </dev/tty || a=""
+    case "$a" in y | Y) ;; *) say "left as it is"; return 0 ;; esac
+    # the oldest backup holds the pre-rice originals
+    local first; first=$(find "$HOME" -maxdepth 1 -type d -name '.dots-backup-*' 2>/dev/null | sort | head -n1)
+    local state="${XDG_STATE_HOME:-$HOME/.local/state}/rice"
+    local l src dst
+    for l in "${LINKS[@]}"; do
+        read -r src dst <<<"$l"
+        src="$DOTS/$src" dst="$HOME/$dst"
+        # gtk and qt files may point at the shell's recoloured copies instead of the repo
+        case "$(readlink "$dst" 2>/dev/null)" in
+            "$src" | "$state"/glyph/*) rm "$dst" ;;
+            *) continue ;;
+        esac
+        if [ -n "$first" ] && { [ -e "$first/${dst#"$HOME"/}" ] || [ -L "$first/${dst#"$HOME"/}" ]; }; then
+            mv "$first/${dst#"$HOME"/}" "$dst"
+            echo "  restored $dst"
+        fi
+    done
+    # the login screen: the greeter steps recorded the previous DM in their run's backup
+    local old="" b
+    for b in $(find "$HOME" -maxdepth 1 -type d -name '.dots-backup-*' 2>/dev/null | sort -r); do
+        [ -r "$b/previous-display-manager.txt" ] && { old=$(cat "$b/previous-display-manager.txt"); break; }
+    done
+    local dm=""
+    if [ -L /etc/systemd/system/display-manager.service ]; then dm="$(basename "$(readlink -f /etc/systemd/system/display-manager.service)" .service)"; fi
+    if [ -n "$old" ] && [ "$old" != "$dm" ]; then
+        sudo_once
+        [ -z "$dm" ] || sudo systemctl disable "$dm"
+        sudo systemctl enable "$old"
+        say "login screen back to $old"
+    elif [ "$dm" = greetd ] || [ "$dm" = sddm ]; then
+        note "$dm stays enabled: no earlier login screen is on record"
+    fi
+    if [ -e /etc/pacman.d/hooks/glyph-rice.hook ]; then sudo_once; sudo rm /etc/pacman.d/hooks/glyph-rice.hook; fi
+    say "done. Packages, your settings in $state and the backups stay in place."
+}
+
 install_flow() { # the guided install: questions, one password, then straight through
     ask_setup
     extras
@@ -651,8 +695,9 @@ case "${1:-}" in
     --update) update ;;
     --update-rest) update_rest "${2:-}" ;;
     --fix-plasma) fix_plasma ;;
+    --uninstall) uninstall ;;
     ""|--with) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
         [ "${1:-}" = --with ] && WITH="${*:2}" # both comma- and space-separated
         install_flow ;;
-    *) echo "usage: $0 [--with telegram,spotify,clash,pywalfox | --links | --greeter | --dry-run | --update | --fix-plasma]"; exit 1 ;;
+    *) echo "usage: $0 [--with telegram,spotify,clash,pywalfox | --links | --greeter | --dry-run | --update | --fix-plasma | --uninstall]"; exit 1 ;;
 esac
