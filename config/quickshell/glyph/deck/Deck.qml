@@ -112,20 +112,13 @@ Scope {
                                 required property string modelData
                                 required property int index
                                 spacing: 16
-                                // between sections -- a column of dots; before "min" a thin line instead
-                                // (fg: white in the dark scheme, black in the light one)
+                                // between sections -- a column of dots, the minimised section included
                                 Image {
-                                    visible: cell.index > 0 && cell.modelData !== "min"
+                                    visible: cell.index > 0
                                     width: 4
                                     height: root.h
                                     fillMode: Image.TileVertically
                                     source: "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="4" height="10"><circle cx="2" cy="5" r="1.5" fill="#${Theme.hex(Theme.s3)}"/></svg>`)
-                                }
-                                Rectangle {
-                                    visible: cell.index > 0 && cell.modelData === "min"
-                                    width: 1
-                                    height: root.h
-                                    color: Theme.fg
                                 }
                                 Loader { sourceComponent: ({ clock: clockC, weather: weatherC, perf: perfC, net: netC, media: mediaC, min: minC })[cell.modelData] }
                             }
