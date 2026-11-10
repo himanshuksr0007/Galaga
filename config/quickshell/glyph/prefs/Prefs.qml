@@ -946,6 +946,27 @@ PanelWindow {
             k: 10
             caption: "features · one switch each · off is fully off"
 
+            // installed apps for the essential picker -- built once the entry list settles,
+            // like the launcher (DesktopEntries trickles in at startup)
+            property var apps: []
+            Timer {
+                id: fAppsT
+                interval: 300
+                running: true
+                onTriggered: feats.apps = DesktopEntries.applications.values.filter(e => !e.noDisplay)
+                    .map(e => ({ id: e.id, name: e.name, src: e.icon ? Quickshell.iconPath(e.icon, true) : "" }))
+                    .sort((a, b) => a.name.localeCompare(b.name))
+            }
+            Connections {
+                target: DesktopEntries.applications
+                function onValuesChanged() { fAppsT.restart(); }
+            }
+            function flipApp(id) {
+                const a = Theme.state.essentialApps.slice(), i = a.indexOf(id);
+                if (i >= 0) a.splice(i, 1); else a.push(id);
+                Theme.state.essentialApps = a;
+            }
+
             Grid {
                 columns: 2
                 spacing: 14
@@ -962,6 +983,72 @@ PanelWindow {
                 Toggle { width: 250; text: "essential only"; on: Theme.state.featEssential; onFlip: Theme.state.featEssential = !Theme.state.featEssential }
             }
             Lb { text: "theme times -- LOOK · desktops -- DESKTOPS · photo -- LOOK · essential apps -- below"; px: 10; color: Theme.mute }
+
+            // essential apps: only these light the edges while "essential only" is on; the rest
+            // still land in quick settings, muted. The list is kept even with the mode off.
+            Column {
+                spacing: 12
+                Row {
+                    spacing: 14
+                    Lb { text: `essential apps · ${Theme.state.essentialApps.length} picked` }
+                    Lb { visible: !Theme.state.featEssential; text: "mode off -- the list waits"; px: 10; color: Theme.mute }
+                }
+                Flickable {
+                    width: 514
+                    height: 296
+                    clip: true
+                    contentHeight: pickCol.height
+                    boundsBehavior: Flickable.StopAtBounds
+                    Column {
+                        id: pickCol
+                        width: parent.width
+                        spacing: 4
+                        Repeater {
+                            model: feats.apps
+                            Rectangle {
+                                id: prow
+                                required property var modelData
+                                readonly property bool on: Theme.state.essentialApps.includes(modelData.id)
+                                width: pickCol.width
+                                height: 48
+                                radius: 14
+                                color: on ? Theme.s2 : "transparent"
+                                border { width: 1; color: on ? Theme.s3 : "transparent" }
+                                Behavior on color { ColorAnimation { duration: Theme.t } }
+                                Image {
+                                    x: 12
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 24
+                                    height: 24
+                                    visible: status === Image.Ready
+                                    source: prow.modelData.src
+                                    sourceSize: Qt.size(24, 24)
+                                }
+                                Lb {
+                                    x: 48
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width - 110
+                                    elide: Text.ElideRight
+                                    text: prow.modelData.name
+                                    color: prow.on ? Theme.fg : Theme.grey
+                                }
+                                Rectangle {
+                                    anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter }
+                                    width: 24
+                                    height: 24
+                                    radius: 12
+                                    color: prow.on ? Theme.fg : "transparent"
+                                    border { width: 1.5; color: prow.on ? Theme.fg : Theme.mute }
+                                    Behavior on color { ColorAnimation { duration: Theme.t } }
+                                    Rectangle { visible: prow.on; anchors.centerIn: parent; width: 8; height: 8; radius: 4; color: Theme.red }
+                                }
+                                TapHandler { onTapped: feats.flipApp(prow.modelData.id) }
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

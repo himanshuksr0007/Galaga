@@ -316,11 +316,15 @@ PanelWindow {
                         delegate: Rectangle {
                             required property var modelData
                             readonly property var n: modelData
+                            // essential mode: the unpicked arrive muted -- grey card, and even a
+                            // critical one keeps no red here (the red is the picked apps' emphasis)
+                            readonly property bool muted: !Notes.essential(n)
                             width: notes.width
                             height: body.height + 32
                             radius: 26
                             color: Theme.s2
-                            border { width: n.urgency === NotificationUrgency.Critical ? 1 : 0; color: Theme.red }
+                            opacity: muted ? 0.45 : 1
+                            border { width: !muted && n.urgency === NotificationUrgency.Critical ? 1 : 0; color: Theme.red }
 
                             Rectangle {
                                 x: 18

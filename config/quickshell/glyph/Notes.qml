@@ -15,6 +15,20 @@ Singleton {
     // progress of long tasks -- hint value (notify-send -h int:value:64 ...): the bottom Glyph strip
     readonly property var task: list.slice().reverse().find(n => n.hints?.value !== undefined) ?? null
 
+    // essential mode (prefs FEATURES, off by default): only the picked apps arrive out loud --
+    // the island, the edge flash. Everything is still tracked below, so quick settings keeps
+    // the full history; the unpicked ones just arrive muted. Matching: the notification's
+    // desktop-entry hint against the picked ids; senders that omit it fall back to the
+    // entry whose name or icon the notification carries.
+    readonly property bool essMode: Theme.state.featEssential
+    function essential(n) {
+        if (!root.essMode) return true;
+        const ids = Theme.state.essentialApps;
+        if (!ids.length) return false;
+        if (n.desktopEntry && ids.includes(n.desktopEntry)) return true;
+        return DesktopEntries.applications.values.some(a => ids.includes(a.id) && (a.name === n.appName || (!!a.icon && a.icon === n.appIcon)));
+    }
+
     NotificationServer {
         id: server
         actionsSupported: true
@@ -23,7 +37,7 @@ Singleton {
         onNotification: n => {
             n.tracked = true;
             root.times = Object.assign({}, root.times, { [n.id]: Date.now() });
-            if (!Theme.state.dnd || n.urgency === NotificationUrgency.Critical) root.arrived(n);
+            if ((!Theme.state.dnd || n.urgency === NotificationUrgency.Critical) && root.essential(n)) root.arrived(n);
         }
     }
 
