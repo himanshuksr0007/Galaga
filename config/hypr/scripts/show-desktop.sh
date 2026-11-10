@@ -5,14 +5,20 @@
 # with the peek/restore binds (Super+Alt+Shift+M). No-op on an empty workspace,
 # and on a special workspace itself (parking the park would be nonsense).
 # Pinned windows stay: they are meant to be visible on every workspace.
-# The dispatch string is the same one the titlebar minimise button runs.
+# Each window goes through minimise.sh, the one minimise entry point, so a
+# bulk park gets the same genie warp into the deck as a single minimise (the
+# shell staggers the ghosts itself) -- and the same plain park when the shell
+# is not there to take it.
 
 ws=$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // empty')
 [ -n "$ws" ] && [ "$ws" -gt 0 ] 2>/dev/null || exit 0
+
+min="$(dirname "$0")/minimise.sh"
+[ -f "$min" ] || min="$HOME/.config/hypr/scripts/minimise.sh"
 
 hyprctl clients -j 2>/dev/null \
     | jq -r --argjson ws "$ws" '.[] | select(.workspace.id == $ws and (.pinned | not)) | .address' \
     | while IFS= read -r addr; do
         [ -n "$addr" ] || continue
-        hyprctl dispatch "hl.dsp.window.move({ window = \"address:$addr\", workspace = \"special:minimized\", follow = false })" >/dev/null 2>&1
+        bash "$min" "$addr"
     done
