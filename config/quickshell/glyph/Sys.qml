@@ -31,7 +31,15 @@ Singleton {
         if (!sink?.audio) return;
         sink.audio.muted = false;
         sink.audio.volume = Math.max(0, Math.min(1, v));
+        Sounds.play("tick"); // every caller is a hand: the quick slider, the bar/home wheel, the keys below
     }
+    // volume keys from the shell, like the brightness ones (services/Backlight): the shell sets
+    // the value itself, so the level, the Glyph strip and the tick always agree -- and a change
+    // nobody asked for (an app, wireplumber) stays silent, which a wpctl bind could never tell
+    // apart. Step and ceiling match hypr/variables.lua (volumeStep 5, volumeMax 100)
+    function stepVol(d) { setVol(vol + d * 0.05); }
+    GlobalShortcut { appid: "shell"; name: "volUp"; description: "volume +"; onPressed: root.stepVol(1) }
+    GlobalShortcut { appid: "shell"; name: "volDown"; description: "volume -"; onPressed: root.stepVol(-1) }
     // someone is listening to the microphone -- the center of the bar mark turns red
     PwNodeLinkTracker { id: micUse; node: root.mic }
     readonly property bool live: rec || micUse.linkGroups.length > 0

@@ -189,21 +189,11 @@ hl.bind("SUPER + SHIFT + U", hl.dsp.exec_cmd("hyprctl kill"))
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
 hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
 hl.bind("SUPER + SHIFT + M", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
-hl.bind(
-    "XF86AudioRaiseVolume",
-    hl.dsp.exec_cmd(
-        "wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l " ..
-        (vars.volumeMax / 100) .. " @DEFAULT_AUDIO_SINK@ " .. vars.volumeStep .. "%+"
-    ),
-    { locked = true, repeating = true }
-)
-hl.bind(
-    "XF86AudioLowerVolume",
-    hl.dsp.exec_cmd(
-        "wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume @DEFAULT_AUDIO_SINK@ " .. vars.volumeStep .. "%-"
-    ),
-    { locked = true, repeating = true }
-)
+-- Volume steps: handled by the shell (Sys.stepVol), like brightness -- it unmutes, steps
+-- vars.volumeStep up to vars.volumeMax, and ticks. The mute keys above stay wpctl: a toggle,
+-- not a level
+hl.bind("XF86AudioRaiseVolume", hl.dsp.global("shell:volUp"), { locked = true, repeating = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.global("shell:volDown"), { locked = true, repeating = true })
 
 -- Sleep
 hl.bind("SUPER + SHIFT + L", hl.dsp.exec_cmd(vars.sleepGestureCmd), { locked = true })
