@@ -399,6 +399,20 @@ turning the mic's ring up doesn't unmute it. Lists longer than eight scroll. The
 live level row is **off by default**: its monitor crashes quickshell 0.3.0, so it
 only exists when you switch it on there — on quickshell 0.3.1+ it just works.
 
+**Sounds** *(Prefs → FEATURES → sounds; volume and kinds in Prefs → AUDIO)*. The
+shell has a quiet voice of its own: seven short blips, synthesized by
+`tools/make_sounds.py` (no samples — sine and noise voices, lowpassed, gone in
+a blink), played through Qt's SoundEffect so there is no process spawn in the
+way. A pop when the launcher or quick settings open (not on the hover peek), a
+tick from the volume keys and sliders — the keys are the shell's own now, like
+the brightness keys, so a volume change nobody asked for stays silent — a soft
+chime when a notification actually arrives (do-not-disturb and essential mode
+have already decided), the shutter click on a screenshot that landed (failures
+stay silent), a two-note nod when the charger goes in or out, and a down/up
+pair for the lock engaging and the password being accepted. Three categories —
+interface, alerts, system — each with its own switch, one volume ring, and
+silence over a fullscreen game, the lock pair excepted.
+
 **The cat tile takes your gifs**. Drop any `.gif` into `~/Pictures/Gifs` and the
 home cat tile plays it — click the tile or scroll over it to flip through them,
 or pick in Prefs → HOME while the cat is selected (a strip of dotted thumbnails).
