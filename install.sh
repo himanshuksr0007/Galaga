@@ -175,25 +175,66 @@ links() {
 
 browser_prefs() { # firefox/zen: built-in window buttons off (config/browser/user.js) -- hyprbars draws them instead
     say "browser prefs (firefox/zen user.js)"
-    local src="$DOTS/config/browser/user.js" base profile target
-    for base in "$HOME/.mozilla/firefox" "$HOME/.zen"; do
-        [ -d "$base" ] || continue # browser never ran here -- nothing to do
-        for profile in "$base"/*.default*/; do
-            [ -d "$profile" ] || continue
-            target="${profile}user.js"
-            if [ -f "$target" ]; then
-                # the pref is already set (by us, or by hand): leave the file exactly as it is
-                grep -q 'browser\.tabs\.inTitlebar' "$target" && continue
-                # the user's own user.js stays in place; a copy goes to the backup before we append
-                mkdir -p "$BACKUP/$(dirname "${target#"$HOME"/}")"
-                cp "$target" "$BACKUP/${target#"$HOME"/}"
-                { echo; cat "$src"; } >>"$target"
-            else
-                cp "$src" "$target"
-            fi
-            echo "  $target"
+    local src="$DOTS/config/browser/user.js"
+    # everywhere firefox/zen keep profiles: the native homes, and the flatpak homes --
+    # a flatpak's profile store sits under ~/.var/app/<app id>/, invisible to a plain
+    # ~/.mozilla glob (a flatpak firefox is the common CachyOS install). Zen's flatpak
+    # id is app.zen_browser.zen (io.github.zen_browser.zen before 1.6); its tarball
+    # builds profile under ~/.config/zen instead of ~/.zen.
+    local bases=(
+        "$HOME/.mozilla/firefox"
+        "$HOME/.var/app/org.mozilla.firefox/.mozilla/firefox"
+        "$HOME/.zen"
+        "$HOME/.config/zen"
+        "$HOME/.var/app/app.zen_browser.zen/.zen"
+        "$HOME/.var/app/io.github.zen_browser.zen/.zen"
+    )
+    # collect the profile dirs: the usual *.default* names (zen spells it *.Default*),
+    # plus whatever profiles.ini registers -- a profile can live under any name there
+    local dirs=() base d p
+    for base in "${bases[@]}"; do
+        [ -d "$base" ] || continue # layout not present on this machine -- nothing to do
+        for d in "$base"/*.default*/ "$base"/*.Default*/; do
+            [ -d "$d" ] && dirs+=("${d%/}")
         done
+        if [ -f "$base/profiles.ini" ]; then
+            while IFS= read -r p; do
+                case "$p" in /*) d="$p" ;; *) d="$base/$p" ;; esac
+                [ -d "$d" ] && dirs+=("$d")
+            done < <(awk -F= '$1 == "Path" || $1 == "Default" { sub(/^[^=]*=/, ""); print }' "$base/profiles.ini" || true)
+        fi
     done
+    local uniq=() seen target patched=0 already=0
+    for d in "${dirs[@]}"; do
+        # the same dir can arrive via a glob and via profiles.ini -- patch it once
+        seen=0
+        for p in "${uniq[@]}"; do [ "$p" = "$d" ] && { seen=1; break; }; done
+        [ "$seen" -eq 0 ] && uniq+=("$d")
+    done
+    for d in "${uniq[@]}"; do
+        target="$d/user.js"
+        if [ -f "$target" ]; then
+            # the pref is already set (by us, or by hand): leave the file exactly as it is
+            if grep -q 'browser\.tabs\.inTitlebar' "$target"; then
+                already=$((already + 1))
+                continue
+            fi
+            # the user's own user.js stays in place; a copy goes to the backup before we append
+            mkdir -p "$BACKUP/$(dirname "${target#"$HOME"/}")"
+            cp "$target" "$BACKUP/${target#"$HOME"/}"
+            { echo; cat "$src"; } >>"$target"
+        else
+            cp "$src" "$target"
+        fi
+        patched=$((patched + 1))
+        echo "  $target"
+    done
+    if [ $((patched + already)) -eq 0 ]; then
+        say "browser prefs: NO firefox/zen profiles found -- if the browser still draws its"
+        say "own buttons, set browser.tabs.inTitlebar to 0 in about:config by hand"
+    else
+        say "browser prefs: $patched profile(s) patched, $already already ok -- restart the browser"
+    fi
 }
 
 flatpak_gtk() { # flatpak apps are sandboxed off from ~/.config/gtk-* -- grant the installed ones read access,

@@ -128,7 +128,15 @@ Every window gets the same three buttons, top-left, in the same order: **close**
   every existing profile: `browser.tabs.inTitlebar = 0` — the "Title Bar" switch — so the
   browser draws no buttons of its own and the bar above takes over (restart the browser
   once after installing; by hand it is the same pref in `about:config`, or tick
-  *Title Bar* under Customize Toolbar). For **Chromium, Chrome and Brave** there is no
+  *Title Bar* under Customize Toolbar). The deploy covers every place profiles live:
+  native (`~/.mozilla/firefox`, `~/.zen`, `~/.config/zen`) **and the flatpak homes**
+  (`~/.var/app/org.mozilla.firefox/.mozilla/firefox`,
+  `~/.var/app/app.zen_browser.zen/.zen`) — a Flatpak Firefox never sees
+  `~/.mozilla`, which is the usual reason the buttons survive an install. The
+  installer prints how many profiles it patched; to verify, open `about:config`,
+  search `browser.tabs.inTitlebar` and check it reads **0** — if it is missing
+  entirely, that profile was not found and the manual route above is the fix.
+  For **Chromium, Chrome and Brave** there is no
   file to deploy — turn on **Use system title bar and borders** once (Settings →
   Appearance) and the bar takes over there too.
 
