@@ -19,10 +19,10 @@ PanelWindow {
 
     property int sel: 0
     signal wallRequested // wallpapers -- their own screen (wall/Walls), opened by shell.qml
-    readonly property var sections: ["HOME", "DECK", "BAR", "LOOK", "WINDOWS", "DISPLAY", "POWER", "INPUT", "IDLE", "SHELL", "FEATURES"]
+    readonly property var sections: ["HOME", "DECK", "BAR", "LOOK", "WINDOWS", "DISPLAY", "POWER", "INPUT", "IDLE", "SHELL", "FEATURES", "DESKTOPS"]
     readonly property string moves: "shift ←→ move · ↵ swap · del drop · drag"
     readonly property string rings: "drag round the rings · scroll"
-    readonly property var hints: [moves, moves, moves, "", rings, rings, "↵ or click a mode", rings, "drag the marks", "", ""]
+    readonly property var hints: [moves, moves, moves, "", rings, rings, "↵ or click a mode", rings, "drag the marks", "", "", ""]
     readonly property var r: Rules.store
 
     // glyphs for home views, deck sections and the bar tray
@@ -1156,6 +1156,91 @@ PanelWindow {
                     }
                 }
             }
+        }
+
+        // ---- DESKTOPS: a name and a wallpaper per workspace (prefs FEATURES -> named desktops).
+        // Unset -- the shell defaults: the number, the global wallpaper. The wallpaper is one of
+        // the wall folder's files; picking one makes its screen copy in the wall cache, the same
+        // conversion the wallpaper picker runs, so the wave crossfade has pixels to work with ----
+        Page {
+            id: dpage
+            k: 11
+            caption: "name + wallpaper per desktop"
+            property int dws: 1
+            property var wallFiles: []
+            readonly property string wres: {
+                const s = Quickshell.screens[0];
+                return s ? `${Math.round(s.width * s.devicePixelRatio)}x${Math.round(s.height * s.devicePixelRatio)}^` : "2880x1800^";
+            }
+            onVisibleChanged: if (visible) { wscan.running = true; nameIn.text = Theme.state.wsNames[String(dws)] ?? ""; }
+            onDwsChanged: nameIn.text = Theme.state.wsNames[String(dws)] ?? ""
+            function setName(v) {
+                const n = Object.assign({}, Theme.state.wsNames);
+                if (v) n[String(dws)] = v; else delete n[String(dws)];
+                Theme.state.wsNames = n;
+            }
+            function setWall(p) {
+                const w = Object.assign({}, Theme.state.wsWalls);
+                if (p) w[String(dws)] = p; else delete w[String(dws)];
+                Theme.state.wsWalls = w;
+                if (p) wcopy.exec(["bash", "-c", "b=$(basename \"$1\"); [ \"$2/$b.jpg\" -nt \"$1\" ] || { magick \"$1[0]\" -resize \"$3\" -quality 90 \"$2/.$b.jpg\" 2>/dev/null && mv \"$2/.$b.jpg\" \"$2/$b.jpg\"; }", "bash", p, Theme.wallCache, wres]);
+            }
+            Process {
+                id: wscan
+                command: ["bash", "-c", "shopt -s nullglob nocaseglob; for f in \"$1\"/*.{jpg,jpeg,png,webp}; do printf '%s\n' \"$f\"; done", "bash", Theme.state.wallDir || Quickshell.env("HOME") + "/Pictures/Wallpapers"]
+                stdout: StdioCollector { onStreamFinished: dpage.wallFiles = text.split("\n").filter(Boolean).sort() }
+            }
+            Process { id: wcopy }
+
+            Lb { visible: !Theme.state.featDesktops; text: "off -- turn on FEATURES → named desktops; what you set here waits"; px: 11; color: Theme.red }
+            Row {
+                spacing: 10
+                Repeater {
+                    model: 10
+                    Rectangle {
+                        id: dchip
+                        required property int index
+                        width: 40
+                        height: 40
+                        radius: 20
+                        color: dpage.dws === index + 1 ? Theme.fg : Theme.s2
+                        Behavior on color { ColorAnimation { duration: Theme.t } }
+                        Num { anchors.centerIn: parent; text: dchip.index + 1; font.pixelSize: 15; color: dpage.dws === dchip.index + 1 ? Theme.ink : Theme.fg }
+                        TapHandler { onTapped: dpage.dws = dchip.index + 1 }
+                    }
+                }
+            }
+            Row {
+                spacing: 12
+                Rectangle {
+                    width: 300
+                    height: 44
+                    radius: 22
+                    color: Theme.s2
+                    TextInput {
+                        id: nameIn
+                        anchors { fill: parent; leftMargin: 16; rightMargin: 16 }
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: Theme.fg
+                        selectionColor: Theme.s3
+                        selectedTextColor: Theme.fg
+                        font { family: Theme.ui; pixelSize: 14 }
+                        clip: true
+                        onAccepted: dpage.setName(text.trim())
+                    }
+                    Lb { visible: !nameIn.text && !nameIn.activeFocus; x: 16; anchors.verticalCenter: parent.verticalCenter; text: "name -- empty is the number"; px: 11 }
+                }
+                Act { text: "set name"; onHit: dpage.setName(nameIn.text.trim()) }
+                Act { text: "clear"; onHit: { dpage.setName(""); nameIn.text = ""; } }
+            }
+            Pick {
+                label: "wallpaper"
+                width: 514
+                opts: ["default"].concat(dpage.wallFiles.map(p => p.slice(p.lastIndexOf("/") + 1).replace(/\.[^.]+$/, "")))
+                cur: Math.max(0, dpage.wallFiles.indexOf(Theme.state.wsWalls[String(dpage.dws)] ?? "") + 1)
+                onPicked: i => dpage.setWall(i === 0 ? "" : dpage.wallFiles[i - 1])
+            }
+            Lb { text: "the name shows on the desktops overview; the wallpaper crossfades in on switch"; px: 10; color: Theme.mute }
         }
     }
 

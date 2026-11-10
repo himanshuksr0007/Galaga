@@ -185,7 +185,7 @@ PanelWindow {
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 2
-                            Lb { text: card.current ? "current desktop" : "desktop"; px: 10 }
+                            Lb { text: (Theme.state.featDesktops && Theme.state.wsNames[String(card.modelData.id)]) || (card.current ? "current desktop" : "desktop"); px: 10 }
                             Lb { text: card.modelData.wins.length + (card.modelData.wins.length === 1 ? " window" : " windows"); px: 10; color: Theme.mute }
                         }
                     }
