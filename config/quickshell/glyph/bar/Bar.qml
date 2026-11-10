@@ -150,10 +150,10 @@ PanelWindow {
                     Loader {
                         id: part
                         required property string modelData
-                        readonly property bool quick: modelData !== "mode" && modelData !== "power"
+                        readonly property bool quick: modelData !== "mode" && modelData !== "power" && modelData !== "focus"
                         anchors.horizontalCenter: parent.horizontalCenter
                         sourceComponent: root.parts[modelData] ?? null
-                        visible: !!sourceComponent && (modelData !== "battery" || root.bat.isLaptopBattery)
+                        visible: !!sourceComponent && (modelData !== "battery" || root.bat.isLaptopBattery) && (modelData !== "focus" || Theme.state.featFocus)
                         TapHandler { enabled: part.quick; onTapped: root.trayClicked() }
                         HoverHandler { enabled: part.quick; cursorShape: Qt.PointingHandCursor }
                     }
@@ -162,7 +162,7 @@ PanelWindow {
         }
     }
 
-    readonly property var parts: ({ layout: layoutC, wifi: wifiC, bluetooth: btC, sound: soundC, notes: notesC, battery: batC, mode: modeC, power: powerC })
+    readonly property var parts: ({ layout: layoutC, wifi: wifiC, bluetooth: btC, sound: soundC, notes: notesC, focus: focusC, battery: batC, mode: modeC, power: powerC })
     Component { id: layoutC; Lb { text: Sys.layout; px: 10 } }
     Component {
         id: wifiC
@@ -263,6 +263,32 @@ PanelWindow {
             TapHandler { onTapped: root.powerClicked() }
         }
     }
+    // focus: a ring that drains as the timer runs, the remaining time under it in Doto;
+    // hover or tap -- the timer card below. The timer itself is the Focus singleton
+    // (session-scoped: a shell restart resets it -- Focus.qml says so too)
+    Component {
+        id: focusC
+        Column {
+            id: focc
+            spacing: 4
+            HoverHandler { onHoveredChanged: { root.focHot = hovered; root.peekF(focc); } Component.onDestruction: root.focHot = false }
+            Item {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: 24
+                height: 24
+                Ring { anchors.fill: parent; n: 16; dot: 3; f: Focus.f; on: Focus.running ? Theme.fg : Theme.grey }
+                Icon { anchors.centerIn: parent; text: "\u{F13AB}"; font.pixelSize: 10; color: Theme.grey }
+            }
+            Num {
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: Focus.running || Focus.paused
+                text: Focus.mmss(Focus.left)
+                font.pixelSize: 10
+                color: Theme.fg
+            }
+            TapHandler { onTapped: root.focOpen = !root.focOpen }
+        }
+    }
 
     // ---- battery and power mode: hover the battery or the ticks -- a card to the right of the bar, like caelestia's popover.
     // Doto charge, status, scale; below, modes as circles with ticks -- a click selects, under the cursor -- what it does.
@@ -279,6 +305,16 @@ PanelWindow {
     onPowHotChanged: powHot ? powOpenT.restart() : powCloseT.restart()
     Timer { id: powOpenT; interval: 180; onTriggered: if (root.powHot) root.powOpen = true }
     Timer { id: powCloseT; interval: 300; onTriggered: if (!root.powHot) root.powOpen = false }
+
+    // ---- the focus card: the battery card's sibling, same anchoring and manners ----
+    property bool focHot: false
+    property real focY: 0
+    property bool focOpen: false
+    readonly property bool focAny: focHot || fpopHov.hovered
+    function peekF(it) { if (!fpop.visible) focY = it.mapToItem(pill, 0, it.height).y; }
+    onFocAnyChanged: focAny ? focOpenT.restart() : focCloseT.restart()
+    Timer { id: focOpenT; interval: 180; onTriggered: if (root.focAny) root.focOpen = true }
+    Timer { id: focCloseT; interval: 300; onTriggered: if (!root.focAny) root.focOpen = false }
     function hm(sec) { const m = Math.round(sec / 60); return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} m` : `${m} m`; }
     readonly property string batState: root.bat.state === UPowerDeviceState.Charging
         ? "charging" + (root.bat.timeToFull ? ` · full in ${hm(root.bat.timeToFull)}` : "")
@@ -378,6 +414,105 @@ PanelWindow {
                         width: parent.width
                         elide: Text.ElideRight
                         text: `${Rules.modes[i].what} · ${i === 0 ? Rules.rates[0] : Rules.refreshHz} hz`
+                    }
+                }
+            }
+        }
+    }
+
+    PopupWindow {
+        id: fpop
+        property real t: root.focOpen ? 1 : 0
+        Behavior on t { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+        visible: t > 0
+        anchor.item: pill
+        anchor.rect: Qt.rect(pill.width + 14, root.focY, 1, 1)
+        anchor.edges: Edges.Top | Edges.Left
+        anchor.gravity: Edges.Top | Edges.Right
+        implicitWidth: Math.ceil(360 * Theme.s)
+        implicitHeight: Math.ceil(fcard.height * Theme.s)
+        color: "transparent"
+
+        Stage {
+            Rectangle {
+                id: fcard
+                width: 360
+                height: fbody.height + 52
+                radius: 36
+                color: Theme.s1
+                border { width: 1; color: Theme.s2 }
+                opacity: fpop.t
+                transform: Translate { x: -16 * (1 - fpop.t) }
+                HoverHandler { id: fpopHov }
+
+                Column {
+                    id: fbody
+                    x: 26
+                    y: 26
+                    width: parent.width - 52
+                    spacing: 16
+
+                    Row {
+                        spacing: 14
+                        Num { text: Focus.mmss(Focus.left); font.pixelSize: 44 }
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 4
+                            Lb { text: "focus"; color: Theme.fg }
+                            Lb { text: Focus.running ? "running" : Focus.paused ? "paused" : "ready" }
+                        }
+                    }
+                    Row {
+                        spacing: 10
+                        Repeater {
+                            model: [15, 25, 45, 60]
+                            Rectangle {
+                                id: fp
+                                required property int modelData
+                                width: 56
+                                height: 40
+                                radius: 20
+                                color: Focus.minutes === modelData ? Theme.fg : Theme.s2
+                                Behavior on color { ColorAnimation { duration: Theme.t } }
+                                Lb { anchors.centerIn: parent; text: fp.modelData + "m"; color: Focus.minutes === fp.modelData ? Theme.ink : Theme.fg }
+                                TapHandler { onTapped: Focus.set(fp.modelData) }
+                            }
+                        }
+                        Rectangle {
+                            width: 40
+                            height: 40
+                            radius: 20
+                            color: Theme.s2
+                            Lb { anchors.centerIn: parent; text: "−5"; color: Theme.fg }
+                            TapHandler { onTapped: Focus.set(Math.max(1, Focus.minutes - 5)) }
+                        }
+                        Rectangle {
+                            width: 40
+                            height: 40
+                            radius: 20
+                            color: Theme.s2
+                            Lb { anchors.centerIn: parent; text: "+5"; color: Theme.fg }
+                            TapHandler { onTapped: Focus.set(Math.min(240, Focus.minutes + 5)) }
+                        }
+                    }
+                    Row {
+                        spacing: 10
+                        Rectangle {
+                            width: 150
+                            height: 46
+                            radius: 23
+                            color: Theme.fg
+                            Lb { anchors.centerIn: parent; text: Focus.running ? "pause" : Focus.paused ? "resume" : "start"; color: Theme.ink }
+                            TapHandler { onTapped: Focus.toggle() }
+                        }
+                        Rectangle {
+                            width: 110
+                            height: 46
+                            radius: 23
+                            color: Theme.s2
+                            Lb { anchors.centerIn: parent; text: "reset"; color: Theme.fg }
+                            TapHandler { onTapped: Focus.reset() }
+                        }
                     }
                 }
             }

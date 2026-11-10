@@ -107,7 +107,7 @@ Singleton {
             property bool featShot: true       // shot: grab text (OCR) and scan QR modes (shot/Shot.qml)
             property string avatar: ""         // profile photo: the copy in the state dir; "" -- the dotted face (lock/LockFace.qml)
             property var deck: ["clock", "weather", "perf", "net", "media", "min"] // its sections in order, see decks
-            property var bar: ["layout", "wifi", "bluetooth", "sound", "notes", "battery", "mode", "power"] // bar tray from top to bottom, see bars
+            property var bar: ["layout", "wifi", "bluetooth", "sound", "notes", "focus", "battery", "mode", "power"] // bar tray from top to bottom, see bars
             property bool barTitle: true   // window title stacked in the bar
             // recording (quick/Rec, Sys.recArgs)
             property int recArea: 0        // 0 whole monitor, 1 region (slurp)
@@ -123,7 +123,7 @@ Singleton {
     // deck sections
     readonly property var decks: ["clock", "weather", "perf", "net", "media", "min"]
     // bar tray
-    readonly property var bars: ["layout", "wifi", "bluetooth", "sound", "notes", "battery", "mode", "power"]
+    readonly property var bars: ["layout", "wifi", "bluetooth", "sound", "notes", "focus", "battery", "mode", "power"]
 
     // ---- the look of everything outside the shell. Called only by shell.qml: at startup and on theme change ----
     // hypr inherits from demonshot: monitor, input, idle, night light and motion are set by its Rules (shell.qml), animations -- from the
