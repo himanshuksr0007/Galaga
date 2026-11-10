@@ -41,6 +41,7 @@ Scope {
     // text/qr results: no image -- the decoded text, and which reader produced it
     property string shotText: ""
     property string shotKind: ""
+    readonly property bool shotLink: shotText.startsWith("http://") || shotText.startsWith("https://")
     property rect shotRect
     property bool shotRec: false
 
@@ -467,7 +468,7 @@ Scope {
                         px: 10
                         color: Theme.mute
                         text: root.shot ? "copied · click to edit"
-                            : root.shotKind === "qr" && /^https?:\/\//.test(root.shotText) ? "copied · click to open"
+                            : root.shotKind === "qr" && root.shotLink ? "copied · click to open"
                             : root.shotText ? "copied to clipboard" : "nothing was copied"
                     }
                 }
@@ -478,7 +479,7 @@ Scope {
                         fx.stop();
                         fired.visible = false;
                         if (root.shot) editor.open(root.shot, root.scr);
-                        else if (root.shotKind === "qr" && /^https?:\/\//.test(root.shotText)) Quickshell.execDetached(["xdg-open", root.shotText]); // a scanned link opens
+                        else if (root.shotKind === "qr" && root.shotLink) Quickshell.execDetached(["xdg-open", root.shotText]); // a scanned link opens
                         else if (root.shotText) Quickshell.execDetached(["wl-copy", root.shotText]);
                     }
                 }
