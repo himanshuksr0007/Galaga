@@ -463,7 +463,7 @@ Scope {
                                         width: 18
                                         height: 18
                                         anchors.verticalCenter: parent.verticalCenter
-                                        Image { anchors.fill: parent; source: modelData.src; visible: !!modelData.src }
+                                        Image { anchors.fill: parent; source: modelData.src; visible: !!modelData.src; sourceSize: Qt.size(18, 18) }
                                         Rectangle { visible: !modelData.src; anchors.centerIn: parent; width: 7; height: 7; radius: 3.5; color: Theme.s3 }
                                     }
                                     Lb { width: minList.width - 42; elide: Text.ElideRight; anchors.verticalCenter: parent.verticalCenter; text: modelData.name; px: 11; color: Theme.fg }
