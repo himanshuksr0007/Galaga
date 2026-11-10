@@ -22,7 +22,9 @@ PanelWindow {
     readonly property var ownWs: Hyprland.monitorFor(screen)?.activeWorkspace
     readonly property bool home: (ownWs?.toplevels.values.length ?? 0) === 0
     property real phase: 0
-    Timer { running: root.home && orb.visible; interval: 100; repeat: true; onTriggered: root.phase += 0.1 }
+    // the breathing drives a fullscreen-window redraw ten times a second: shell performance trim
+    // breathes at half rate, lite holds the orb still (Theme.perf)
+    Timer { running: root.home && orb.visible && !Theme.perfLite; interval: Theme.state.perf === 1 ? 200 : 100; repeat: true; onTriggered: root.phase += 0.1 }
 
     Stage {
         id: stage

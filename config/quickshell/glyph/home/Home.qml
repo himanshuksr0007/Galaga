@@ -32,7 +32,8 @@ PanelWindow {
     // cava is shared (the glyph edges register as "edges"): register by name (per screen), unregister on
     // the way out -- a Binding here used to own Cava.active outright
     readonly property string cavaKey: "home:" + (root.screen?.name ?? "?")
-    readonly property bool cavaWant: Theme.state.homeBento && root.homes.some(s => Theme.scr(s.name, "widgets").includes("cava"))
+    // shell performance lite: the matrix stands down too -- cava then has no consumers and stops
+    readonly property bool cavaWant: Theme.state.homeBento && !Theme.perfLite && root.homes.some(s => Theme.scr(s.name, "widgets").includes("cava"))
     onCavaWantChanged: Cava.use(cavaKey, cavaWant)
     Component.onCompleted: Cava.use(cavaKey, cavaWant)
     Component.onDestruction: Cava.use(cavaKey, false)
@@ -236,7 +237,7 @@ PanelWindow {
                     width: 164
                     height: 164
                     property real turn: 0
-                    Timer { running: root.home && Media.playing; interval: 33; repeat: true; onTriggered: art.turn = (art.turn + 360 / 14 / 30) % 360 }
+                    Timer { running: root.home && Media.playing && !Theme.perfLite; interval: 33; repeat: true; onTriggered: art.turn = (art.turn + 360 / 14 / 30) % 360 }
                     Art { anchors.fill: parent; rotation: art.turn; url: root.player?.trackArtUrl ?? ""; step: 6 }
                 }
                 Column {

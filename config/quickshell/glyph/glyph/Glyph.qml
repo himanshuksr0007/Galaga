@@ -50,7 +50,9 @@ Scope {
     // process home's Glyph Matrix uses (services/Cava registers consumers by name, one
     // process for all). The vol/bri/mic flash takes the strip while it is up; the meter
     // returns when it fades. The level leans on the low bands, like the matrix does.
-    readonly property bool vuOn: Theme.state.edges && Theme.state.featEdges && Media.playing
+    // shell performance lite (Theme.perfLite): the meter stands down -- cava loses this consumer,
+    // and with home's matrix gone too the process never starts for eye-candy
+    readonly property bool vuOn: Theme.state.edges && Theme.state.featEdges && Media.playing && !Theme.perfLite
     onVuOnChanged: Cava.use("edges", vuOn)
     Component.onCompleted: Cava.use("edges", vuOn)
     Component.onDestruction: Cava.use("edges", false)

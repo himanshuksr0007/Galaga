@@ -321,7 +321,7 @@ Scope {
                             width: 84
                             height: 84
                             property real turn: 0
-                            Timer { running: win.open && Media.playing; interval: 33; repeat: true; onTriggered: art.turn = (art.turn + 360 / 14 / 30) % 360 }
+                            Timer { running: win.open && Media.playing && !Theme.perfLite; interval: 33; repeat: true; onTriggered: art.turn = (art.turn + 360 / 14 / 30) % 360 }
                             Art { anchors.fill: parent; rotation: art.turn; url: Media.player?.trackArtUrl ?? ""; step: 5 }
                         }
                         Column {

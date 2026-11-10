@@ -165,12 +165,14 @@ PanelWindow {
     Component { id: layoutC; Lb { text: Sys.layout; px: 10 } }
     // RunCat: the busier the cpu, the faster it runs (250 ms a frame idle, 50 at full load). cpu is polled
     // while it is in the tray; the Binding is not in a delegate -- a destroyed value is not given back.
-    // Grey as-is; in the light theme it would vanish on white, so it inverts to black, like the buds
+    // Grey as-is; in the light theme it would vanish on white, so it inverts to black, like the buds.
+    // Shell performance lite: the cat stands still and its cpu polling stops with it (the Binding below)
     Component {
         id: catC
         AnimatedImage {
             width: 44
             height: 26
+            playing: !Theme.perfLite
             source: "runcat.gif"
             mipmap: true
             speed: 1 + 4 * SysStats.cpu
@@ -178,7 +180,7 @@ PanelWindow {
             layer.effect: MultiEffect { brightness: -1 }
         }
     }
-    Binding { target: SysStats; property: "cat"; value: Theme.state.bar.includes("cat") }
+    Binding { target: SysStats; property: "cat"; value: Theme.state.bar.includes("cat") && !Theme.perfLite }
     // wifi: two arcs and a dot with round caps, like the battery; off gets a slash
     Component {
         id: wifiC
