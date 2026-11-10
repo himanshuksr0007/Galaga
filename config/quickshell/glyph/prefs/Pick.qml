@@ -15,7 +15,7 @@ Rectangle {
     property real seg: 104 // a caller can narrow the segments (the DISPLAY hz pill)
     width: head.width + opts.length * seg + 8
     height: 64
-    radius: 32
+    radius: Theme.corner(32)
     color: Theme.s2
     border { width: activeFocus ? 1 : 0; color: Theme.fg }
     activeFocusOnTab: true

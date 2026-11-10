@@ -352,7 +352,7 @@ PanelWindow {
                         anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 30 }
                         width: Math.max(1, Theme.state.deck.length) * 104 + 20
                         height: 116
-                        radius: 40
+                        radius: Theme.corner(40)
                         color: Theme.s1
                         border { width: 1; color: strip.activeFocus ? Theme.fg : Theme.s2 }
                         Behavior on width { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
@@ -473,7 +473,7 @@ PanelWindow {
                     readonly property int n: Math.max(1, Theme.state.bar.length)
                     width: bar.onTop ? n * 104 + 20 : 88
                     height: bar.onTop ? 116 : n * 68 + 20
-                    radius: bar.onTop ? 40 : 44
+                    radius: Theme.corner(bar.onTop ? 40 : 44)
                     color: Theme.s1
                     border { width: 1; color: col.activeFocus ? Theme.fg : Theme.s2 }
                     Behavior on width { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
@@ -748,7 +748,7 @@ PanelWindow {
                 Rectangle {
                     width: 360
                     height: 72
-                    radius: 36
+                    radius: Theme.corner(36)
                     color: Theme.s2
                     border { width: photoIn.activeFocus ? 1 : 0; color: Theme.fg }
                     Lb { id: photoL; x: 30; anchors.verticalCenter: parent.verticalCenter; text: "photo"; color: photoIn.activeFocus ? Theme.fg : Theme.grey }
@@ -779,7 +779,7 @@ PanelWindow {
             Rectangle {
                 width: 760
                 height: 72
-                radius: 36
+                radius: Theme.corner(36)
                 color: Theme.s2
                 border { width: name.activeFocus ? 1 : 0; color: Theme.fg }
                 Lb { id: nameL; x: 30; anchors.verticalCenter: parent.verticalCenter; text: "name"; color: name.activeFocus ? Theme.fg : Theme.grey }
@@ -859,7 +859,7 @@ PanelWindow {
                         Rectangle {
                             width: 168
                             height: 105
-                            radius: 14
+                            radius: Theme.corner(14)
                             color: "transparent"
                             border { width: Theme.wall ? 0 : 1; color: Theme.s3 }
                             Image {
@@ -931,7 +931,7 @@ PanelWindow {
         // ---- WINDOWS: desktop with two windows using live ring values. Window animation -- only if motion ----
         Page {
             k: 5
-            caption: `windows · hyprland · gaps ${gIn.v} / ${gOut.v} · border ${bord.v} · rounding ${rnd.v}`
+            caption: `windows · hyprland · gaps ${gIn.v} / ${gOut.v} · border ${bord.v} · rounding ${rnd.v} · panels ${pan.v} %`
 
             Row {
                 spacing: 40
@@ -994,6 +994,7 @@ PanelWindow {
                 Dial { id: gOut; label: "gaps out"; to: 60; value: root.r.gapsOut; onMoved: v => { root.r.gapsOut = v; Theme.apply(); } }
                 Dial { id: bord; label: "border"; to: 6; n: 24; value: root.r.border; onMoved: v => { root.r.border = v; Theme.apply(); } }
                 Dial { id: rnd; label: "rounding"; to: 40; value: Theme.state.rounding; onMoved: v => Theme.state.rounding = v } // shell.qml calls Theme.apply itself
+                Dial { id: pan; label: "panels"; to: 100; step: 5; value: Theme.state.corners; onMoved: v => Theme.state.corners = v } // the shell's corners, %
             }
         }
 
@@ -1044,7 +1045,7 @@ PanelWindow {
                                 z: map.held === modelData.name ? 1 : 0
                                 width: modelData.lw * map.k - 10
                                 height: modelData.lh * map.k - 10
-                                radius: 18
+                                radius: Theme.corner(18)
                                 color: Theme.bg
                                 border { width: sc.on && map.activeFocus ? 2 : 1; color: sc.on ? Theme.fg : Theme.s3 }
                                 Behavior on border.color { ColorAnimation { duration: Theme.t } }
@@ -1573,7 +1574,7 @@ PanelWindow {
             y: 14 * u
             width: onTop ? parent.width - 28 * u : 64 * u
             height: onTop ? 64 * u : parent.height - 28 * u
-            radius: Math.min(width, height) / 2
+            radius: Theme.corner(Math.min(width, height) / 2)
             color: Theme.s1
             border { width: 1; color: Theme.s2 }
         }
@@ -1602,7 +1603,7 @@ PanelWindow {
         readonly property bool round: root.rounds.includes(modelData.id)
         width: modelData.span * cell + (modelData.span - 1) * gap
         height: cell
-        radius: round ? cell / 2 : cell * 0.18
+        radius: round ? cell / 2 : Theme.corner(cell * 0.18)
         color: hot ? Theme.fg : modelData.fits ? Theme.s1 : "transparent"
         border { width: on ? 2 : 1; color: on ? Theme.fg : modelData.fits ? Theme.s2 : Theme.mute }
         z: drag.active ? 1 : 0

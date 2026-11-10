@@ -127,7 +127,7 @@ PanelWindow {
 
                     width: 318
                     height: 188
-                    radius: 22
+                    radius: Theme.corner(22)
                     color: Theme.s1
                     border { width: 1; color: hot || current ? Theme.fg : Theme.s2 }
                     opacity: ph

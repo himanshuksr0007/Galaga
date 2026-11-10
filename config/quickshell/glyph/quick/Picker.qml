@@ -71,7 +71,7 @@ Rectangle {
     height: (list.height + 32) * t
     opacity: t
     clip: true
-    radius: 30
+    radius: Theme.corner(30)
     color: Theme.s2
 
     Column {
@@ -113,7 +113,7 @@ Rectangle {
                 readonly property bool busy: root.isWifi ? o.stateChanging : o.pairing || o.state === BluetoothDeviceState.Connecting || o.state === BluetoothDeviceState.Disconnecting
                 width: list.width
                 height: 56
-                radius: 28
+                radius: Theme.corner(28)
                 color: hov.hovered ? Theme.s3 : "transparent"
 
                 Rectangle {
@@ -170,7 +170,7 @@ Rectangle {
             visible: !!root.ask
             width: list.width
             height: 56
-            radius: 28
+            radius: Theme.corner(28)
             color: Theme.s1
             border { width: 1; color: Theme.s3 }
             onVisibleChanged: if (visible) pw.forceActiveFocus()

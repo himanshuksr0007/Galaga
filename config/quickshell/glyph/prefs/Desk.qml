@@ -33,7 +33,7 @@ Item {
     Rectangle {
         width: 620
         height: 388
-        radius: 24
+        radius: Theme.corner(24)
         color: root.c[0]
         border { width: 1; color: Theme.s3 }
         Behavior on color { ColorAnimation { duration: Theme.t } }
@@ -49,7 +49,7 @@ Item {
             y: 12
             width: 44
             height: 364
-            radius: 22
+            radius: Theme.corner(22)
             color: root.c[1]
             border { width: 1; color: root.c[2] }
             Fill { x: 16; y: 16; width: 12; height: 12; radius: 6; color: root.c[6] }
@@ -76,7 +76,7 @@ Item {
             y: 12
             width: 196
             height: 228
-            radius: 18
+            radius: Theme.corner(18)
             color: root.c[1]
             border { width: 1; color: root.c[3] }
             Cap { x: 16; y: 16; text: "quick"; color: root.c[5] }
@@ -85,14 +85,14 @@ Item {
                 y: 40
                 width: 164
                 height: 30
-                radius: 15
+                radius: Theme.corner(15)
                 color: root.c[2]
                 Fill {
                     x: 4
                     y: 4
                     width: parent.width - 8
                     height: 22
-                    radius: 11
+                    radius: Theme.corner(11)
                     color: root.c[6]
                     Cap { x: 12; anchors.verticalCenter: parent.verticalCenter; text: "wi-fi"; color: root.ink }
                     Fill { anchors { right: parent.right; rightMargin: 9; verticalCenter: parent.verticalCenter } width: 6; height: 6; radius: 3; color: root.ink }
@@ -103,7 +103,7 @@ Item {
                 y: 78
                 width: 164
                 height: 30
-                radius: 15
+                radius: Theme.corner(15)
                 color: root.c[2]
                 Fill { x: 4; y: 4; width: 22; height: 22; radius: 11; color: root.c[4] }
                 Cap { x: 36; anchors.verticalCenter: parent.verticalCenter; text: "bluetooth"; color: root.c[5] }
@@ -117,14 +117,14 @@ Item {
                 Fill {
                     width: 78
                     height: 46
-                    radius: 12
+                    radius: Theme.corner(12)
                     color: root.c[6]
                     Cap { anchors.centerIn: parent; text: "dnd"; color: root.ink }
                 }
                 Fill {
                     width: 78
                     height: 46
-                    radius: 12
+                    radius: Theme.corner(12)
                     color: root.c[2]
                     Cap { anchors.centerIn: parent; text: "game"; color: root.c[5] }
                 }
@@ -137,7 +137,7 @@ Item {
             y: 12
             width: 332
             height: 228
-            radius: 18
+            radius: Theme.corner(18)
             color: root.c[1]
             border { width: 2; color: root.c[6] }
             Column {
@@ -188,7 +188,7 @@ Item {
             y: 252
             width: 540
             height: 120
-            radius: 28
+            radius: Theme.corner(28)
             color: root.c[1]
             border { width: 1; color: root.c[2] }
             Art { x: 16; y: 16; width: 88; height: 88; step: 4 }

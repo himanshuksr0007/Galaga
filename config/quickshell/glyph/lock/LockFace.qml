@@ -259,7 +259,7 @@ Item {
                         anchors.horizontalCenter: parent.horizontalCenter
                         width: 300
                         height: 48
-                        radius: 24
+                        radius: Theme.corner(24)
                         color: pick.containsMouse ? Theme.s3 : Theme.s2
                         border { width: 1; color: Theme.s3 }
                         Text {
@@ -285,7 +285,7 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 58 + (380 - 58) * root.ph(0.5, 0.9) // grows from a dot into a pill
                 height: 58
-                radius: 29
+                radius: Theme.corner(29)
                 opacity: root.ph(0.45, 0.6)
                 color: Theme.s1
                 border { width: 1; color: root.auth.fail ? Theme.red : Theme.s3 }

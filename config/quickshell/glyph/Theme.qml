@@ -156,6 +156,8 @@ Singleton {
     function url(p) { return p ? "file://" + p.split("/").map(encodeURIComponent).join("/") : ""; }
 
     function fade(c, a) { return Qt.rgba(c.r, c.g, c.b, a); }
+    // a panel's, tile's, pill's corner radius -- by the corners setting (prefs -> WINDOWS -> panels): 0 straight, 100 as designed
+    function corner(px) { return px * st.corners / 100; }
     // clock per 12/24 setting: "09" or "9"
     function hh(d) { const h = d.getHours(); return st.clock24 ? String(h).padStart(2, "0") : String(h % 12 || 12); }
     function hex(c) { return c.toString().slice(1, 7).toUpperCase(); }
@@ -198,6 +200,7 @@ Singleton {
             property int wallPitch: 10     // dot pitch, px
             property int wallBright: 85    // %, from background to image
             property int rounding: 20      // hypr windows
+            property int corners: 100      // the shell panels' corners, % of their own; round things stay round (Theme.corner)
             property bool edges: true      // Glyph strips at the edges (volume/brightness, flashes, progress)
             property int briSteps: 20      // brightness from the keys: divisions per scale, 40/20/10 -- step 2.5/5/10 %
             property bool quickHover: true // quick settings on hover at the right edge

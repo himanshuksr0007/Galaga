@@ -130,7 +130,7 @@ PanelWindow {
 
                     width: 330
                     height: 236
-                    radius: 22
+                    radius: Theme.corner(22)
                     color: ma.containsMouse ? Theme.s2 : Theme.s1
                     border { width: hot ? 2 : 1; color: hot ? Theme.fg : current ? Theme.mute : Theme.s2 }
 

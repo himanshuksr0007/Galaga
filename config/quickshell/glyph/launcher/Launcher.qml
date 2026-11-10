@@ -288,7 +288,7 @@ PanelWindow {
             width: 860
             height: Math.min(stage.height - 280, 30 + 66 + 20 + body.height + 34)
             opacity: root.t
-            radius: 44
+            radius: Theme.corner(44)
             color: Theme.s1
             border { width: 1; color: Theme.s2 }
             MouseArea { anchors.fill: parent }
@@ -300,7 +300,7 @@ PanelWindow {
                 y: 30
                 width: parent.width - 68
                 height: 66
-                radius: 33
+                radius: Theme.corner(33)
                 color: Theme.s2
 
                 Icon { id: lens; x: 24; anchors.verticalCenter: parent.verticalCenter; text: "\u{F0349}"; color: Theme.grey; font.pixelSize: 22 }
@@ -379,7 +379,7 @@ PanelWindow {
                         Rectangle {
                             width: parent.width
                             height: 56
-                            radius: 28
+                            radius: Theme.corner(28)
                             color: Theme.s2
                             border { width: root.smartFocus ? 1 : 0; color: Theme.fg }
                             Icon {

@@ -100,7 +100,7 @@ Scope {
                     width: row.width + 52
                     height: root.h + 52
                     opacity: win.t // not visible: a hidden Row has width 0, and the window is measured by it
-                    radius: 40
+                    radius: Theme.corner(40)
                     color: Theme.s1
                     border { width: 1; color: Theme.s2 }
 
@@ -518,7 +518,7 @@ Scope {
                         z: 6
                         width: 184
                         height: 72
-                        radius: 14
+                        radius: Theme.corner(14)
                         color: Theme.s2
                         border { width: 1; color: Theme.s3 }
                         Column {
