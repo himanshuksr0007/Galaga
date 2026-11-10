@@ -1505,6 +1505,22 @@ PanelWindow {
                     }
                 }
             }
+
+            // the first-login card (welcome/Welcome.qml): bring it back
+            Row {
+                spacing: 14
+                Lb { anchors.verticalCenter: parent.verticalCenter; text: "welcome card" }
+                Rectangle {
+                    width: showL.implicitWidth + 28
+                    height: 32
+                    radius: 16
+                    color: Theme.s2
+                    Lb { id: showL; anchors.centerIn: parent; text: "show"; px: 11; color: Theme.fg }
+                    TapHandler { onTapped: { Theme.state.welcomed = false; root.close(); } }
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                }
+                Lb { anchors.verticalCenter: parent.verticalCenter; text: "the keys, once more"; px: 10; color: Theme.mute }
+            }
         }
 
         // ---- DESKTOPS: a name and a wallpaper per workspace (prefs FEATURES -> named desktops).

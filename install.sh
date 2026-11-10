@@ -167,6 +167,10 @@ links() {
     mkdir -p "$HOME/.config/demonshot" "${XDG_STATE_HOME:-$HOME/.local/state}/rice"
     echo glyph > "${XDG_STATE_HOME:-$HOME/.local/state}/rice/shell"
     mkdir -p "$HOME/Pictures/Wallpapers" # wallpaper picker (Super+Shift+W) looks here
+    # the five starter wallpapers (assets/wallpapers, CC0 -- generated for the rice): copied, never
+    # overwriting -- once they're yours they're yours (AMM021's installer does the same)
+    local w
+    for w in "$DOTS"/assets/wallpapers/*.jpg; do [ -e "$HOME/Pictures/Wallpapers/$(basename "$w")" ] || cp "$w" "$HOME/Pictures/Wallpapers/"; done
     fc-cache -f >/dev/null
     command -v gsettings >/dev/null || return 0 # --links on a system without GNOME schemas
     # dark mode for Zen, Electron and libadwaita (through the portal) and a dark gtk3 base for our gtk.css

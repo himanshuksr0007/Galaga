@@ -23,6 +23,7 @@ import "settings"
 import "shot"
 import "vpn"
 import "wall"
+import "welcome"
 
 // glyph: rice in the spirit of nothing os. Home on the wallpaper, bar, launcher, quick settings,
 // Glyph strips at the edges instead of OSD, notification island, power menu, settings, deck (bottom dashboard), clipboard, charms (emoji and symbols), screenshots, vpn, wallpapers. Lock -- a separate process (lock.qml).
@@ -45,6 +46,7 @@ ShellRoot {
     Genie {}
     Shot { id: shot }
     Vpn { id: vpn }
+    LazyLoader { active: !Theme.state.welcomed; Welcome {} } // the first-login card; FEATURES brings it back
     Walls { id: walls }
 
     Variants {

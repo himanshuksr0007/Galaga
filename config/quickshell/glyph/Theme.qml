@@ -186,6 +186,7 @@ Singleton {
             property string variant: "tonalspot" // how a wallpaper tone becomes a palette, an id from schemes.js (VARIANTS)
             property bool dnd: false  // new ones are not shown, critical ones always
             property int unread: 0    // for the lock
+            property bool welcomed: false // the first-login card was dismissed (welcome/Welcome.qml)
             // ---- what the settings (prefs) change ----
             property var widgets: ["weather", "calendar", "cpu", "player", "buds", "system"] // home bento in order, see kinds
             property bool clock24: true
