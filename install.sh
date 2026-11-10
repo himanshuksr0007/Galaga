@@ -3,6 +3,8 @@
 #   ./install.sh                   packages + services + symlinks; asks which EXTRA to install too
 #   ./install.sh --with telegram   same without the question (--with "" -- just the rice itself)
 #   ./install.sh --links           symlinks only (on an already configured system)
+#   ./install.sh --greeter         boot login: greetd with the glyph face -- REPLACES the current
+#                                  display manager (sddm/...); separate on purpose, prints its rollback
 set -euo pipefail
 
 DOTS="$(cd "$(dirname "$0")" && pwd)"
@@ -31,6 +33,10 @@ AUR=(
     qtengine darkly-bin bibata-cursor-theme-bin
     zen-browser-bin
 )
+
+# greeter only (./install.sh --greeter). The compositor is the session's own Hyprland
+# (stripped config in config/greetd/), already installed above -- greetd is the only addition
+GREETER_PACMAN=(greetd)
 
 # optional, like caelestia's optional components. What the special-workspace keybinds open -- apps in hypr/variables.lua
 declare -A EXTRA=(
@@ -211,15 +217,89 @@ flatpak_gtk() { # flatpak apps are sandboxed off from ~/.config/gtk-* -- grant t
     done
 }
 
+greeter() { # boot login: greetd + the lock's face as the greeter (./install.sh --greeter).
+    # Replaces the current display manager -- deliberately NOT part of the default run.
+    # Order is the safety story: packages, files and config all land first; the DM swap is
+    # the very last step, so a failure anywhere above leaves the old login untouched.
+    say "greeter (greetd)"
+    sudo pacman -S --needed "${GREETER_PACMAN[@]}"
+
+    # the shell config at a system path: the greeter runs as the "greeter" user and cannot
+    # read ~/.config. A copy, not a symlink -- re-run --greeter after a pull to refresh it
+    if ! sudo diff -qr "$DOTS/$G" /etc/greetd/glyph >/dev/null 2>&1; then
+        sudo rm -rf /etc/greetd/glyph
+        sudo mkdir -p /etc/greetd
+        sudo cp -r "$DOTS/$G" /etc/greetd/glyph
+        echo "  /etc/greetd/glyph"
+    fi
+    sudo chmod -R go+rX /etc/greetd/glyph # root-owned repo files are group-only: the greeter user needs read+traverse
+
+    # the fonts, system-wide: the greeter user cannot see ~/.local/share/fonts either --
+    # without this the Doto clock falls back to a default font and the face is not the face
+    if ! diff -qr "$DOTS/config/fonts" /usr/share/fonts/glyph >/dev/null 2>&1; then
+        sudo mkdir -p /usr/share/fonts/glyph
+        sudo cp "$DOTS/config/fonts"/*.ttf "$DOTS/config/fonts"/*.otf "$DOTS/config/fonts"/OFL.txt /usr/share/fonts/glyph/
+        sudo fc-cache -f >/dev/null
+        echo "  /usr/share/fonts/glyph"
+    fi
+
+    # greetd's own files (config, the stripped compositor config, the launcher script):
+    # a changed one that already exists goes to the backup first -- once, only on change
+    local f
+    for f in config.toml hyprland.lua glyph-greeter; do
+        sudo cmp -s "$DOTS/config/greetd/$f" "/etc/greetd/$f" && continue
+        if [ -e "/etc/greetd/$f" ]; then
+            mkdir -p "$BACKUP/etc/greetd"
+            sudo cp "/etc/greetd/$f" "$BACKUP/etc/greetd/$f"
+            sudo chown "$USER" "$BACKUP/etc/greetd/$f"
+            echo "  old /etc/greetd/$f -> $BACKUP/etc/greetd/$f"
+        fi
+        sudo mkdir -p /etc/greetd
+        sudo cp "$DOTS/config/greetd/$f" "/etc/greetd/$f"
+        echo "  /etc/greetd/$f"
+    done
+    sudo chmod 755 /etc/greetd/glyph-greeter
+
+    # the swap -- only now, with greetd installed and configured. Which DM is on today:
+    local old=""
+    if [ -L /etc/systemd/system/display-manager.service ]; then
+        old="$(basename "$(readlink -f /etc/systemd/system/display-manager.service)" .service)"
+    fi
+    [ "$old" = greetd ] && old="" # a re-run: greetd already is the display manager
+    if [ -n "$old" ]; then
+        mkdir -p "$BACKUP"
+        echo "$old" > "$BACKUP/previous-display-manager.txt"
+        sudo systemctl disable "$old"
+        echo "  disabled: $old (recorded in $BACKUP/previous-display-manager.txt)"
+    fi
+    if systemctl is-enabled -q greetd 2>/dev/null; then
+        echo "  greetd already enabled"
+    else
+        sudo systemctl enable greetd
+        echo "  enabled: greetd"
+    fi
+
+    say "greeter is the boot login from the next reboot"
+    if [ -n "$old" ]; then
+        say "rollback: sudo systemctl disable greetd && sudo systemctl enable $old"
+        say "  (greetd's config backup, if any, is in $BACKUP/etc/greetd/ -- cp it back to /etc/greetd/)"
+    else
+        say "rollback: sudo systemctl disable greetd, then enable your old display manager"
+    fi
+    say "no login screen at boot? Ctrl+Alt+F3 -> log in on the text console -> run the rollback"
+}
+
 [ "$EUID" -eq 0 ] && { echo "run as your user, sudo will ask by itself"; exit 1; }
 
 case "${1:-}" in
     --links) links; browser_prefs; flatpak_gtk ;; # on any distribution (NixOS, Fedora...): packages are up to you then, list in README
+    --greeter) command -v pacman >/dev/null || { echo "the greeter step installs greetd with pacman (Arch only)"; exit 1; }
+        greeter ;;
     ""|--with) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
         [ "${1:-}" = --with ] && WITH="${*:2}" # both comma- and space-separated
         extras; packages; plugins; services; links; browser_prefs; flatpak_gtk
         # spicetify needs Spotify already downloaded and logged in, so there is nothing to apply before the first launch
         [[ " ${WITH//,/ } " == *" spotify "* ]] && say "spotify: launch it, log in, then spicetify config custom_apps marketplace && spicetify backup apply"
         say "done. reboot and pick Hyprland in sddm" ;;
-    *) echo "usage: $0 [--with telegram,spotify,clash | --links]"; exit 1 ;;
+    *) echo "usage: $0 [--with telegram,spotify,clash | --links | --greeter]"; exit 1 ;;
 esac

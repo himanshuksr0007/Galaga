@@ -1,0 +1,11 @@
+# glyph greeter -- written to /etc/greetd/config.toml by ./install.sh --greeter.
+# greetd runs the greeter session as the "greeter" user: a stripped Hyprland
+# (hyprland.lua next to this file) whose only job is showing the glyph face.
+# Hyprland gives us VT switching for free, so a broken greeter can never lock
+# you out of the machine: Ctrl+Alt+F3 is always a text login.
+[terminal]
+vt = 1
+
+[default_session]
+command = "Hyprland --config /etc/greetd/hyprland.lua"
+user = "greeter"

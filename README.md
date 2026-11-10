@@ -34,6 +34,7 @@ My fork of [**glyph-rice**](https://github.com/Nebelung-cloud/glyph-rice) by [**
 | **Buds** | Nothing / CMF earbuds: battery, ANC | |
 | **Power** | power menu | `Super` `Esc` |
 | **Lock** | lock screen | `Super` `L` |
+| **Greeter** | boot login: the lock's face on greetd | `install.sh --greeter` |
 | **Rice** | shell switcher, if Demon's Shot is installed too | `rice switch <name>` |
 
 Also: Hyprland (Lua), hypridle, kitty, fish, starship, fastfetch, btop, cava (dots in fish; `command cava` for bars), GTK, Qt and folder colours.
@@ -58,6 +59,7 @@ git clone https://github.com/yasakei/glyph-rice ~/.local/share/glyph
 ~/.local/share/glyph/install.sh                  # Arch: packages, services, symlinks
 ~/.local/share/glyph/install.sh --with telegram  # same, extras picked up front
 ~/.local/share/glyph/install.sh --links          # any distro: symlinks only
+~/.local/share/glyph/install.sh --greeter        # optional, Arch: boot login screen (replaces sddm)
 ```
 
 Without `--with` it asks which extras to add: `telegram` (`Super` `D`), `spotify` with Spicetify (`Super` `M`),
@@ -167,6 +169,63 @@ Exceptions and notes:
 - No bar on a GTK app is normal — it has its own buttons. A bar *and* native buttons on the
   same window means the app is missing from the `no_bar` list: find its class with
   `hyprctl clients` and add it in `rules.lua`.
+
+<div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
+
+<h2 align="center">Login screen (greeter)</h2>
+
+The lock screen, at boot. The rice's session lock only exists inside a session, so the
+default install still boots into sddm's plain card. The optional greeter step replaces it
+with **the same face**: same dot clock, dotted avatar, password pill, same dots — one
+drawing (`lock/LockFace.qml`) with its PAM backend swapped for
+[ greetd ](https://git.sr.ht/~kennylevinsen/greetd) via Quickshell's Greetd service
+(`greet.qml`).
+
+```sh
+~/.local/share/glyph/install.sh --greeter   # Arch only; separate on purpose, not in the default run
+```
+
+What it does, in order: installs `greetd`; copies the shell config to `/etc/greetd/glyph`
+(the greeter runs as the `greeter` user and cannot read `~/.config` — re-run `--greeter`
+after a pull to refresh the copy); installs the fonts system-wide in
+`/usr/share/fonts/glyph` (same reason — without them the Doto clock is not Doto); writes
+`/etc/greetd/config.toml`, `hyprland.lua` and `glyph-greeter` (a changed file that already
+exists is backed up to `~/.dots-backup-<date>/etc/greetd/` first); and only then swaps the
+display manager — the currently enabled one (sddm, gdm, …) is disabled and its name
+recorded in `~/.dots-backup-<date>/previous-display-manager.txt`, greetd is enabled. If
+anything fails before the swap, the old login is untouched. Re-running changes nothing
+twice.
+
+The greeter session is a **stripped Hyprland** (`config/greetd/hyprland.lua`): no plugins,
+no binds, no daemons — it starts the face and exits when the face does, which is what lets
+greetd hand over to your session. Its input section mirrors the session's, NumLock
+included: `numlock_by_default` is on, so a numpad PIN types from a cold boot without
+touching NumLock. Keyboard focus is held from the first frame — just start typing; keys
+combined with Ctrl/Alt/Super are ignored (they are shortcuts, not password characters).
+
+- **User switching:** the name sits in a bubble with a caret. Click it and every other
+  human user on the machine (uid ≥ 1000, real shell) is listed; picking one cancels the
+  in-flight auth, clears the field and starts auth for that user. Faces come from
+  AccountsService (`/var/lib/AccountsService/icons/<user>`) or `~/.face`, else the dotted
+  gradient. The last picked user is remembered and pre-selected next boot.
+- **Session:** exactly the one you already run — the `Hyprland (uwsm-managed)` entry,
+  resolved at runtime from `/usr/share/wayland-sessions/*.desktop` (fallback: the first
+  Hyprland entry, then the first entry there is). There is deliberately no session picker
+  on the face.
+- **Honest notes:** greetd *replaces* your display manager — that is the whole point, and
+  the step is separate and explicit for that reason. Weather and the player line come from
+  session services; with no session yet they simply stay empty, as the lock's fallbacks
+  already allow. The layout chip reads `en` until login (the stripped compositor's layout
+  is the one in `hyprland.lua` — keep its `kb_layout` in step with the session's).
+
+Rollback, as printed by the step itself:
+
+```sh
+sudo systemctl disable greetd && sudo systemctl enable sddm   # or whichever DM was recorded
+```
+
+And if the greeter ever fails to appear: Hyprland keeps VT switching alive, so
+`Ctrl+Alt+F3` → log in on the text console → run the rollback → reboot.
 
 <div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
 
