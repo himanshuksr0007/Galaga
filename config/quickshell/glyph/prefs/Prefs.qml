@@ -448,28 +448,35 @@ PanelWindow {
             }
         }
 
-        // ---- BAR: bar tray stacked, as in the bar -- top to bottom; labels on the side. Tray -- what exists ----
+        // ---- BAR: the edge -- two screens in miniature, click chooses. The tray -- as in the bar: at the side a column
+        // (labels beside), on top a row (labels under the icon), in order; drag -- along the bar. The pool -- what exists ----
         Page {
             id: bar
             k: 2
-            caption: `bar · ${Theme.state.bar.length} of ${Theme.bars.length} in the tray · left edge`
+            caption: `bar · ${Theme.state.bar.length} of ${Theme.bars.length} in the tray · ${onTop ? "top" : "left"} edge`
+            readonly property bool onTop: Theme.state.barAt === "top"
+            readonly property real step: onTop ? 104 : 68 // a slot along the bar
             property int cur: 0
-            // dragging from (-1 -- none): dy -- cursor shift in layout px, at -- where it is in the column, to -- where it will land
+            // dragging from (-1 -- nobody): d -- the cursor's shift along the bar in layout px, at -- where it is, to -- where it will land
             property int from: -1
-            property real dy: 0
-            readonly property real at: Math.max(10, Math.min(10 + (Theme.state.bar.length - 1) * 68, 10 + from * 68 + dy))
-            readonly property int to: Math.round((at - 10) / 68)
+            property real d: 0
+            readonly property real at: Math.max(10, Math.min(10 + (Theme.state.bar.length - 1) * step, 10 + from * step + d))
+            readonly property int to: Math.round((at - 10) / step)
 
-            Row {
-                spacing: 200
+            Grid {
+                columns: bar.onTop ? 1 : 2
+                columnSpacing: 200
+                rowSpacing: 40
 
                 Rectangle {
                     id: col
-                    width: 88
-                    height: Math.max(1, Theme.state.bar.length) * 68 + 20
-                    radius: 44
+                    readonly property int n: Math.max(1, Theme.state.bar.length)
+                    width: bar.onTop ? n * 104 + 20 : 88
+                    height: bar.onTop ? 116 : n * 68 + 20
+                    radius: bar.onTop ? 40 : 44
                     color: Theme.s1
                     border { width: 1; color: col.activeFocus ? Theme.fg : Theme.s2 }
+                    Behavior on width { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
                     Behavior on height { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
                     activeFocusOnTab: true
                     Keys.onPressed: e => {
@@ -491,17 +498,22 @@ PanelWindow {
                             readonly property int slot: bar.from < 0 ? index
                                 : index > bar.from && index <= bar.to ? index - 1
                                 : index < bar.from && index >= bar.to ? index + 1 : index
-                            y: bd.active ? bar.at : 10 + slot * 68
-                            width: col.width
-                            height: 68
-                            z: bd.active ? 1 : 0
-                            Behavior on y {
+                            // the place along the bar: behind the cursor while dragging
+                            property real pos: bd.active ? bar.at : 10 + slot * bar.step
+                            Behavior on pos {
                                 enabled: !bd.active
                                 NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide }
                             }
+                            x: bar.onTop ? pos : 0
+                            y: bar.onTop ? 0 : pos
+                            width: bar.onTop ? 104 : col.width
+                            height: bar.onTop ? col.height : 68
+                            z: bd.active ? 1 : 0
 
                             Rectangle {
-                                anchors.centerIn: parent
+                                id: bdot
+                                x: (parent.width - width) / 2
+                                y: bar.onTop ? 18 : (parent.height - height) / 2
                                 width: 52
                                 height: 52
                                 radius: 26
@@ -509,7 +521,13 @@ PanelWindow {
                                 border { width: bs.on && !bs.hot ? 1 : 0; color: Theme.fg }
                                 Icon { anchors.centerIn: parent; text: root.icons[bs.modelData] ?? ""; font.pixelSize: 22; color: bs.hot ? Theme.ink : Theme.fg }
                             }
-                            Lb { x: parent.width + 24; anchors.verticalCenter: parent.verticalCenter; text: bs.modelData; px: 10; color: bs.on ? Theme.fg : Theme.grey }
+                            Lb {
+                                x: bar.onTop ? (parent.width - width) / 2 : parent.width + 24
+                                y: bar.onTop ? bdot.y + bdot.height + 10 : (parent.height - height) / 2
+                                text: bs.modelData
+                                px: 10
+                                color: bs.on ? Theme.fg : Theme.grey
+                            }
                             TapHandler {
                                 onTapped: {
                                     col.forceActiveFocus();
@@ -519,8 +537,9 @@ PanelWindow {
                             DragHandler {
                                 id: bd
                                 target: null
-                                xAxis.enabled: false
-                                onActiveTranslationChanged: bar.dy = activeTranslation.y / Theme.s
+                                xAxis.enabled: bar.onTop
+                                yAxis.enabled: !bar.onTop
+                                onActiveTranslationChanged: bar.d = (bar.onTop ? activeTranslation.x : activeTranslation.y) / Theme.s
                                 onActiveChanged: {
                                     if (active) {
                                         bar.cur = bs.index;
@@ -540,8 +559,50 @@ PanelWindow {
 
                 Column {
                     spacing: 14
+                    Lb { text: "edge" }
+                    // screens with the pill at their own edge; left/right -- the other one
+                    Row {
+                        id: edges
+                        spacing: 20
+                        activeFocusOnTab: true
+                        Keys.onPressed: e => {
+                            if (e.key !== Qt.Key_Left && e.key !== Qt.Key_Right && e.key !== Qt.Key_Space && e.key !== Qt.Key_Return) return;
+                            Theme.state.barAt = bar.onTop ? "left" : "top";
+                            e.accepted = true;
+                        }
+                        Repeater {
+                            model: ["left", "top"]
+                            Column {
+                                id: ed
+                                required property string modelData
+                                readonly property bool on: (modelData === "top") === bar.onTop
+                                spacing: 10
+                                Rectangle {
+                                    width: 200
+                                    height: 125
+                                    radius: 18
+                                    color: Theme.bg
+                                    border { width: ed.on && edges.activeFocus ? 2 : 1; color: ed.on ? Theme.fg : Theme.s3 }
+                                    Behavior on border.color { ColorAnimation { duration: Theme.t } }
+                                    Rectangle {
+                                        x: 10
+                                        y: 10
+                                        width: ed.modelData === "top" ? parent.width - 20 : 16
+                                        height: ed.modelData === "top" ? 16 : parent.height - 20
+                                        radius: 8
+                                        color: ed.on ? Theme.fg : Theme.s3
+                                        Behavior on color { ColorAnimation { duration: Theme.t } }
+                                    }
+                                    TapHandler { onTapped: Theme.state.barAt = ed.modelData }
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                }
+                                Lb { anchors.horizontalCenter: parent.horizontalCenter; text: ed.modelData; px: 10; color: ed.on ? Theme.fg : Theme.grey }
+                            }
+                        }
+                    }
+                    Item { width: 1; height: 12 }
                     Toggle { width: 200; text: "window title"; on: Theme.state.barTitle; onFlip: Theme.state.barTitle = !Theme.state.barTitle }
-                    Lb { topPadding: 6; text: "above the clock"; px: 10 }
+                    Lb { topPadding: 6; text: bar.onTop ? "left of the clock" : "above the clock"; px: 10 }
                 }
             }
 
@@ -765,12 +826,13 @@ PanelWindow {
                             id: wnd
                             required property int index
                             readonly property real o: gOut.v * desk.k
-                            readonly property real l: 78 * desk.k + o // bar 64 + gap 14
-                            readonly property real w: (desk.width - l - o - 2 * gIn.v * desk.k) / 2
-                            x: index ? l + w + 2 * gIn.v * desk.k : l
-                            y: o
+                            readonly property real l: 78 * Theme.s * desk.k + o // bar 64 + gap 14, in logical px
+                            readonly property real w: (desk.width - (at === "top" ? o : l) - o - 2 * gIn.v * desk.k) / 2
+                            readonly property string at: Theme.state.barAt
+                            x: (at !== "top" ? l : o) + (index ? w + 2 * gIn.v * desk.k : 0)
+                            y: at === "top" ? l : o
                             width: w
-                            height: desk.height - 2 * o
+                            height: desk.height - (at === "top" ? l : o) - o
                             radius: rnd.v * desk.k
                             color: Theme.s1
                             border { width: bord.v ? Math.max(1, bord.v * desk.k) : 0; color: index ? Theme.s3 : Theme.fg }
@@ -1385,12 +1447,15 @@ PanelWindow {
             fillMode: Image.Tile
             source: "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="1" fill="#${Theme.hex(Theme.s2)}"/></svg>`)
         }
+        // the bar at its own edge: the offset 14 and thickness 64 are layout px, on screen they are Theme.s logical ones
         Rectangle {
-            x: 14 * parent.k
-            y: 14 * parent.k
-            width: 64 * parent.k
-            height: parent.height - 28 * parent.k
-            radius: width / 2
+            readonly property real u: Theme.s * parent.k
+            readonly property bool onTop: Theme.state.barAt === "top"
+            x: 14 * u
+            y: 14 * u
+            width: onTop ? parent.width - 28 * u : 64 * u
+            height: onTop ? 64 * u : parent.height - 28 * u
+            radius: Math.min(width, height) / 2
             color: Theme.s1
             border { width: 1; color: Theme.s2 }
         }

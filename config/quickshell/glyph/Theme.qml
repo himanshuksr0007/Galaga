@@ -134,6 +134,7 @@ Singleton {
             property var deck: ["clock", "weather", "perf", "net", "media", "min"] // its sections in order, see decks
             property var bar: ["layout", "wifi", "bluetooth", "sound", "notes", "focus", "battery", "mode", "power"] // bar tray from top to bottom, see bars
             property bool barTitle: true   // window title stacked in the bar
+            property string barAt: "left"  // left or top; the calendar, the battery card, home, the island and the Glyph flash follow the bar
             // recording (quick/Rec, Sys.recArgs)
             property int recArea: 0        // 0 whole monitor, 1 region (slurp)
             property int recAudio: 0       // 0 no sound, 1 system, 2 microphone, 3 both on one track

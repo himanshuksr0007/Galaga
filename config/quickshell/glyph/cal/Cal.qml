@@ -43,8 +43,11 @@ PanelWindow {
     Stage {
         Rectangle {
             id: panel
-            x: 92 - 24 * (1 - root.t) // right edge of the bar pill (14 + 64) and gap 14
-            anchors.verticalCenter: parent.verticalCenter
+            // the bar pill's inner edge (14 + 64) and gap 14, slides out from the bar; across -- centered, where the clock is
+            readonly property real off: 92 - 24 * (1 - root.t)
+            readonly property bool onTop: Theme.state.barAt === "top"
+            x: onTop ? (parent.width - width) / 2 : off
+            y: onTop ? off : (parent.height - height) / 2
             width: 440
             height: col.height + 52
             opacity: root.t

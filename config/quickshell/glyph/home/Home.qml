@@ -61,6 +61,8 @@ PanelWindow {
 
     Stage {
         id: stage
+        // the layout sits under a left bar; bar on top or taken off this screen -- half its width to the left, centered
+        x: Theme.state.barAt === "top" || !Theme.scr(root.screen?.name, "bar") ? -39 * Theme.s : 0
 
         Row {
             x: 182

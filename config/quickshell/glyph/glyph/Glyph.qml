@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Effects
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Services.Notifications
 import Quickshell.Services.UPower
 import Quickshell.Wayland
@@ -127,11 +128,14 @@ Scope {
     }
     Timer { id: noteT; interval: 3000; onTriggered: root.note = null }
     readonly property bool crit: note?.urgency === NotificationUrgency.Critical
+    // flash and island sit under the bar when it is on top and present on the focused screen (that is where they stand)
+    readonly property bool underBar: Theme.state.barAt === "top" && Theme.scr(Hyprland.focusedMonitor?.name, "bar")
 
     Edge {
         id: top
         shown: !!root.note && Theme.state.edges
         anchors.top: true
+        margins.top: root.underBar ? Math.ceil(78 * Theme.s) : 0
         implicitWidth: Math.ceil(640 * Theme.s)
         implicitHeight: Math.ceil(30 * Theme.s)
         Seg {
@@ -160,6 +164,7 @@ Scope {
     PanelWindow {
         visible: stack.count > 0
         anchors.top: true
+        margins.top: root.underBar ? Math.ceil(78 * Theme.s) : 0
         implicitWidth: Math.ceil(600 * Theme.s)
         implicitHeight: Math.ceil((24 + root.most * 132) * Theme.s)
         exclusionMode: ExclusionMode.Ignore
