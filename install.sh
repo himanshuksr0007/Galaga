@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # Glyph: installs everything on a clean Arch and links the configs from this repo.
-#   ./install.sh                   packages + services + symlinks; asks which EXTRA to install too
-#   ./install.sh --with telegram   same without the question (--with "" -- just the rice itself)
+#   ./install.sh                   guided: every question first (extras, file manager, login
+#                                  screen), one password, then it runs to the end by itself
+#   ./install.sh --dry-run         the guided flow, printing what it would do; changes nothing
+#   ./install.sh --with telegram   same without the questions (--with "" -- just the rice itself)
+#   ./install.sh --update          get the newest version of the rice, then refresh what changed
+#   ./install.sh --uninstall       take the links away, put the old files and login screen back
+#   ./install.sh --fix-plasma      from KDE Plasma: Wi-Fi passwords out of KDE Wallet, autostart guards
 #   ./install.sh --links           symlinks only (on an already configured system)
 #   ./install.sh --greeter         boot login: greetd with the glyph face -- REPLACES the current
 #                                  display manager (sddm/...); separate on purpose, prints its rollback
@@ -9,6 +14,12 @@ set -euo pipefail
 
 DOTS="$(cd "$(dirname "$0")" && pwd)"
 BACKUP="$HOME/.dots-backup-$(date +%F_%H-%M-%S)"
+
+DRY=0
+run() { # the guided flow's changes go through here, so --dry-run can't touch anything
+    if [ "$DRY" = 1 ]; then printf '  would run: %s\n' "$*"; else "$@"; fi
+}
+note() { printf '  %s\n' "$*"; }
 
 PACMAN=(
     # base (cmake/meson: hyprpm builds the plugins from source)
@@ -82,6 +93,7 @@ say() { printf '\e[38;2;215;25;33m●\e[0m %s\n' "$*"; }
 
 extras() { # --with or a prompt -> into EXT, installs yay (and repo packages) separately from AUR
     local w; EXT=()
+    [ "$DRY" = 1 ] && WITH="" # a dry run answers everything with the defaults
     if [ -z "${WITH+x}" ]; then
         say "what else to install? space-separated, Enter -- nothing"
         for w in "${!EXTRA[@]}"; do printf '  %-9s %s\n' "$w" "${EXTRA[$w]}"; done
@@ -98,24 +110,28 @@ packages() {
     # pulseaudio modules require pulseaudio itself -- pacman would not let us replace it with pipewire-pulse.
     # As a list, not grep '^pulseaudio-': pulseaudio-alsa and pulseaudio-qt live fine with pipewire
     local pa; pa=$(pacman -Qq pulseaudio-{bluetooth,jack,lirc,rtp,zeroconf,equalizer,equalizer-ladspa} 2>/dev/null || true)
-    [ -z "$pa" ] || sudo pacman -R $pa
+    [ -z "$pa" ] || run sudo pacman -R $pa
     pacman -Q pulseaudio &>/dev/null && say "pacman will ask \"Remove pulseaudio?\" -- answer y, pipewire-pulse replaces it"
     # no --noconfirm: on a conflict (pulseaudio -> pipewire-pulse) it would answer "no" and fail the install
-    sudo pacman -Syu --needed "${PACMAN[@]}"
+    run sudo pacman -Syu --needed "${PACMAN[@]}"
 
     if ! command -v yay >/dev/null; then
         say "yay"
-        local tmp; tmp="$(mktemp -d)"
-        git clone --depth 1 https://aur.archlinux.org/yay-bin.git "$tmp/yay-bin"
-        (cd "$tmp/yay-bin" && makepkg -si --noconfirm)
-        rm -rf "$tmp"
+        if [ "$DRY" = 1 ]; then
+            note "would clone yay-bin and build it (makepkg -si)"
+        else
+            local tmp; tmp="$(mktemp -d)"
+            git clone --depth 1 https://aur.archlinux.org/yay-bin.git "$tmp/yay-bin"
+            (cd "$tmp/yay-bin" && makepkg -si --noconfirm)
+            rm -rf "$tmp"
+        fi
     fi
 
     say "aur"
     # AUR is optional: if a package fails, we still install services and links
-    yay -S --needed --noconfirm "${AUR[@]}" || say "aur: not everything installed, see above"
+    run yay -S --needed --noconfirm "${AUR[@]}" || say "aur: not everything installed, see above"
     # separately: if spicetify failed to build, the AUR core is unaffected
-    [ ${#EXT[@]} -eq 0 ] || yay -S --needed --noconfirm "${EXT[@]}" || say "optional: not everything installed, see above"
+    [ ${#EXT[@]} -eq 0 ] || run yay -S --needed --noconfirm "${EXT[@]}" || say "optional: not everything installed, see above"
 }
 
 plugins() { # hyprbars -- the window title bars (config/hypr/hyprland/titlebars.lua), built by hyprpm
@@ -124,7 +140,7 @@ plugins() { # hyprbars -- the window title bars (config/hypr/hyprland/titlebars.
         # hyprpm used to ship inside the hyprland package; it is a package of its own now,
         # and a system installed before the split (or without it) has no hyprpm at all
         say "hyprpm missing -- installing the hyprpm package"
-        sudo pacman -S --needed hyprpm || true
+        run sudo pacman -S --needed hyprpm || true
     fi
     if ! command -v hyprpm >/dev/null; then
         # loud on purpose: without hyprpm there are no title bars, and a silent skip here
@@ -134,9 +150,10 @@ plugins() { # hyprbars -- the window title bars (config/hypr/hyprland/titlebars.
         return 0
     fi
     # add errors out when the repo is already there -- that is what a re-run looks like
-    hyprpm add https://github.com/hyprwm/hyprland-plugins 2>/dev/null || true
+    run hyprpm add https://github.com/hyprwm/hyprland-plugins 2>/dev/null || true
     # no session is running during install: enable only records it, execs.lua loads it at login
-    if hyprpm enable hyprbars; then
+    if [ "$DRY" = 1 ]; then run hyprpm enable hyprbars
+    elif hyprpm enable hyprbars; then
         say "hyprbars enabled -- window title bars are on from the next login"
     else
         say "hyprpm: hyprbars could not be enabled -- no title bars"
@@ -146,11 +163,11 @@ plugins() { # hyprbars -- the window title bars (config/hypr/hyprland/titlebars.
 
 services() {
     say "services"
-    sudo systemctl enable NetworkManager bluetooth power-profiles-daemon
-    systemctl is-enabled -q display-manager.service 2>/dev/null || sudo systemctl enable sddm
-    systemctl --user enable pipewire-pulse.socket wireplumber ydotool
-    sudo usermod -aG input,video "$USER" # ydotool (uinput), brightnessctl
-    xdg-user-dirs-update
+    run sudo systemctl enable NetworkManager bluetooth power-profiles-daemon
+    systemctl is-enabled -q display-manager.service 2>/dev/null || run sudo systemctl enable sddm
+    run systemctl --user enable pipewire-pulse.socket wireplumber ydotool
+    run sudo usermod -aG input,video "$USER" # ydotool (uinput), brightnessctl
+    run xdg-user-dirs-update
 }
 
 links() {
@@ -160,6 +177,11 @@ links() {
         read -r src dst <<<"$l"
         src="$DOTS/$src" dst="$HOME/$dst"
         [ "$(readlink "$dst")" = "$src" ] && continue
+        if [ "$DRY" = 1 ]; then
+            if [ -e "$dst" ] || [ -L "$dst" ]; then note "would move $dst to the backup and link $src there"
+            else note "would link $dst -> $src"; fi
+            continue
+        fi
         if [ -e "$dst" ] || [ -L "$dst" ]; then
             mkdir -p "$BACKUP/$(dirname "${dst#"$HOME"/}")"
             mv "$dst" "$BACKUP/${dst#"$HOME"/}"
@@ -169,27 +191,31 @@ links() {
         echo "  $dst"
     done
     # rules.json and kitty.conf are created by the shell itself; rice starts glyph and builds the folder theme
-    mkdir -p "$HOME/.config/demonshot" "${XDG_STATE_HOME:-$HOME/.local/state}/rice"
-    echo glyph > "${XDG_STATE_HOME:-$HOME/.local/state}/rice/shell"
-    mkdir -p "$HOME/Pictures/Wallpapers" # wallpaper picker (Super+Shift+W) looks here
-    # the five starter wallpapers (assets/wallpapers, CC0 -- generated for the rice): copied, never
-    # overwriting -- once they're yours they're yours (AMM021's installer does the same)
-    local w
-    for w in "$DOTS"/assets/wallpapers/*.jpg; do [ -e "$HOME/Pictures/Wallpapers/$(basename "$w")" ] || cp "$w" "$HOME/Pictures/Wallpapers/"; done
-    # LocalSend starts dark on OLED black (its accent follows the GTK one); only before its first
-    # run -- after that its settings are the user's
-    local ls="$HOME/.local/share/org.localsend.localsend_app/shared_preferences.json"
-    [ -e "$ls" ] || { mkdir -p "${ls%/*}"; echo '{"flutter.ls_theme":"dark","flutter.ls_color":"oled"}' > "$ls"; }
-    fc-cache -f >/dev/null
+    if [ "$DRY" = 1 ]; then
+        note "would write glyph to ${XDG_STATE_HOME:-$HOME/.local/state}/rice/shell, seed the starter wallpapers and LocalSend's dark start"
+    else
+        mkdir -p "$HOME/.config/demonshot" "${XDG_STATE_HOME:-$HOME/.local/state}/rice"
+        echo glyph > "${XDG_STATE_HOME:-$HOME/.local/state}/rice/shell"
+        mkdir -p "$HOME/Pictures/Wallpapers" # wallpaper picker (Super+Shift+W) looks here
+        # the five starter wallpapers (assets/wallpapers, CC0 -- generated for the rice): copied, never
+        # overwriting -- once they're yours they're yours (AMM021's installer does the same)
+        local w
+        for w in "$DOTS"/assets/wallpapers/*.jpg; do [ -e "$HOME/Pictures/Wallpapers/$(basename "$w")" ] || cp "$w" "$HOME/Pictures/Wallpapers/"; done
+        # LocalSend starts dark on OLED black (its accent follows the GTK one); only before its first
+        # run -- after that its settings are the user's
+        local ls="$HOME/.local/share/org.localsend.localsend_app/shared_preferences.json"
+        [ -e "$ls" ] || { mkdir -p "${ls%/*}"; echo '{"flutter.ls_theme":"dark","flutter.ls_color":"oled"}' > "$ls"; }
+    fi
+    run fc-cache -f
     command -v gsettings >/dev/null || return 0 # --links on a system without GNOME schemas
     # dark mode for Zen, Electron and libadwaita (through the portal) and a dark gtk3 base for our gtk.css
-    gsettings set org.gnome.desktop.interface color-scheme prefer-dark
-    gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark
+    run gsettings set org.gnome.desktop.interface color-scheme prefer-dark
+    run gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark
     # window buttons for apps that read it from here (the rest read settings.ini):
     # close and maximise, on the left -- maximise works for these apps (rules.lua
     # exempts them from the maximise suppression); minimise is not rendered
     # because its click cannot work on Hyprland (see term/gtk-3.0/settings.ini)
-    gsettings set org.gnome.desktop.wm.preferences button-layout 'close,maximize:appmenu'
+    run gsettings set org.gnome.desktop.wm.preferences button-layout 'close,maximize:appmenu'
 }
 
 browser_cleanup() { # firefox/zen: take OUT the inTitlebar user.js snippet older installs deployed.
@@ -200,6 +226,7 @@ browser_cleanup() { # firefox/zen: take OUT the inTitlebar user.js snippet older
     # was appended to the user's own file (the rest stays byte-identical). Safe to re-run:
     # a profile without the snippet is left untouched.
     say "browser cleanup (firefox/zen user.js)"
+    if [ "$DRY" = 1 ]; then note "would remove the old inTitlebar snippet from firefox/zen profiles, if it's there"; return 0; fi
     local marker='// glyph -- window buttons (see README: "Window buttons")'
     local pref='user_pref("browser.tabs.inTitlebar", 0);'
     # everywhere firefox/zen keep profiles: the native homes, and the flatpak homes --
@@ -283,6 +310,7 @@ tmux_theme() { # tmux follows the palette: Theme.apps() writes ~/.config/tmux/th
     # colours anything if tmux.conf sources it -- add that line to an existing config (either home).
     # No tmux, or no config, or the line already there: nothing to do (AMM021's installer does the same)
     command -v tmux >/dev/null || return 0
+    if [ "$DRY" = 1 ]; then note "would add the theme.conf source line to your tmux.conf, if it isn't there"; return 0; fi
     local conf
     for conf in "$HOME/.config/tmux/tmux.conf" "$HOME/.tmux.conf"; do
         [ -f "$conf" ] || continue
@@ -297,6 +325,7 @@ flatpak_gtk() { # flatpak apps are sandboxed off from ~/.config/gtk-* -- grant t
     # or their headerbar buttons never see the gtk.css discs (GNOME Calculator is usually a flatpak).
     # Read-only and per-app; the button-layout the apps already show comes from gsettings, which does reach them.
     command -v flatpak >/dev/null || return 0
+    if [ "$DRY" = 1 ]; then note "would grant the installed GNOME flatpaks read access to the gtk config"; return 0; fi
     say "flatpak gtk access"
     local apps=(org.gnome.Calculator org.gnome.Nautilus org.gnome.TextEditor org.gnome.Loupe org.gnome.Papers
                 org.gnome.Calendar org.gnome.Clocks org.gnome.Contacts org.gnome.Weather org.gnome.Characters)
@@ -312,6 +341,72 @@ flatpak_gtk() { # flatpak apps are sandboxed off from ~/.config/gtk-* -- grant t
             say "flatpak: could not grant gtk config access to $app"
         fi
     done
+}
+
+LOGIN="" FILES=""
+ask_setup() { # every question first (AMM021's flow): the file manager and the login screen are
+    # asked here, the extras in extras() -- after that, one password and no more questions.
+    # Only at a terminal and only without --with: scripts and pipes get the defaults.
+    [ -z "${WITH+x}" ] && { : </dev/tty; } 2>/dev/null || return 0
+    say "a few choices (Enter keeps the default)"
+    local a
+    printf '  file manager [thunar] / dolphin: '
+    read -r a </dev/tty || a=""
+    case "$a" in dolphin) FILES=dolphin ;; *) FILES=thunar ;; esac
+    printf '  login screen [keep] / glyph: '
+    read -r a </dev/tty || a=""
+    case "$a" in glyph) LOGIN=greeter ;; *) LOGIN="" ;; esac
+}
+
+KEEPER=""
+sudo_once() { # one password, then sudo stays alive so nothing stops to ask again
+    [ "$DRY" = 1 ] && return 0
+    if sudo -n true 2>/dev/null; then :; else
+        say "your password, once"
+        sudo -v
+    fi
+    ( trap - ERR; set +e; while kill -0 $$ 2>/dev/null; do sudo -n true; sleep 50; done ) >/dev/null 2>&1 &
+    KEEPER=$!
+    trap '[ -z "$KEEPER" ] || kill "$KEEPER" 2>/dev/null || true' EXIT
+}
+
+set_file_manager() { # the guided choice, applied (AMM021's set_file_manager): the xdg default,
+    # and for Dolphin the pieces Plasma would normally provide
+    command -v xdg-mime >/dev/null || return 0
+    case "$FILES" in
+        dolphin)
+            run xdg-mime default org.kde.dolphin.desktop inode/directory
+            # outside Plasma nothing provides the menu KDE apps read their app list from, and
+            # "Open With" comes up empty. Yours is left alone if you have one
+            local menu="$HOME/.config/menus/applications.menu"
+            if [ ! -e "$menu" ] && [ -r /etc/xdg/menus/arch-applications.menu ]; then
+                run mkdir -p "${menu%/*}"
+                run cp -n /etc/xdg/menus/arch-applications.menu "$menu" || true
+            fi
+            # "Open Terminal" and the F4 panel use this; a choice you already made stays
+            if [ -z "$(kreadconfig6 --file kdeglobals --group General --key TerminalApplication 2>/dev/null)" ]; then
+                run kwriteconfig6 --file kdeglobals --group General --key TerminalApplication kitty || true
+            fi
+            run kbuildsycoca6 --noincremental || true
+            note "Super+E still follows variables.lua (fileExplorer) -- set it to dolphin there if you want the key to match"
+            ;;
+        *) run xdg-mime default thunar.desktop inode/directory ;;
+    esac
+}
+
+install_flow() { # the guided install: questions, one password, then straight through
+    ask_setup
+    extras
+    [ "$FILES" = dolphin ] && EXT+=(dolphin kio-extras ffmpegthumbs kdegraphics-thumbnailers archlinux-xdg-menu kde-cli-tools)
+    sudo_once
+    packages; plugins; services; links; browser_cleanup; flatpak_gtk; tmux_theme
+    [ -n "$FILES" ] && set_file_manager
+    case "$LOGIN" in
+        greeter) if [ "$DRY" = 1 ]; then note "would run the greeter step (./install.sh --greeter)"; else greeter; fi ;;
+    esac
+    # spicetify needs Spotify already downloaded and logged in, so there is nothing to apply before the first launch
+    [[ " ${WITH//,/ } " == *" spotify "* ]] && say "spotify: launch it, log in, then spicetify config custom_apps marketplace && spicetify backup apply"
+    if [ "$DRY" = 1 ]; then say "dry run done -- nothing was changed"; else say "done. reboot and pick Hyprland in sddm"; fi
 }
 
 greeter() { # boot login: greetd + the lock's face as the greeter (./install.sh --greeter).
@@ -406,11 +501,10 @@ case "${1:-}" in
     --links) links; browser_cleanup; flatpak_gtk; tmux_theme ;; # on any distribution (NixOS, Fedora...): packages are up to you then, list in README
     --greeter) command -v pacman >/dev/null || { echo "the greeter step installs greetd with pacman (Arch only)"; exit 1; }
         greeter ;;
+    --dry-run) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
+        DRY=1; install_flow ;;
     ""|--with) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
         [ "${1:-}" = --with ] && WITH="${*:2}" # both comma- and space-separated
-        extras; packages; plugins; services; links; browser_cleanup; flatpak_gtk; tmux_theme
-        # spicetify needs Spotify already downloaded and logged in, so there is nothing to apply before the first launch
-        [[ " ${WITH//,/ } " == *" spotify "* ]] && say "spotify: launch it, log in, then spicetify config custom_apps marketplace && spicetify backup apply"
-        say "done. reboot and pick Hyprland in sddm" ;;
-    *) echo "usage: $0 [--with telegram,spotify,clash | --links | --greeter]"; exit 1 ;;
+        install_flow ;;
+    *) echo "usage: $0 [--with telegram,spotify,clash,pywalfox | --links | --greeter | --dry-run]"; exit 1 ;;
 esac
