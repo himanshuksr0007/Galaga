@@ -7,6 +7,7 @@ import "cal"
 import "charms"
 import "clip"
 import "deck"
+import "desktops"
 import "glyph"
 import "home"
 import "launcher"
@@ -34,6 +35,7 @@ ShellRoot {
     Clip { id: clip }
     Charms { id: charms }
     Deck { id: deck }
+    Desktops { id: desktops }
     Shot { id: shot }
     Vpn { id: vpn }
     Walls { id: walls }
@@ -101,6 +103,7 @@ ShellRoot {
     }
     // Super+Space (altar in demonshot) -- deck, bottom dashboard: the launcher is already on tapping Super
     Shortcut { name: "altar"; description: "deck: bottom dashboard"; onPressed: deck.toggle() }
+    Shortcut { name: "desktops"; description: "desktops overview"; onPressed: desktops.toggle() }
     Shortcut { name: "quick"; description: "quick settings"; onPressed: quick.toggle() }
     Shortcut { name: "ward"; description: "quick settings"; onPressed: quick.toggle() } // Super+N in demonshot -- same toggles
     Shortcut { name: "settings"; description: "settings"; onPressed: prefs.toggle() }

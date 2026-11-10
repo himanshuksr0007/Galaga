@@ -45,6 +45,7 @@ hl.bind("SUPER + I", hl.dsp.global("shell:settings"))
 hl.bind("SUPER + N", hl.dsp.global("shell:ward"))
 hl.bind("SUPER + P", hl.dsp.global("shell:pact"))
 hl.bind("SUPER + A", hl.dsp.global("shell:quick")) -- glyph quick settings
+hl.bind("SUPER + Tab", hl.dsp.global("shell:desktops")) -- desktops overview (also 3-finger swipe up)
 hl.bind("SUPER + SHIFT + W", hl.dsp.global("shell:wall")) -- glyph wallpapers
 hl.bind(vars.kbSession, hl.dsp.global("shell:power"))
 hl.bind(vars.kbPower, hl.dsp.global("shell:power"))
