@@ -95,7 +95,8 @@ hl.bind("SUPER + G", hl.dsp.global("shell:game"))  -- game mode has no key by de
 
 Every window gets the same three buttons, top-left, in the same order: **close** (red),
 **minimise** (white), **maximise** (black) — one look, two layers (GTK headerbar apps
-are the exception: they render close only, for the reasons under "Minimise is not real"):
+are the exception: they render close and maximise — minimise is the one button that
+cannot be made real there, for the reasons under "Minimise is not real"):
 
 - **Server-side windows** (terminals, most apps) get a bar from **hyprbars**, the
   hyprland-plugins plugin — `install.sh` adds and enables it through hyprpm, the config is
@@ -111,11 +112,20 @@ are the exception: they render close only, for the reasons under "Minimise is no
 - **Apps that draw their own buttons** (GTK headerbar apps, Electron) are excluded
   from the bar in `hypr/hyprland/rules.lua` (`hyprbars:no_bar`) and themed instead:
   `quickshell/glyph/term/gtk-3.0` and `gtk-4.0` ship a `settings.ini` and CSS that paints
-  the native **close** button as the same red disc, with its glyph from
-  `term/window-buttons/`. Only close is rendered (`gtk-decoration-layout=close:appmenu`):
-  a GTK headerbar's own minimise/maximise buttons can never work on Hyprland — see
-  "Minimise is not real" below — so they are not shown at all, rather than painted as
-  discs whose clicks do nothing. GTK4 needs its own
+  the native **close** and **maximise** buttons as the same red and black discs, with
+  their glyphs from `term/window-buttons/`. Close and maximise are rendered
+  (`gtk-decoration-layout=close,maximize:appmenu`) — and maximise genuinely works:
+  the click sends a maximise request, and `rules.lua` exempts exactly these apps from
+  its global maximise suppression, so Hyprland honours it (for every other app the
+  suppression stays: the tiling layout decides sizes, apps do not maximise
+  themselves). Minimise is not rendered: its request can never land — see
+  "Minimise is not real" below — so it is not shown at all, rather than painted as a
+  disc whose click does nothing. The exclusions are one curated list in `rules.lua`
+  (the `ownButtons` list at the top of the file): there is no protocol signal for
+  "this app draws its own buttons", so the list is the mechanism. If some app shows
+  **both** bars, add it — focus the window, read its class with `hyprctl activewindow`
+  (or find it in `hyprctl clients`), add one line to the list: the hyprbar goes away
+  and the app's own maximise starts working. GTK4 needs its own
   rules in that CSS: there the button itself is transparent and the visible disc is its
   image node, so colours and glyphs are painted on `windowcontrols button > image` —
   painting the button (the GTK3 way) leaves GTK4 buttons plain grey. **Flatpak** GTK apps
@@ -149,19 +159,30 @@ parks the window on the hidden `special:minimized` workspace. `Super+Alt+Shift+M
 that workspace — focus a window there and pull it back with any move-to-workspace bind
 (`Ctrl+Super+Shift+↓` moves it to the current workspace).
 
-That is also why GTK apps' headerbars show **only the close disc**. Their own − / ▢
-buttons send xdg requests into the compositor, and neither can ever land on Hyprland:
-a minimise request is received and dropped (Hyprland has no minimised state to put a
-window in, and doesn't even advertise the minimise capability to clients), and
-maximise requests are suppressed by this config's own global rule
-(`suppress_event = "maximize"` in `rules.lua`) because the tiling layout decides
-window sizes. There is no supported way to move those apps onto the hyprbar instead —
+That is also why GTK apps' headerbars show **no minimise disc**. Their own − / ▢
+buttons send xdg requests into the compositor, and the two requests have different
+fates. **Maximise can land** — it is a real state in Hyprland — and does: the
+config's global maximise suppression (`suppress_event = "maximize"` in `rules.lua`,
+kept for everything else because the tiling layout decides window sizes) is scoped
+to exempt exactly the own-buttons apps, so their ▢ renders as the black disc and
+maximises / unmaximises on click. **Minimise cannot land**: the request is received
+and dropped — Hyprland has no minimised state to put a window in, and doesn't even
+advertise the minimise capability to clients. And nothing outside the compositor
+can catch the click on its way down: no IPC event fires for a window's *own*
+minimise request (the event socket's `minimized` event only reports an *external*,
+taskbar-style client asking to minimise a window), and the plugin API's hooks
+mirror those same events, so the point where the request dies is unreachable from
+outside. Reaching it would take a custom C++ plugin hooking Hyprland's internal
+xdg state handling — and a plugin is built against one Hyprland version's headers
+and refuses to load on any other, so it would break on every Hyprland upgrade.
+That trade is deliberately not shipped; the keyboard route below is the minimise
+story for these apps. There is also no supported way to move those apps onto the
+hyprbar instead —
 GTK4 ignores `GTK_CSD` on Wayland, libadwaita's headerbar *is* app content (Calculator's
 mode switcher and undo/redo live there), and Hyprland has no rule to force a client
-into server-side decorations — so the headerbar stays, and the dead buttons go: the
-decoration layout renders close only. For GTK apps, minimise / maximise / fullscreen
-live on the keyboard, firing the same dispatchers as the bar buttons:
-`Super+Alt+M` parks, `Super+Alt+F` maximises, `Super+F` fullscreens.
+into server-side decorations — so the headerbar stays, its working buttons render,
+and for GTK apps minimise lives on the keyboard, firing the same dispatchers as the
+bar buttons: `Super+Alt+M` parks, `Super+Alt+F` maximises, `Super+F` fullscreens.
 
 Parked windows are listed in the **deck** (bottom edge): a fixed **minimised** section at
 its right end, behind a thin line, shows each parked window's icon and name — click one
@@ -177,8 +198,8 @@ Exceptions and notes:
   (Settings → Advanced, under System integration on some versions) and restart it:
   its own controls disappear and only the bar remains.
 - **VS Code** draws its own titlebar and ignores both layers. Its buttons stay its own —
-  or set `"window.titleBarStyle": "native"` and remove `Code` from the `no_bar` list in
-  `rules.lua`, then the bar above takes over.
+  or set `"window.titleBarStyle": "native"` and remove `Code` from the own-buttons
+  list in `rules.lua`, then the bar above takes over.
 - **Qt apps** need nothing: qtengine/Darkly style widgets, not decorations (no Qt setting
   carries a button layout — nothing to fake), and their windows are server-side here, so
   hyprbars draws their buttons.
@@ -190,8 +211,9 @@ Exceptions and notes:
 - **After a Hyprland upgrade** the plugin is built against the old version and quietly
   stops loading: `hyprpm update`, then `hyprpm reload` or relog.
 - No bar on a GTK app is normal — it has its own buttons. A bar *and* native buttons on the
-  same window means the app is missing from the `no_bar` list: find its class with
-  `hyprctl clients` and add it in `rules.lua`.
+  same window means the app is missing from the own-buttons list: find its class with
+  `hyprctl activewindow` (or `hyprctl clients`) and add one line to `ownButtons` in
+  `rules.lua` — the bar goes away and the app's own maximise starts working.
 
 <div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
 
