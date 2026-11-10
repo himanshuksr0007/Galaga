@@ -188,6 +188,7 @@ Scope {
                 Column {
                     width: 300
                     Row {
+                        id: gauges
                         spacing: 18
                         Gauge { on: win.open; f: SysStats.cpu; label: `cpu · ${Math.round(SysStats.cpuTemp)}°` }
                         Gauge { on: win.open; f: SysStats.mem; label: `mem · ${SysStats.memUsed.toFixed(1)}g` }
@@ -196,6 +197,9 @@ Scope {
                     Item { width: 1; height: 18 }
                     Row {
                         spacing: 14
+                        // the section is root.h tall (the panel is sized by it, not by content):
+                        // this row gets what the gauges and the spacer leave, no more
+                        height: root.h - gauges.height - 18
                         Column {
                             width: 160
                             spacing: 4
@@ -213,14 +217,21 @@ Scope {
                         }
                         Column {
                             width: 126
+                            height: parent.height
                             spacing: 6
-                            Lb { text: `cores · ${SysStats.cpuFreq.toFixed(1)} ghz`; px: 10 }
+                            Lb { id: coresLabel; text: `cores · ${SysStats.cpuFreq.toFixed(1)} ghz`; px: 10 }
                             // column per core: top dot white, below it grey -- like the cpu graph in Home
                             Grid {
                                 id: cores
+                                anchors.horizontalCenter: parent.horizontalCenter
                                 readonly property int n: Math.max(1, SysStats.cores.length)
-                                readonly property real d: (width - (n - 1) * spacing) / n
+                                // the cell has to fit both ways: 8 rows are fixed, so on a machine with
+                                // few cores the width alone would make the grid taller than this column
+                                // (8 * d + 7 * spacing) and it would spill out of the panel -- cap d by
+                                // the height the column actually has, the width wins when cores are many
+                                readonly property real d: Math.min((width - (n - 1) * spacing) / n, (height - 7 * spacing) / 8)
                                 width: parent.width
+                                height: parent.height - coresLabel.height - parent.spacing
                                 columns: n
                                 spacing: 3
                                 Repeater {
