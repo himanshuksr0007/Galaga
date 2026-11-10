@@ -3,9 +3,18 @@
 # (hyprland.lua next to this file) whose only job is showing the glyph face.
 # Hyprland gives us VT switching for free, so a broken greeter can never lock
 # you out of the machine: Ctrl+Alt+F3 is always a text login.
+#
+# Launched through start-hyprland, Hyprland's watchdog wrapper: the raw
+# Hyprland binary paints a "started without start-hyprland" warning banner
+# across the greeter screen. The wrapper takes Hyprland's own arguments
+# after "--" (its --config included). greetd's contract is unchanged: the
+# wrapper stays in front until Hyprland exits and then exits with it on a
+# clean exit -- which is the login path (the face exits, glyph-greeter runs
+# hyprctl dispatch exit) -- so greetd still sees the session end and hands
+# over to the user session.
 [terminal]
 vt = 1
 
 [default_session]
-command = "Hyprland --config /etc/greetd/hyprland.lua"
+command = "start-hyprland -- --config /etc/greetd/hyprland.lua"
 user = "greeter"

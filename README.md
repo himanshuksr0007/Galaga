@@ -243,7 +243,12 @@ twice.
 
 The greeter session is a **stripped Hyprland** (`config/greetd/hyprland.lua`): no plugins,
 no binds, no daemons — it starts the face and exits when the face does, which is what lets
-greetd hand over to your session. Its input section mirrors the session's, NumLock
+greetd hand over to your session. It is launched through `start-hyprland -- --config …`
+(Hyprland's watchdog wrapper; Hyprland's own arguments go after the `--`): launching the
+raw `Hyprland` binary instead makes Hyprland paint a *"started without start-hyprland"*
+warning banner across the greeter screen. The wrapper does not change the hand-over — it
+stays in front until Hyprland exits and exits with it on a clean exit, which is exactly
+the login path. Its input section mirrors the session's, NumLock
 included: `numlock_by_default` is on, so a numpad PIN types from a cold boot without
 touching NumLock. Keyboard focus is held from the first frame — just start typing; keys
 combined with Ctrl/Alt/Super are ignored (they are shortcuts, not password characters).
