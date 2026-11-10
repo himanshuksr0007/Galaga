@@ -233,6 +233,11 @@ Singleton {
             property var wsWalls: ({})         // desktop id (as string) -> wallpaper path; missing/"" -- the global wall above
             property bool featShot: true       // shot: grab text (OCR) and scan QR modes (shot/Shot.qml)
             property bool featGameAuto: true   // a fullscreen game turns on game mode (+ dnd) by itself (services/Game.qml)
+            property bool sounds: true         // interface sounds (services/Sounds): quiet synthesized blips -- lock, shots, notes, ticks
+            property int soundVol: 55          // their volume, %
+            property bool soundUi: true        // interface: panels opening (pop), the volume tick
+            property bool soundAlerts: true    // alerts: a notification arriving
+            property bool soundSys: true       // system: lock, unlock, screenshot, charger
             property var gameAuto: null        // services/Game: what game mode and dnd were before it took them; null -- it isn't holding them
             property string avatar: ""         // profile photo: the copy in the state dir; "" -- the dotted face (lock/LockFace.qml)
             property bool lockHideLen: false // lock: three fixed dots while typing, the password's length doesn't show (SenulMapa's idea, AMM021's port)
