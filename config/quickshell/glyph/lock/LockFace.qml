@@ -45,6 +45,10 @@ Item {
     Stage {
         id: stage
         focus: true
+        // type-anywhere: the password starts with the first key, no click. focus: true asks for it,
+        // these take it -- first frame, and again if the surface ever (re)appears without it
+        Component.onCompleted: forceActiveFocus()
+        onVisibleChanged: if (visible) forceActiveFocus()
 
         Keys.onPressed: e => {
             if (root.usersOpen && e.key === Qt.Key_Escape) { root.usersOpen = false; e.accepted = true; return; }
@@ -52,7 +56,10 @@ Item {
             if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) root.auth.submit();
             else if (e.key === Qt.Key_Escape) root.auth.buffer = "";
             else if (e.key === Qt.Key_Backspace) root.auth.buffer = root.auth.buffer.slice(0, -1);
-            else if (e.text && e.text.charCodeAt(0) >= 32) { root.auth.buffer += e.text; root.auth.fail = false; }
+            // Ctrl/Alt/Super + key is a shortcut, never a password character (Shift alone is fine --
+            // capitals are; numpad digits carry KeypadModifier, not one of these three)
+            else if (e.text && e.text.charCodeAt(0) >= 32
+                     && !(e.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) { root.auth.buffer += e.text; root.auth.fail = false; }
             else return;
             e.accepted = true;
         }
