@@ -117,6 +117,27 @@ hl.window_rule({ match = { initial_title = "Spotify( \\(?Free\\)?)?" }, workspac
 hl.window_rule({ match = { class = "discord|equibop|vesktop|whatsapp|org\\.telegram\\.desktop|TelegramDesktop" }, workspace = "special:communication" })
 hl.window_rule({ match = { class = "Todoist|io\\.github\\.alainm23\\.planify" }, workspace = "special:todo" })
 
+-- Window buttons (hyprbars, hyprland/titlebars.lua): windows that draw their own buttons
+-- (GTK headerbars, browsers, Electron) keep theirs -- themed by term/gtk.css -- and get no
+-- second bar here; fullscreen, PiP and XWayland popups lose the bar too
+hl.window_rule({ match = { fullscreen = true }, ["hyprbars:no_bar"] = true })
+hl.window_rule({ match = { tag = "xwl_popup" }, ["hyprbars:no_bar"] = true })
+hl.window_rule({ match = { title = "Picture(-| )in(-| )[Pp]icture" }, ["hyprbars:no_bar"] = true })
+hl.window_rule({
+    match = {
+        class = "^(" ..
+            "org\\.gnome\\..*|" .. -- GNOME apps: headerbars (Nautilus, Settings, Text Editor, Loupe, ...)
+            "gnome-control-center|" ..
+            "firefox|org\\.mozilla\\.firefox|zen|chromium|google-chrome|brave-browser|" .. -- own titlebars
+            "Code|VSCodium|codium|" .. -- VS Code: own titlebar, see README "Window buttons"
+            "steam|" .. -- own titlebar; the games themselves are fullscreen anyway
+            "discord|vesktop|equibop|" .. -- own titlebars
+            "org\\.quickshell" .. -- the shell's own windows (Rice switcher)
+            ")$",
+    },
+    ["hyprbars:no_bar"] = true,
+})
+
 ---------------------
 ---- Layer rules ----
 ---------------------

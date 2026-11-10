@@ -103,6 +103,8 @@ return {
     kbPinWindow                = "SUPER + SHIFT + P", -- Super+P -- vpn panel
     kbWindowFullscreen         = "SUPER + F",
     kbWindowBorderedFullscreen = "SUPER + ALT + F",
+    kbMinimiseWindow           = "SUPER + ALT + M", -- no minimise in hypr: parks the window on special:minimized
+    kbMinimisedWs              = "SUPER + ALT + SHIFT + M", -- peek at the minimised windows
     kbToggleWindowFloating     = "SUPER + ALT + space",
     kbCloseWindow              = "SUPER + Q",
 

@@ -34,6 +34,11 @@ hl.on("hyprland.start", function()
 
     -- background kitty without a window: the first Super+Q opens instantly too
     hl.exec_cmd(vars.terminal .. " --start-as=hidden")
+
+    -- Plugins (hyprpm): loads hyprbars, the window title bars. Its init reloads the
+    -- config, which is what registers the buttons in hyprland/titlebars.lua.
+    -- After a Hyprland upgrade the plugin is stale until rebuilt: `hyprpm update`
+    hl.exec_cmd("hyprpm reload -n")
 end)
 
 -- Resizer listener

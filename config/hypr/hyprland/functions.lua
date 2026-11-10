@@ -78,6 +78,19 @@ local function move_actions(win)
     end
 end
 
+-- Minimise: Hyprland has no minimise, so the window is parked on the hidden
+-- special:minimized workspace (follow = false -- focus stays where it is). The white
+-- title-bar button does the same through a dispatcher string (hyprland/titlebars.lua).
+local function minimise_active()
+    hl.dispatch(hl.dsp.window.move({ workspace = "special:minimized", follow = false }))
+end
+
+-- peek at the minimised windows; restore one by focusing it there and moving it out
+-- (CTRL + SUPER + SHIFT + down moves it to the current workspace, or any move bind)
+local function toggle_minimised()
+    hl.dispatch(hl.dsp.workspace.toggle_special("minimized"))
+end
+
 -- special ws: open/close, and if it is empty, launch its app from vars.apps (caelestia toggle replacement).
 -- we read apps on keypress, not at load: user.lua loads after the keybinds and changes them there
 local function toggle_special(name)
@@ -105,6 +118,8 @@ end
 
 return {
     toggle_special       = toggle_special,
+    minimise_active      = minimise_active,
+    toggle_minimised     = toggle_minimised,
     record               = record,
     resizer              = resizer,
     resize_by_screen     = resize_by_screen,

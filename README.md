@@ -89,6 +89,46 @@ hl.bind("SUPER + G", hl.dsp.global("shell:game"))  -- game mode has no key by de
 
 <div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
 
+<h2 align="center">Window buttons</h2>
+
+Every window gets the same three buttons, top-left, in the same order: **close** (red),
+**minimise** (white), **fullscreen** (black) — one look, two layers:
+
+- **Server-side windows** (terminals, most apps) get a bar from **hyprbars**, the
+  hyprland-plugins plugin — `install.sh` adds and enables it through hyprpm, the config is
+  `hypr/hyprland/titlebars.lua`. The buttons run the same dispatchers as the keybinds, so a
+  click animates exactly like the keyboard: close rides `windowsOut`, fullscreen and the
+  minimise move ride `windowsMove` (`hypr/hyprland/animations.lua` — the animation tree has
+  no fullscreen leaf, geometry changes are `windowsMove`). Double-clicking the bar toggles
+  fullscreen.
+- **Apps that draw their own buttons** (GTK headerbar apps, browsers, Electron) are excluded
+  from the bar in `hypr/hyprland/rules.lua` (`hyprbars:no_bar`) and themed instead:
+  `quickshell/glyph/term/gtk-3.0` and `gtk-4.0` ship a `settings.ini` (buttons on the left,
+  `close,minimize,maximize:appmenu`) and CSS that paints the native buttons as the same
+  red/white/black discs, with glyphs from `term/window-buttons/`.
+
+**Minimise is not real.** Hyprland has no minimise: the white button (and `Super+Alt+M`)
+parks the window on the hidden `special:minimized` workspace. `Super+Alt+Shift+M` peeks at
+that workspace — focus a window there and pull it back with any move-to-workspace bind
+(`Ctrl+Super+Shift+↓` moves it to the current workspace).
+
+Exceptions and notes:
+
+- Fullscreen windows, picture-in-picture and XWayland popups get no bar.
+- **VS Code** draws its own titlebar and ignores both layers. Its buttons stay its own —
+  or set `"window.titleBarStyle": "native"` and remove `Code` from the `no_bar` list in
+  `rules.lua`, then the bar above takes over.
+- **Qt apps** need nothing: qtengine/Darkly style widgets, not decorations (no Qt setting
+  carries a button layout — nothing to fake), and their windows are server-side here, so
+  hyprbars draws their buttons.
+- **After a Hyprland upgrade** the plugin is built against the old version and quietly
+  stops loading: `hyprpm update`, then `hyprpm reload` or relog.
+- No bar on a GTK app is normal — it has its own buttons. A bar *and* native buttons on the
+  same window means the app is missing from the `no_bar` list: find its class with
+  `hyprctl clients` and add it in `rules.lua`.
+
+<div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
+
 <h2 align="center">Dependencies</h2>
 
 | | |

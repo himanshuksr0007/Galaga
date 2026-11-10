@@ -75,3 +75,30 @@ scrollbar slider:hover, scrollbar slider:active { background-color: #8C8C8C; }
 .thunar notebook header tab:checked { background-color: #F2F2F2; color: #000000; }
 
 .thunar statusbar { font-family: "Space Mono"; font-size: 11px; letter-spacing: 1.5px; color: #8C8C8C; padding: 6px 12px; }
+
+/* ---- window buttons: the same traffic lights as the hyprbars bars (hyprland/titlebars.lua).
+   Apps with headerbars draw their own buttons; settings.ini next to this file puts them on the
+   left (close, minimize, maximize), here they become the same red / white / black discs.
+   The discs are pure CSS; the stock symbolic icons are hidden and the glyphs are our svgs
+   (term/window-buttons/, linked into gtk-3.0/ and gtk-4.0/ by install.sh) ---- */
+headerbar .titlebutton, windowcontrols button {
+    min-width: 15px; min-height: 15px;
+    padding: 0; margin: 0 4px;
+    border: none; border-radius: 999px; box-shadow: none;
+    background-repeat: no-repeat; background-position: center; background-size: 15px 15px;
+}
+headerbar .titlebutton image, windowcontrols button image { opacity: 0; }
+headerbar .titlebutton.close, windowcontrols button.close {
+    background-color: #D71921; background-image: url("window-buttons/close.svg");
+}
+headerbar .titlebutton.close:hover, windowcontrols button.close:hover { background-color: #AE131B; }
+headerbar .titlebutton.minimize, windowcontrols button.minimize {
+    background-color: #F2F2F2; background-image: url("window-buttons/minimize.svg");
+}
+headerbar .titlebutton.minimize:hover, windowcontrols button.minimize:hover { background-color: #FFFFFF; }
+headerbar .titlebutton.maximize, windowcontrols button.maximize {
+    background-color: #000000; background-image: url("window-buttons/maximize.svg");
+}
+headerbar .titlebutton.maximize:hover, windowcontrols button.maximize:hover { background-color: #2A2A2A; }
+/* unfocused window: discs dim, like the bars' ash inactive buttons */
+headerbar:backdrop .titlebutton, windowcontrols:backdrop button { opacity: 0.55; }

@@ -9,8 +9,8 @@ DOTS="$(cd "$(dirname "$0")" && pwd)"
 BACKUP="$HOME/.dots-backup-$(date +%F_%H-%M-%S)"
 
 PACMAN=(
-    # base
-    base-devel git curl jq python
+    # base (cmake/meson: hyprpm builds the plugins from source)
+    base-devel git curl jq python cmake meson
     # session
     hyprland hypridle hyprsunset hyprpicker xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
     sddm quickshell polkit-gnome gnome-keyring geoclue upower xdg-user-dirs
@@ -55,6 +55,10 @@ LINKS=(
     "$G/term/cava                               .config/cava"
     "$G/term/gtk-3.0/gtk.css                    .config/gtk-3.0/gtk.css"
     "$G/term/gtk-4.0/gtk.css                    .config/gtk-4.0/gtk.css"
+    "$G/term/gtk-3.0/settings.ini               .config/gtk-3.0/settings.ini"
+    "$G/term/gtk-4.0/settings.ini               .config/gtk-4.0/settings.ini"
+    "$G/term/window-buttons                     .config/gtk-3.0/window-buttons"
+    "$G/term/window-buttons                     .config/gtk-4.0/window-buttons"
     "config/fish/config.fish                    .config/fish/config.fish"
     "config/fish/functions/fish_greeting.fish   .config/fish/functions/fish_greeting.fish"
     "config/fonts                               .local/share/fonts/glyph"
@@ -100,6 +104,16 @@ packages() {
     [ ${#EXT[@]} -eq 0 ] || yay -S --needed --noconfirm "${EXT[@]}" || say "optional: not everything installed, see above"
 }
 
+plugins() { # hyprbars -- the window title bars (config/hypr/hyprland/titlebars.lua), built by hyprpm
+    say "plugins (hyprpm)"
+    command -v hyprpm >/dev/null || { say "no hyprpm (it ships with hyprland) -- title bars skipped"; return 0; }
+    # add errors out when the repo is already there -- that is what a re-run looks like
+    hyprpm add https://github.com/hyprwm/hyprland-plugins 2>/dev/null || true
+    # no session is running during install: enable only records it, execs.lua loads it at login
+    hyprpm enable hyprbars || say "hyprpm: hyprbars could not be enabled -- no title bars"
+    say "after every Hyprland upgrade the plugin goes stale: hyprpm update (then hyprpm reload or relog)"
+}
+
 services() {
     say "services"
     sudo systemctl enable NetworkManager bluetooth power-profiles-daemon
@@ -133,6 +147,8 @@ links() {
     # dark mode for Zen, Electron and libadwaita (through the portal) and a dark gtk3 base for our gtk.css
     gsettings set org.gnome.desktop.interface color-scheme prefer-dark
     gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark
+    # window buttons on the left for apps that read it from here (the rest read settings.ini)
+    gsettings set org.gnome.desktop.wm.preferences button-layout 'close,minimize,maximize:appmenu'
 }
 
 [ "$EUID" -eq 0 ] && { echo "run as your user, sudo will ask by itself"; exit 1; }
@@ -141,7 +157,7 @@ case "${1:-}" in
     --links) links ;; # on any distribution (NixOS, Fedora...): packages are up to you then, list in README
     ""|--with) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
         [ "${1:-}" = --with ] && WITH="${*:2}" # both comma- and space-separated
-        extras; packages; services; links
+        extras; packages; plugins; services; links
         # spicetify needs Spotify already downloaded and logged in, so there is nothing to apply before the first launch
         [[ " ${WITH//,/ } " == *" spotify "* ]] && say "spotify: launch it, log in, then spicetify config custom_apps marketplace && spicetify backup apply"
         say "done. reboot and pick Hyprland in sddm" ;;
