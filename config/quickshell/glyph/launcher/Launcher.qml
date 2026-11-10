@@ -76,6 +76,94 @@ PanelWindow {
         return out.sort((a, b) => b.score - a.score || (uses[b.id] ?? 0) - (uses[a.id] ?? 0));
     }
 
+    // ---- smarts (apps mode, prefs FEATURES): the query is understood before it is searched ----
+    // a conversion from the built-in table (no rates -- no currency), an arithmetic line for
+    // qalc, or "kill <app>" for the app's windows. The answer is a strip above the results;
+    // it holds Enter until Down hands the keys to the grid. Files ride the grid itself.
+    property var smart: null
+    property string smartOut: ""
+    property bool smartFocus: true
+    property var fileItems: []
+
+    readonly property var units: ({
+        mm: ["length", 0.001], cm: ["length", 0.01], m: ["length", 1], km: ["length", 1000],
+        "in": ["length", 0.0254], inch: ["length", 0.0254], ft: ["length", 0.3048], foot: ["length", 0.3048], yd: ["length", 0.9144], mi: ["length", 1609.344], mile: ["length", 1609.344],
+        g: ["mass", 0.001], kg: ["mass", 1], t: ["mass", 1000], lb: ["mass", 0.45359237], oz: ["mass", 0.0283495231],
+        b: ["data", 1], kb: ["data", 1e3], mb: ["data", 1e6], gb: ["data", 1e9], tb: ["data", 1e12],
+        kib: ["data", 1024], mib: ["data", 1048576], gib: ["data", 1073741824], tib: ["data", 1099511627776],
+        s: ["time", 1], sec: ["time", 1], min: ["time", 60], h: ["time", 3600], hr: ["time", 3600], day: ["time", 86400], week: ["time", 604800],
+        ms: ["speed", 1], kmh: ["speed", 1 / 3.6], mph: ["speed", 0.44704],
+        ml: ["volume", 0.001], l: ["volume", 1], gal: ["volume", 3.785411784]
+    })
+    function fmt(x) {
+        if (x === 0) return "0";
+        return Math.abs(x) >= 1e6 || Math.abs(x) < 1e-4 ? x.toExponential(4) : String(Math.round(x * 1e6) / 1e6);
+    }
+    function convert(q) {
+        const m = q.toLowerCase().match(/^(-?[\d.]+)\s*([a-z°]+)\s+(?:to|in)\s+([a-z°]+)$/);
+        if (!m) return "";
+        const v = parseFloat(m[1]);
+        if (isNaN(v)) return "";
+        const a = m[2].replace("°", ""), b = m[3].replace("°", "");
+        const T = { c: [x => x + 273.15, x => x - 273.15], f: [x => (x - 32) * 5 / 9 + 273.15, x => (x - 273.15) * 9 / 5 + 32], k: [x => x, x => x] };
+        if (T[a] || T[b]) {
+            if (!T[a] || !T[b]) return "";
+            return `${m[1]} ${m[2]} = ${fmt(T[b][1](T[a][0](v)))} ${m[3]}`;
+        }
+        const ua = units[a], ub = units[b];
+        if (!ua || !ub || ua[0] !== ub[0]) return "";
+        return `${m[1]} ${m[2]} = ${fmt(v * ua[1] / ub[1])} ${m[3]}`;
+    }
+    function computeSmart() {
+        smart = null;
+        smartOut = "";
+        if (mode !== 0 || !Theme.state.featLauncher) return;
+        const q = query.trim();
+        if (!q) return;
+        const km = q.match(/^kill\s+(.+)$/i);
+        if (km) {
+            const needle = km[1].trim().toLowerCase();
+            const wins = Hyprland.toplevels.values.filter(t => {
+                const cls = t.lastIpcObject?.class ?? "";
+                return cls.toLowerCase().includes(needle) || (DesktopEntries.heuristicLookup(cls)?.name ?? "").toLowerCase().includes(needle);
+            });
+            if (wins.length) {
+                const addrs = wins.map(t => t.address);
+                smart = { kind: "kill", text: `kill ${km[1].trim()}`, sub: `${addrs.length} window${addrs.length > 1 ? "s" : ""}`,
+                          act: () => addrs.forEach(a => Hyprland.dispatch(`hl.dsp.window.close({ window = "address:0x${a}" })`)) };
+            }
+            return;
+        }
+        const cv = convert(q);
+        if (cv) {
+            smart = { kind: "conv", text: cv, sub: "conversion", act: () => Quickshell.execDetached(["wl-copy", cv.slice(cv.indexOf(" = ") + 3)]) };
+            return;
+        }
+        if (/^[0-9\s+\-*/().%^]+$/.test(q) && /[0-9]/.test(q) && /[+\-*/%^]/.test(q)) {
+            smart = { kind: "maths", text: q, sub: "maths", act: () => { if (root.smartOut) Quickshell.execDetached(["wl-copy", root.smartOut]); } };
+            smartCalc.exec(["qalc", "-t", q]); // exec cancels the previous run, like calc mode
+        }
+    }
+    Process { id: smartCalc; stdout: StdioCollector { onStreamFinished: root.smartOut = text.trim() } }
+
+    // files under home: bounded (depth 3, first 24), searched on a pause in typing
+    Timer { id: fileT; interval: 250; onTriggered: root.findFiles() }
+    function findFiles() {
+        const q = query.trim();
+        if (mode !== 0 || !Theme.state.featLauncher || q.length < 2) { fileItems = []; return; }
+        findProc.exec(["sh", "-c", 'find "$1" -maxdepth 3 -not -path "*/.*" -type f -iname "*$2*" 2>/dev/null | head -24',
+                       "glyph-find", Quickshell.env("HOME"), q.replace(/["$`\\]/g, "")]);
+    }
+    Process {
+        id: findProc
+        stdout: StdioCollector {
+            onStreamFinished: root.fileItems = text.split("\n").filter(Boolean).map(p => ({
+                name: p.slice(p.lastIndexOf("/") + 1), glyph: "\u{F0214}", src: "", hl: [],
+                run: () => Quickshell.execDetached(["xdg-open", p])
+            }));
+        }
+    }
+
     // blocks: { head, sub, items }; each cell -- row/col, the arrows move by them
     readonly property var blocks: {
         const q = query.trim().toLowerCase();
@@ -86,6 +174,7 @@ PanelWindow {
         else if (q) {
             const r = filter(apps, q);
             b = [{ head: "results", sub: String(r.length), items: r }];
+            if (Theme.state.featLauncher && fileItems.length) b.push({ head: "files", sub: String(fileItems.length), items: fileItems });
         } else {
             const recent = apps.filter(a => uses[a.id]).sort((a, b) => uses[b.id] - uses[a.id]).slice(0, 6);
             b = (recent.length ? [{ head: "recent", items: recent }] : []).concat([{ head: "all apps", sub: String(apps.length), all: true, items: apps }]);
@@ -122,6 +211,12 @@ PanelWindow {
     }
     function launch() {
         if (!shown) return; // fades for Theme.t and still catches clicks: a second click of a double-click -- a second window
+        if (mode === 0 && smart && smartFocus) { // the smart strip holds Enter until Down is pressed
+            const s = smart;
+            close();
+            s.act();
+            return;
+        }
         if (mode === 3) {
             if (calcOut) Quickshell.execDetached(["wl-copy", calcOut]);
             return close();
@@ -147,10 +242,13 @@ PanelWindow {
     Process { id: calc; stdout: StdioCollector { onStreamFinished: root.calcOut = text.trim() } }
     onQueryChanged: {
         sel = 0;
+        smartFocus = true;
+        computeSmart();
+        fileT.restart();
         if (mode === 3 && query.trim()) calc.exec(["qalc", "-t", query]); // exec cancels the previous calculation
         else calcOut = "";
     }
-    onModeChanged: { sel = 0; flick.contentY = 0; if (mode === 3) queryChanged(); }
+    onModeChanged: { sel = 0; flick.contentY = 0; computeSmart(); if (mode === 3) queryChanged(); }
     // list shrank without a new query (a window closed in windows) -- cursor past the end, cur empty
     onFlatChanged: sel = Math.max(0, Math.min(sel, flat.length - 1))
 
@@ -221,8 +319,8 @@ PanelWindow {
                         else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) root.launch();
                         else if (e.key === Qt.Key_Tab) root.mode = (root.mode + 1) % 4;
                         else if (e.key === Qt.Key_Backtab) root.mode = (root.mode + 3) % 4;
-                        else if (e.key === Qt.Key_Down) root.move(1, 0);
-                        else if (e.key === Qt.Key_Up) root.move(-1, 0);
+                        else if (e.key === Qt.Key_Down) { if (root.smartFocus && root.smart && root.mode === 0) root.smartFocus = false; else root.move(1, 0); } // the strip hands the keys to the grid
+                        else if (e.key === Qt.Key_Up) { if (!root.smartFocus && root.smart && root.mode === 0 && root.cur && root.flat.length && root.cur.row === root.flat[0].row) root.smartFocus = true; else root.move(-1, 0); } // back up onto the strip
                         else if (e.key === Qt.Key_Right && (!input.text || input.cursorPosition === input.text.length) && root.flat.length) root.move(0, 1);
                         else if (e.key === Qt.Key_Left && (!input.text || input.cursorPosition === 0) && root.flat.length) root.move(0, -1);
                         else return;
@@ -263,6 +361,42 @@ PanelWindow {
                 Column {
                     id: body
                     width: flick.width
+
+                    // the smart strip: maths / conversion / kill, above the results
+                    Item {
+                        visible: root.mode === 0 && !!root.smart && !!root.query.trim()
+                        width: body.width
+                        height: visible ? 70 : 0
+                        Rectangle {
+                            width: parent.width
+                            height: 56
+                            radius: 28
+                            color: Theme.s2
+                            border { width: root.smartFocus ? 1 : 0; color: Theme.fg }
+                            Icon {
+                                id: smIcon
+                                x: 20
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: root.smart?.kind === "kill" ? "\u{F0156}" : root.smart?.kind === "conv" ? "\u{F0779}" : "\u{F00EC}"
+                                font.pixelSize: 20
+                                color: Theme.grey
+                            }
+                            Text {
+                                anchors { left: smIcon.right; leftMargin: 14; verticalCenter: parent.verticalCenter }
+                                width: parent.width - 210
+                                elide: Text.ElideRight
+                                text: root.smart?.kind === "maths" ? `${root.smart.text} = ${root.smartOut || "…"}` : root.smart?.text ?? ""
+                                font { family: Theme.ui; pixelSize: 17; weight: Font.DemiBold }
+                                color: Theme.fg
+                            }
+                            Lb {
+                                anchors { right: parent.right; rightMargin: 22; verticalCenter: parent.verticalCenter }
+                                text: root.smart?.kind === "kill" ? `↵ kill · ${root.smart.sub}` : root.smart?.kind === "conv" ? "↵ copy" : "↵ copy result"
+                                px: 10
+                            }
+                            TapHandler { onTapped: { root.smartFocus = true; root.launch(); } }
+                        }
+                    }
 
                     // calc: answer large, Enter -- copy
                     Column {
