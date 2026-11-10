@@ -222,16 +222,18 @@ PanelWindow {
             }
         }
 
-        // earbuds as a ring; none -- volume
+        // earbuds as a ring; none -- volume. Muted reads as mute everywhere in this
+        // shell (the bar's icon, the quick slider): the same Sys.muted binding here --
+        // mute glyph, 0, empty ring -- never the stored volume behind a speaker icon
         Component {
             id: budsW
             W {
                 round: true
-                Ring { anchors { fill: parent; margins: 12 } f: root.buds ? root.buds.battery : Sys.vol }
+                Ring { anchors { fill: parent; margins: 12 } f: root.buds ? root.buds.battery : Sys.muted ? 0 : Sys.vol }
                 Column {
                     anchors.centerIn: parent
-                    Icon { anchors.horizontalCenter: parent.horizontalCenter; text: root.buds ? "\u{F02CB}" : "\u{F057E}"; font.pixelSize: 30 }
-                    Num { anchors.horizontalCenter: parent.horizontalCenter; topPadding: lead + 8; text: Math.round((root.buds ? root.buds.battery : Sys.vol) * 100); font.pixelSize: 54 }
+                    Icon { anchors.horizontalCenter: parent.horizontalCenter; text: root.buds ? "\u{F02CB}" : Sys.muted ? "\u{F075F}" : "\u{F057E}"; font.pixelSize: 30 }
+                    Num { anchors.horizontalCenter: parent.horizontalCenter; topPadding: lead + 8; text: Math.round((root.buds ? root.buds.battery : Sys.muted ? 0 : Sys.vol) * 100); font.pixelSize: 54 }
                     Lb {
                         anchors.horizontalCenter: parent.horizontalCenter
                         topPadding: 6
