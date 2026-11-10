@@ -206,7 +206,7 @@ PanelWindow {
 
                     Slider { icon: "\u{F00E0}"; visible: Sys.panelBriExternal ? Backlight.ddcOk : Sys.hasBri; value: Sys.panelBri; onMoved: v => Sys.setPanelBri(v) }
                     Slider { icon: Sys.muted ? "\u{F075F}" : "\u{F057E}"; value: Sys.muted ? 0 : Sys.vol; onMoved: v => Sys.setVol(v); picked: root.pick === "out"; onMenu: root.pick = picked ? "" : "out" }
-                    Out { width: parent.width; visible: root.pick === "out"; onTouched: root.pin() } // right-click the volume slider: the outputs
+                    Out { width: parent.width; open: root.pick === "out"; onTouched: root.pin() } // right-click the volume slider: the outputs
 
                     // power mode, like caelestia: four cells, white fill slides to the selected one; ticks -- strength.
                     // ultra -- also 60 Hz and no animations, blur or shadows (Rules.modes)

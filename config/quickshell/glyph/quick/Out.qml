@@ -9,6 +9,13 @@ Rectangle {
     id: root
     signal touched // any click inside pins the panel
 
+    // unfolds like the Picker and Rec beside it in Quick: grows and fades on t
+    // instead of snapping in -- Quick's column rides the height binding, so the
+    // whole panel glides with it
+    property bool open: false
+    property real t: open ? 1 : 0
+    Behavior on t { NumberAnimation { duration: 250; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+
     // [label, icon, order]
     function kind(n) {
         return /^raop_sink/.test(n.name) ? ["airplay", "\u{F0118}", 3]
@@ -28,7 +35,10 @@ Rectangle {
         .filter(n => n.isSink && n.audio && !n.isStream && !/^HDMI \d+$/.test(n.nickname))
         .sort((a, b) => kind(a)[2] - kind(b)[2] || name(a).localeCompare(name(b)))
 
-    height: list.height + 32
+    visible: t > 0
+    height: (list.height + 32) * t
+    opacity: t
+    clip: true
     radius: Theme.corner(30)
     color: Theme.s2
 
