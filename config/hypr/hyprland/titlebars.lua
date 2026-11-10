@@ -6,9 +6,11 @@
 -- The pcall below keeps that pass silent; the reload right after registers the buttons.
 -- After a Hyprland upgrade the plugin is stale until rebuilt: `hyprpm update`.
 --
--- Apps that draw their own buttons (GTK headerbars, browsers, VS Code, ...) are excluded
--- in rules.lua (hyprbars:no_bar) and themed by term/gtk-3.0 + term/gtk-4.0 instead --
--- one look, two layers (see README: "Window buttons").
+-- Apps that draw their own headerbar buttons (GTK apps, VS Code, ...) are excluded
+-- in rules.lua (hyprbars:no_bar) and themed by term/gtk-3.0 + term/gtk-4.0 instead.
+-- Browsers get this bar like everyone else: their built-in buttons are switched off
+-- on their side first (config/browser/user.js for Firefox/Zen, a setting in
+-- Chromium) -- see README: "Window buttons".
 --
 -- Colours: bone bar and ash inactive discs from the scheme, the rice's one red and its
 -- white/black from Theme.qml (the same values as term/gtk.css). hyprbars draws each

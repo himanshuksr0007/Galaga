@@ -101,16 +101,30 @@ Every window gets the same three buttons, top-left, in the same order: **close**
   minimise move ride `windowsMove` (`hypr/hyprland/animations.lua` — the animation tree has
   no fullscreen leaf, geometry changes are `windowsMove`). Double-clicking the bar toggles
   fullscreen.
-- **Apps that draw their own buttons** (GTK headerbar apps, browsers, Electron) are excluded
+- **Apps that draw their own buttons** (GTK headerbar apps, Electron) are excluded
   from the bar in `hypr/hyprland/rules.lua` (`hyprbars:no_bar`) and themed instead:
   `quickshell/glyph/term/gtk-3.0` and `gtk-4.0` ship a `settings.ini` (buttons on the left,
   `close,minimize,maximize:appmenu`) and CSS that paints the native buttons as the same
   red/white/black discs, with glyphs from `term/window-buttons/`.
+- **Browsers** get the bar too — but their built-in buttons had to be switched off first.
+  Firefox, Zen, Chromium and friends draw small grey buttons inside their own UI, where
+  `gtk.css` cannot reach them, and the requests behind those buttons go nowhere on
+  Hyprland: minimise does not exist and maximise is suppressed, so only their close did
+  anything. For **Firefox and Zen**, `install.sh` deploys `config/browser/user.js` into
+  every existing profile: `browser.tabs.inTitlebar = 0` — the "Title Bar" switch — so the
+  browser draws no buttons of its own and the bar above takes over (restart the browser
+  once after installing; by hand it is the same pref in `about:config`, or tick
+  *Title Bar* under Customize Toolbar). For **Chromium, Chrome and Brave** there is no
+  file to deploy — turn on **Use system title bar and borders** once (Settings →
+  Appearance) and the bar takes over there too.
 
 **Minimise is not real.** Hyprland has no minimise: the white button (and `Super+Alt+M`)
 parks the window on the hidden `special:minimized` workspace. `Super+Alt+Shift+M` peeks at
 that workspace — focus a window there and pull it back with any move-to-workspace bind
-(`Ctrl+Super+Shift+↓` moves it to the current workspace).
+(`Ctrl+Super+Shift+↓` moves it to the current workspace). One honest exception: inside
+GTK apps, the minimise button in their *own* headerbar still does nothing — it sends the
+same minimise request Hyprland cannot honour. That is a platform limitation, not a
+theming miss; `Super+Alt+M` works on every window, GTK apps included.
 
 Exceptions and notes:
 

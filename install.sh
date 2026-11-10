@@ -151,13 +151,36 @@ links() {
     gsettings set org.gnome.desktop.wm.preferences button-layout 'close,minimize,maximize:appmenu'
 }
 
+browser_prefs() { # firefox/zen: built-in window buttons off (config/browser/user.js) -- hyprbars draws them instead
+    say "browser prefs (firefox/zen user.js)"
+    local src="$DOTS/config/browser/user.js" base profile target
+    for base in "$HOME/.mozilla/firefox" "$HOME/.zen"; do
+        [ -d "$base" ] || continue # browser never ran here -- nothing to do
+        for profile in "$base"/*.default*/; do
+            [ -d "$profile" ] || continue
+            target="${profile}user.js"
+            if [ -f "$target" ]; then
+                # the pref is already set (by us, or by hand): leave the file exactly as it is
+                grep -q 'browser\.tabs\.inTitlebar' "$target" && continue
+                # the user's own user.js stays in place; a copy goes to the backup before we append
+                mkdir -p "$BACKUP/$(dirname "${target#"$HOME"/}")"
+                cp "$target" "$BACKUP/${target#"$HOME"/}"
+                { echo; cat "$src"; } >>"$target"
+            else
+                cp "$src" "$target"
+            fi
+            echo "  $target"
+        done
+    done
+}
+
 [ "$EUID" -eq 0 ] && { echo "run as your user, sudo will ask by itself"; exit 1; }
 
 case "${1:-}" in
-    --links) links ;; # on any distribution (NixOS, Fedora...): packages are up to you then, list in README
+    --links) links; browser_prefs ;; # on any distribution (NixOS, Fedora...): packages are up to you then, list in README
     ""|--with) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
         [ "${1:-}" = --with ] && WITH="${*:2}" # both comma- and space-separated
-        extras; packages; plugins; services; links
+        extras; packages; plugins; services; links; browser_prefs
         # spicetify needs Spotify already downloaded and logged in, so there is nothing to apply before the first launch
         [[ " ${WITH//,/ } " == *" spotify "* ]] && say "spotify: launch it, log in, then spicetify config custom_apps marketplace && spicetify backup apply"
         say "done. reboot and pick Hyprland in sddm" ;;

@@ -118,8 +118,15 @@ hl.window_rule({ match = { class = "discord|equibop|vesktop|whatsapp|org\\.teleg
 hl.window_rule({ match = { class = "Todoist|io\\.github\\.alainm23\\.planify" }, workspace = "special:todo" })
 
 -- Window buttons (hyprbars, hyprland/titlebars.lua): windows that draw their own buttons
--- (GTK headerbars, browsers, Electron) keep theirs -- themed by term/gtk.css -- and get no
--- second bar here; fullscreen, PiP and XWayland popups lose the bar too
+-- (GTK headerbars, Electron) keep theirs -- themed by term/gtk.css -- and get no second
+-- bar here; fullscreen, PiP and XWayland popups lose the bar too.
+-- Browsers are NOT excluded: they draw their buttons inside their own UI, where gtk.css
+-- cannot reach them, and the requests behind those buttons go nowhere on Hyprland
+-- (minimise does not exist, maximise is suppressed above), so only their close worked.
+-- Browsers get the bar like everyone else, and their own buttons are switched off on
+-- their side: Firefox/Zen via user.js (install.sh deploys config/browser/user.js),
+-- Chromium/Chrome/Brave via their "Use system title bar and borders" setting --
+-- see README "Window buttons".
 hl.window_rule({ match = { fullscreen = true }, ["hyprbars:no_bar"] = true })
 hl.window_rule({ match = { tag = "xwl_popup" }, ["hyprbars:no_bar"] = true })
 hl.window_rule({ match = { title = "Picture(-| )in(-| )[Pp]icture" }, ["hyprbars:no_bar"] = true })
@@ -128,7 +135,6 @@ hl.window_rule({
         class = "^(" ..
             "org\\.gnome\\..*|" .. -- GNOME apps: headerbars (Nautilus, Settings, Text Editor, Loupe, ...)
             "gnome-control-center|" ..
-            "firefox|org\\.mozilla\\.firefox|zen|chromium|google-chrome|brave-browser|" .. -- own titlebars
             "Code|VSCodium|codium|" .. -- VS Code: own titlebar, see README "Window buttons"
             "steam|" .. -- own titlebar; the games themselves are fullscreen anyway
             "discord|vesktop|equibop|" .. -- own titlebars
