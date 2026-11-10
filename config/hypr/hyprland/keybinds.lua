@@ -168,7 +168,7 @@ hl.bind(vars.kbCommunicationWs, fn.toggle_special("communication"))
 hl.bind(vars.kbTodoWs, fn.toggle_special("todo"))
 
 -- Apps
-hl.bind(vars.kbTerminal, hl.dsp.exec_cmd(vars.terminal))
+hl.bind(vars.kbTerminal, function() hl.exec_cmd(vars.terminal) end) -- read at press time: user.lua loads after the binds and can change vars.terminal (back to "kitty -1" included)
 hl.bind(vars.kbBrowser, hl.dsp.exec_cmd(vars.browser))
 hl.bind(vars.kbEditor, function() if vars.apps.editor then hl.exec_cmd(vars.apps.editor) end end)
 hl.bind(vars.kbFileExplorer, hl.dsp.exec_cmd(vars.fileExplorer))

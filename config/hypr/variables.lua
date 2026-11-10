@@ -20,7 +20,7 @@ return {
     lockCmd                    = rice .. " lock", -- locks the current shell; a second one does not start
 
     -- Apps
-    terminal                   = "kitty -1", -- single-instance: new windows from the live process, ~40 ms instead of ~400
+    terminal                   = "kitty", -- not -1: the shared process, once it lost its GL after a sleep (AMD and Intel), whitened every new window until it was restarted; the cost is ~230 ms to open instead of ~20
     browser                    = "zen-browser",
     fileExplorer               = "thunar",
     audioSettings              = "pavucontrol",

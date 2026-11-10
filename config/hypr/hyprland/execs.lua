@@ -47,9 +47,6 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("libinput-gestures")
 
     -- hypridle starts the shell (Rules.idle): timings from house rules -> ~/.config/demonshot/hypridle.conf
-
-    -- background kitty without a window: the first Super+Q opens instantly too
-    hl.exec_cmd(vars.terminal .. " --start-as=hidden")
 end)
 
 -- Resizer listener
