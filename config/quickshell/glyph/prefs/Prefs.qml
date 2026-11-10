@@ -18,10 +18,10 @@ PanelWindow {
 
     property int sel: 0
     signal wallRequested // wallpapers -- their own screen (wall/Walls), opened by shell.qml
-    readonly property var sections: ["HOME", "DECK", "BAR", "LOOK", "WINDOWS", "DISPLAY", "POWER", "INPUT", "IDLE", "SHELL"]
+    readonly property var sections: ["HOME", "DECK", "BAR", "LOOK", "WINDOWS", "DISPLAY", "POWER", "INPUT", "IDLE", "SHELL", "FEATURES"]
     readonly property string moves: "shift ←→ move · ↵ swap · del drop · drag"
     readonly property string rings: "drag round the rings · scroll"
-    readonly property var hints: [moves, moves, moves, "", rings, rings, "↵ or click a mode", rings, "drag the marks", ""]
+    readonly property var hints: [moves, moves, moves, "", rings, rings, "↵ or click a mode", rings, "drag the marks", "", ""]
     readonly property var r: Rules.store
 
     // glyphs for home views, deck sections and the bar tray
@@ -416,8 +416,8 @@ PanelWindow {
                     spacing: 14
                     Toggle { width: 200; text: "deck · hover"; on: Theme.state.deckHover; onFlip: Theme.state.deckHover = !Theme.state.deckHover }
                     Toggle { width: 200; text: "quick · hover"; on: Theme.state.quickHover; onFlip: Theme.state.quickHover = !Theme.state.quickHover }
-                    Toggle { width: 200; text: "genie · minimise"; on: Theme.state.genie; onFlip: Theme.state.genie = !Theme.state.genie }
                     Lb { topPadding: 6; text: "bottom edge · right edge"; px: 10 }
+                    Lb { text: "genie lives in FEATURES now"; px: 10; color: Theme.mute }
                 }
             }
 
@@ -936,6 +936,32 @@ PanelWindow {
                 Act { icon: "\u{F0450}"; text: "reload"; onHit: Quickshell.reload(false) }
                 Toggle { text: "do not disturb"; on: Theme.state.dnd; onFlip: Theme.state.dnd = !Theme.state.dnd }
             }
+        }
+
+        // ---- FEATURES: one persisted switch per feature of the programme; off -- the feature is fully inert.
+        // The detailed controls live with their feature: theme times in LOOK, desktop names/walls in DESKTOPS,
+        // the profile photo in LOOK. The essential app picker is below the switches, on this page ----
+        Page {
+            id: feats
+            k: 10
+            caption: "features · one switch each · off is fully off"
+
+            Grid {
+                columns: 2
+                spacing: 14
+                Toggle { width: 250; text: "genie · minimise"; on: Theme.state.genie; onFlip: Theme.state.genie = !Theme.state.genie }
+                Toggle { width: 250; text: "genie · restore"; on: Theme.state.featGenieBack; onFlip: Theme.state.featGenieBack = !Theme.state.featGenieBack }
+                Toggle { width: 250; text: "reactive edges"; on: Theme.state.featEdges; onFlip: Theme.state.featEdges = !Theme.state.featEdges }
+                Toggle { width: 250; text: "exposé"; on: Theme.state.featExpose; onFlip: Theme.state.featExpose = !Theme.state.featExpose }
+                Toggle { width: 250; text: "lock media"; on: Theme.state.featLockMedia; onFlip: Theme.state.featLockMedia = !Theme.state.featLockMedia }
+                Toggle { width: 250; text: "launcher smarts"; on: Theme.state.featLauncher; onFlip: Theme.state.featLauncher = !Theme.state.featLauncher }
+                Toggle { width: 250; text: "focus in bar"; on: Theme.state.featFocus; onFlip: Theme.state.featFocus = !Theme.state.featFocus }
+                Toggle { width: 250; text: "named desktops"; on: Theme.state.featDesktops; onFlip: Theme.state.featDesktops = !Theme.state.featDesktops }
+                Toggle { width: 250; text: "shot text + qr"; on: Theme.state.featShot; onFlip: Theme.state.featShot = !Theme.state.featShot }
+                Toggle { width: 250; text: "theme · auto"; on: Theme.state.themeMode === 1; onFlip: Theme.state.themeMode = Theme.state.themeMode === 1 ? 0 : 1 }
+                Toggle { width: 250; text: "essential only"; on: Theme.state.featEssential; onFlip: Theme.state.featEssential = !Theme.state.featEssential }
+            }
+            Lb { text: "theme times -- LOOK · desktops -- DESKTOPS · photo -- LOOK · essential apps -- below"; px: 10; color: Theme.mute }
         }
     }
 

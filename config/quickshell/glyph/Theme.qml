@@ -88,6 +88,24 @@ Singleton {
             property bool quickHover: true // quick settings on hover at the right edge
             property bool deckHover: true  // deck -- bottom-center panel, slides out on hovering the edge
             property bool genie: true      // minimise warps the window into the deck's minimised section (genie/Genie.qml); off -- a plain park
+            // ---- the feature programme: one persisted toggle per feature (prefs FEATURES). Off -- the feature is fully inert ----
+            property bool featGenieBack: true  // restore expands the park-time snapshot back out of the minimised section (genie/Genie.qml)
+            property bool featEdges: true      // reactive glyph edges: music VU, charging fill, focus drain (glyph/Glyph.qml)
+            property bool featExpose: true     // all-windows exposé of the current desktop (expose/Expose.qml)
+            property bool featLockMedia: true  // media controls + notification summary on the session lock (lock/LockFace.qml)
+            property bool featEssential: false // essential notifications: only the picked apps light the edges (Notes.qml); off by default -- it changes notification behaviour
+            property var essentialApps: []     // desktop entry ids picked in prefs FEATURES
+            property var peek: []              // latest notifications [{ app, summary }] -- written by Notes, read by the lock face
+            property bool featLauncher: true   // launcher smarts in apps mode: maths, conversions, kill, files (launcher/Launcher.qml)
+            property bool featFocus: true      // focus timer as a bar tray widget (bar/Bar.qml); the timer itself also lives in cal/Cal.qml
+            property int themeMode: 0          // 0 -- manual (the light field above decides), 1 -- auto on the schedule below
+            property int lightAt: 420          // auto: light from 07:00 -- minutes after midnight, edited in prefs LOOK
+            property int darkAt: 1140          // auto: dark from 19:00
+            property bool featDesktops: true   // per-desktop names + wallpapers (prefs DESKTOPS)
+            property var wsNames: ({})         // desktop id (as string) -> name; missing -- just the number
+            property var wsWalls: ({})         // desktop id (as string) -> wallpaper path; missing/"" -- the global wall above
+            property bool featShot: true       // shot: grab text (OCR) and scan QR modes (shot/Shot.qml)
+            property string avatar: ""         // profile photo: the copy in the state dir; "" -- the dotted face (lock/LockFace.qml)
             property var deck: ["clock", "weather", "perf", "net", "media", "min"] // its sections in order, see decks
             property var bar: ["layout", "wifi", "bluetooth", "sound", "notes", "battery", "mode", "power"] // bar tray from top to bottom, see bars
             property bool barTitle: true   // window title stacked in the bar
