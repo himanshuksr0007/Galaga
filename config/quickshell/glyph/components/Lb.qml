@@ -3,6 +3,7 @@ import qs
 
 // label: Space Mono caps, .14em tracking, grey. Size -- px (not font.pixelSize: tracking is computed from it)
 Text {
+    textFormat: Text.PlainText // labels carry other people's strings (networks, devices, windows, tracks): AutoText would load <img src="http://..."> out of them
     property real px: 12
     font { family: Theme.mono; pixelSize: px; letterSpacing: px * 0.14; capitalization: Font.AllUppercase }
     color: Theme.grey

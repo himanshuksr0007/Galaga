@@ -161,6 +161,7 @@ PanelWindow {
                         Text {
                             width: parent.width
                             text: card.modelData.title
+                            textFormat: Text.PlainText
                             wrapMode: Text.Wrap
                             maximumLineCount: 2
                             elide: Text.ElideRight

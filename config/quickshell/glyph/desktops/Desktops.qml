@@ -206,6 +206,7 @@ PanelWindow {
                                 Text {
                                     width: parent.width - 22
                                     text: modelData.title || modelData.cls
+                                    textFormat: Text.PlainText
                                     elide: Text.ElideRight
                                     font { family: Theme.ui; pixelSize: 12 }
                                     color: Theme.grey
