@@ -22,6 +22,10 @@ PanelWindow {
     property int sel: 0
 
     Behavior on t { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+    // a card's own phase over the shared fade: ease-out-quart delayed by index,
+    // so the cards arrive in a short stagger instead of one flat block (the
+    // lock face phases its elements the same way)
+    function ph(i) { const x = Math.max(0, Math.min(1, (t - i * 0.07) / 0.6)); return 1 - Math.pow(1 - x, 4); }
 
     function open() {
         Hyprland.refreshToplevels(); // full re-query: fresh geometry and titles, not the event-fed snapshot
@@ -131,6 +135,8 @@ PanelWindow {
                     width: 330
                     height: 236
                     radius: Theme.corner(22)
+                    opacity: root.ph(index)
+                    transform: Translate { y: 18 * (1 - root.ph(index)) }
                     color: ma.containsMouse ? Theme.s2 : Theme.s1
                     border { width: hot ? 2 : 1; color: hot ? Theme.fg : current ? Theme.mute : Theme.s2 }
 
