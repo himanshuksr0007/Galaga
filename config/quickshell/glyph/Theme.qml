@@ -192,6 +192,9 @@ Singleton {
             property bool welcomed: false // the first-login card was dismissed (welcome/Welcome.qml)
             // ---- what the settings (prefs) change ----
             property var widgets: ["weather", "calendar", "cpu", "player", "buds", "system"] // home bento in order, see kinds
+            property bool homeClock: true  // home shows the clock and date (prefs -> LOOK -> on home)
+            property bool homeHello: true  // ... the greeting and the line under it
+            property bool homeBento: true  // ... the widgets
             property bool clock24: true
             property bool blink: true      // clock colon blinks
             property string name: ""       // in the greeting; empty -- $USER

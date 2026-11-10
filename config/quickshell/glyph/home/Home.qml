@@ -32,7 +32,7 @@ PanelWindow {
     // cava is shared (the glyph edges register as "edges"): register by name (per screen), unregister on
     // the way out -- a Binding here used to own Cava.active outright
     readonly property string cavaKey: "home:" + (root.screen?.name ?? "?")
-    readonly property bool cavaWant: root.homes.some(s => Theme.scr(s.name, "widgets").includes("cava"))
+    readonly property bool cavaWant: Theme.state.homeBento && root.homes.some(s => Theme.scr(s.name, "widgets").includes("cava"))
     onCavaWantChanged: Cava.use(cavaKey, cavaWant)
     Component.onCompleted: Cava.use(cavaKey, cavaWant)
     Component.onDestruction: Cava.use(cavaKey, false)
@@ -64,35 +64,46 @@ PanelWindow {
         // the layout sits under a left bar; bar on top or taken off this screen -- half its width to the left, centered
         x: Theme.state.barAt === "top" || !Theme.scr(root.screen?.name, "bar") ? -39 * Theme.s : 0
 
-        Row {
-            x: 182
-            y: 150
-            Num { text: Theme.hh(clock.date); font.pixelSize: 300 }
-            Num { text: ":"; font.pixelSize: 300; opacity: Theme.state.blink && root.dim ? 0.2 : 1 }
-            Num { text: Qt.formatTime(clock.date, "mm"); font.pixelSize: 300 }
+        // the clock and date, the greeting and its line can each be hidden (prefs -> LOOK -> on home); they fade
+        Item {
+            opacity: Theme.state.homeClock ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+            Row {
+                x: 182
+                y: 150
+                Num { text: Theme.hh(clock.date); font.pixelSize: 300 }
+                Num { text: ":"; font.pixelSize: 300; opacity: Theme.state.blink && root.dim ? 0.2 : 1 }
+                Num { text: Qt.formatTime(clock.date, "mm"); font.pixelSize: 300 }
+            }
+            Lb {
+                x: 190
+                y: 448
+                text: `${root.en.toString(clock.date, "dddd · d MMMM")} · week ${root.week(clock.date)}`
+                px: 14
+            }
         }
-        Lb {
-            x: 190
-            y: 448
-            text: `${root.en.toString(clock.date, "dddd · d MMMM")} · week ${root.week(clock.date)}`
-            px: 14
-        }
-        Text {
-            x: 188
-            y: 560
-            textFormat: Text.StyledText
-            text: `${root.hello},<br><font color="${Theme.grey}">${(Theme.state.name || Quickshell.env("USER")).replace(/&/g, "&amp;").replace(/</g, "&lt;")}.</font>`
-            font { family: Theme.ui; pixelSize: 54; weight: Font.Light; letterSpacing: -1 }
-            lineHeight: 1.1
-            color: Theme.fg
-        }
-        Row {
-            x: 190
-            y: 700
-            spacing: 28
-            Meta { icon: "\u{F009A}"; text: `${Notes.list.length} notifications` }
-            Meta { visible: Weather.ok; icon: Weather.glyph(Weather.now?.code ?? 0, Weather.now?.day); text: `${Math.round(Weather.now?.temp ?? 0)}° ${Weather.name(Weather.now?.code)}` }
-            Meta { visible: !!root.buds; icon: "\u{F02CB}"; text: `${root.buds?.name ?? ""} · ${Math.round((root.buds?.battery ?? 0) * 100)}%` }
+        Item {
+            opacity: Theme.state.homeHello ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+            Text {
+                x: 188
+                y: 560
+                textFormat: Text.StyledText
+                text: `${root.hello},<br><font color="${Theme.grey}">${(Theme.state.name || Quickshell.env("USER")).replace(/&/g, "&amp;").replace(/</g, "&lt;")}.</font>`
+                font { family: Theme.ui; pixelSize: 54; weight: Font.Light; letterSpacing: -1 }
+                lineHeight: 1.1
+                color: Theme.fg
+            }
+            Row {
+                x: 190
+                y: 700
+                spacing: 28
+                Meta { icon: "\u{F009A}"; text: `${Notes.list.length} notifications` }
+                Meta { visible: Weather.ok; icon: Weather.glyph(Weather.now?.code ?? 0, Weather.now?.day); text: `${Math.round(Weather.now?.temp ?? 0)}° ${Weather.name(Weather.now?.code)}` }
+                Meta { visible: !!root.buds; icon: "\u{F02CB}"; text: `${root.buds?.name ?? ""} · ${Math.round((root.buds?.battery ?? 0) * 100)}%` }
+            }
         }
 
         // bento: cells 220, gap 20, 3x3 grid, its right edge 80 from the screen's edge (on 1920 -- from 1140, on a
@@ -102,6 +113,7 @@ PanelWindow {
         Repeater {
             id: bento
             model: {
+                if (!Theme.state.homeBento) return []; // prefs -> LOOK -> on home: the widgets off entirely
                 const out = [];
                 let r = 0, c = 0;
                 for (const id of Theme.scr(root.screen?.name, "widgets") ?? []) {

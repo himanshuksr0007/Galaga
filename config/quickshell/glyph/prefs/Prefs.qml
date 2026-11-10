@@ -760,6 +760,10 @@ PanelWindow {
                     Toggle { width: 200; text: "edges"; on: Theme.state.edges; onFlip: Theme.state.edges = !Theme.state.edges }
                     Toggle { width: 200; text: "hide length"; on: Theme.state.lockHideLen; onFlip: Theme.state.lockHideLen = !Theme.state.lockHideLen }
                     Toggle { width: 200; text: "one screen"; on: Theme.state.lockOneScreen; onFlip: Theme.state.lockOneScreen = !Theme.state.lockOneScreen }
+                    // on home: which parts of the home screen show at all (Isaqdn03's section hides)
+                    Toggle { width: 200; text: "home · clock"; on: Theme.state.homeClock; onFlip: Theme.state.homeClock = !Theme.state.homeClock }
+                    Toggle { width: 200; text: "home · greeting"; on: Theme.state.homeHello; onFlip: Theme.state.homeHello = !Theme.state.homeHello }
+                    Toggle { width: 200; text: "home · widgets"; on: Theme.state.homeBento; onFlip: Theme.state.homeBento = !Theme.state.homeBento }
                     Act {
                         icon: "\u{F02E9}"
                         text: "wallpaper"
