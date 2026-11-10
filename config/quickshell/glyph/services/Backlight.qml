@@ -67,7 +67,7 @@ Singleton {
     // ---- an external monitor over DDC (ddcutil), after AMM021's rice_nothing: buses come in pairs
     // "I2C bus -> DRM_connector", external -- a connector without eDP. logind's udev rule gives the active
     // user rw on /dev/i2c-*, no sudo needed. There are no change events -- we keep our own value, check
-    // getvcp every 5 s, and on a panel drag set it through one process ----
+    // getvcp on the shell's DDC cadence (Theme.ddcMs), and on a panel drag set it through one process ----
     property string ddcBus: ""      // /dev/i2c-N, empty -- no external monitor with DDC
     property real ddc: 0.5          // last known 0...1
     property bool ddcOk: false
@@ -83,7 +83,7 @@ Singleton {
     property real ddcSetAt: 0       // when the last write went: reading right after it isn't possible
     Timer {
         running: !!root.ddcBus
-        interval: 5000
+        interval: Theme.ddcMs
         repeat: true
         onTriggered: root.ddcRead()
     }

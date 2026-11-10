@@ -70,7 +70,7 @@ Singleton {
     readonly property string layout: kbd.slice(0, 2).toLowerCase() // "English (US)" → en
 
     // ---- recording and airplane mode: hypr keybinds toggle them too, hence polling. Night light -- shared with demonshot, in its rules.json
-    // ponytail: pgrep every 3 s; if it becomes noticeable -- watch processes via systemd-run --scope ----
+    // ponytail: pgrep on the shell's check cadence (Theme.sysPollMs); if it becomes noticeable -- watch processes via systemd-run --scope ----
     property bool rec: false
     readonly property bool night: Rules.store.night
     property bool air: false
@@ -85,7 +85,7 @@ Singleton {
             }
         }
     }
-    Timer { running: true; repeat: true; interval: 3000; triggeredOnStart: true; onTriggered: poll.running = true }
+    Timer { running: true; repeat: true; interval: Theme.sysPollMs; triggeredOnStart: true; onTriggered: poll.running = true }
 
     function sh(c) { Quickshell.execDetached(["sh", "-c", c]); }
     // recording settings from Theme.state (quick/Rec) -> gpu-screen-recorder flags; the screenshot tool takes them too
