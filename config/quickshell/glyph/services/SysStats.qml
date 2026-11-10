@@ -35,6 +35,10 @@ Singleton {
 
     property var prev: ({})
     property var prevNet: [[0, 0], 0] // [[rx, tx], ms]
+    // Intel iGPU: no gpu_busy_percent -- the share of time out of RC6 sleep, times the frequency
+    // against its maximum (Dimashyt's method). No sensor of its own: the cpu's temperature (shared die)
+    property var prevRc6: [0, 0]
+    property real gpuMaxFreq: 1250 // MHz, the card's RP0 -- the detection below replaces it
 
     function read(f) { f.reload(); return f.text(); }
     function num(f) { return parseFloat(read(f)) || 0; }
@@ -48,7 +52,7 @@ Singleton {
     FileView { id: route; path: "/proc/net/route"; blockAllReads: true }
     // gpu and sensors are not hardcoded, as in caelestia: if nvidia-smi exists -- take it; otherwise the first drm card with gpu_busy_percent
     // (amdgpu), its vram and its hwmon. CPU temperature -- the first known sensor. Nothing found -- zeros
-    property string gpuType: ""   // "nvidia" | "drm" | ""
+    property string gpuType: ""   // "nvidia" | "drm" | "intel" | ""
     property string card: ""      // /sys/class/drm/cardN/device
     property string gpuDev: ""    // pci device of the card in sysfs: power/runtime_status -- whether it is asleep
     property string gpuHwmon: ""
@@ -61,12 +65,15 @@ Singleton {
     FileView { id: gpuTempF; path: root.gpuHwmon ? root.gpuHwmon + "/temp1_input" : ""; blockAllReads: true; printErrors: false }
     FileView { id: cpuTempF; path: root.hwmon(["k10temp", "coretemp", "zenpower", "cpu_thermal"]); blockAllReads: true; printErrors: false }
     FileView { id: gpuPm; path: root.gpuDev ? root.gpuDev + "/power/runtime_status" : ""; blockAllReads: true; printErrors: false }
+    FileView { id: gpuRc6; path: root.gpuType === "intel" ? root.card + "/rc6_residency_ms" : ""; blockAllReads: true; printErrors: false }
+    FileView { id: gpuCurFreq; path: root.gpuType === "intel" ? root.card + "/rps_cur_freq_mhz" : ""; blockAllReads: true; printErrors: false }
 
     Process {
         running: true
         command: ["sh", "-c", `for h in /sys/class/hwmon/hwmon*; do echo "hwmon $(cat $h/name) $h"; done
 command -v nvidia-smi >/dev/null && nvidia-smi -L >/dev/null 2>&1 && echo "nvidia $(ls -d /sys/bus/pci/drivers/nvidia/*:* 2>/dev/null | head -1)"
-for c in /sys/class/drm/card*/device; do [ -e "$c/gpu_busy_percent" ] && { echo "card $c $(ls -d $c/hwmon/hwmon* 2>/dev/null | head -1)"; break; }; done`]
+for c in /sys/class/drm/card*/device; do [ -e "$c/gpu_busy_percent" ] && { echo "card $c $(ls -d $c/hwmon/hwmon* 2>/dev/null | head -1)"; break; }; done
+for g in /sys/class/drm/card*/gt/gt0; do [ -e "$g/rc6_residency_ms" ] && { echo "intel $g $(cat $g/rps_RP0_freq_mhz)"; break; }; done`]
         stdout: StdioCollector {
             onStreamFinished: {
                 const m = {};
@@ -75,6 +82,7 @@ for c in /sys/class/drm/card*/device; do [ -e "$c/gpu_busy_percent" ] && { echo 
                     if (k === "hwmon") m[a] = b;
                     else if (k === "nvidia") { root.gpuType = "nvidia"; root.gpuDev = a ?? ""; }
                     else if (k === "card" && root.gpuType !== "nvidia") { root.gpuType = "drm"; root.card = root.gpuDev = a; root.gpuHwmon = b ?? ""; }
+                    else if (k === "intel" && !root.gpuType) { root.gpuType = "intel"; root.card = a; root.gpuMaxFreq = +b || 1250; }
                 }
                 root.hwmons = m;
             }
@@ -166,6 +174,12 @@ for c in /sys/class/drm/card*/device; do [ -e "$c/gpu_busy_percent" ] && { echo 
         // Asleep -- means idle: 0, do not touch the card
         if (root.read(gpuPm).startsWith("suspend")) { root.gpu = 0; root.gpuTemp = 0; }
         else if (root.gpuType === "nvidia") nvidia.running = true;
+        else if (root.gpuType === "intel") {
+            const rc6 = root.num(gpuRc6), now = Date.now(), [pr, pt] = root.prevRc6, dt = now - pt;
+            if (pt && dt > 0) root.gpu = Math.max(0, Math.min(1, 1 - (rc6 - pr) / dt)) * (root.num(gpuCurFreq) / root.gpuMaxFreq);
+            root.prevRc6 = [rc6, now];
+            root.gpuTemp = root.cpuTemp;
+        }
         else {
             root.gpu = root.num(gpuBusy) / 100;
             root.gpuTemp = root.num(gpuTempF) / 1000;
