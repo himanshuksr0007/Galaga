@@ -446,6 +446,98 @@ update_rest() { # step 2: whatever the new version needs. Asks for a password on
     say "updated. Your choices and settings are as they were."
 }
 
+needs_psk() { # a password network with no password stored
+    case "$(nmcli -g 802-11-wireless-security.key-mgmt connection show "$1" 2>/dev/null)" in wpa-psk | sae) ;; *) return 1 ;; esac
+    [ -z "$(nmcli -s -g 802-11-wireless-security.psk connection show "$1" 2>/dev/null)" ]
+}
+
+# ---- KDE Wallet: Plasma keeps each password in the folder "Network Management" under "{uuid};802-11-wireless-security", as JSON ----
+WALLET_KEYS=""
+wallet_open() { # one call, so a locked wallet asks once. Empty if there's no wallet, or it stays locked
+    command -v kwallet-query >/dev/null || return 0
+    say "opening KDE Wallet to read the saved passwords -- it may ask for the wallet's password once"
+    WALLET_KEYS=$(timeout 120 kwallet-query -l -f "Network Management" kdewallet 2>/dev/null | grep -F ';802-11-wireless-security' || true)
+}
+wallet_has() { case "$WALLET_KEYS" in *"{$1};"*) return 0 ;; *) return 1 ;; esac; }
+wallet_psk() { # prints the password; nothing if it can't be read
+    wallet_has "$1" || return 0
+    timeout 30 kwallet-query -r "{$1};802-11-wireless-security" -f "Network Management" kdewallet 2>/dev/null | jq -r '.psk // empty' 2>/dev/null || true
+}
+
+fix_plasma() { # coming from KDE Plasma (AMM021's --fix-plasma): things that worked there because
+    # Plasma's own helpers were running. The big one is the login-refused root cause: a Wi-Fi
+    # password kept in KDE Wallet (psk-flags 1) or asked every time (2) is not there at boot, and
+    # a per-user profile cannot connect before login -- under greetd that reads as "login refused".
+    say "fixing what Plasma left behind"
+    command -v nmcli >/dev/null || { say "no NetworkManager here -- nothing to fix"; return 0; }
+    local u t name flags perm why items=() active
+    active=$(nmcli -g UUID,ACTIVE connection show 2>/dev/null | awk -F: '$2 == "yes" {print $1}')
+    local any_wallet=""
+    while IFS=: read -r u t; do
+        if [ "$t" = 802-11-wireless ] && [ "$(nmcli -g 802-11-wireless-security.psk-flags connection show "$u" 2>/dev/null)" = 1 ]; then any_wallet=1; fi
+    done < <(nmcli -g UUID,TYPE connection show 2>/dev/null)
+    [ -z "$any_wallet" ] || wallet_open
+    while IFS=: read -r u t; do
+        [ "$t" = 802-11-wireless ] || continue
+        flags=$(nmcli -g 802-11-wireless-security.psk-flags connection show "$u" 2>/dev/null)
+        perm=$(nmcli -g connection.permissions connection show "$u" 2>/dev/null)
+        case "$flags" in 1) why="password in KDE Wallet" ;; 2) why="asks every time" ;; *) why="" ;; esac
+        if wallet_has "$u"; then why="found in KDE Wallet"; fi
+        if [ -z "$why" ] && needs_psk "$u"; then why="no password saved"; fi
+        if [ -z "$why" ] && [ -z "$perm" ]; then continue; fi
+        name=$(nmcli -g connection.id connection show "$u" 2>/dev/null | tr -d '|' | cut -c1-22)
+        items+=("$u|$name|${why:-only connects after login}")
+    done < <(nmcli -g UUID,TYPE connection show 2>/dev/null)
+    if [ ${#items[@]} -eq 0 ]; then
+        say "wi-fi: every saved network has its password and can connect at boot -- KDE Wallet isn't the cause"
+    else
+        say "wi-fi: ${#items[@]} saved network(s) won't connect by themselves:"
+        local it
+        for it in "${items[@]}"; do IFS='|' read -r u name why <<<"$it"; note "$name -- $why"; done
+        local a
+        printf '  migrate them so they connect at boot? [y/N] '
+        read -r a </dev/tty || a=""
+        case "$a" in y | Y)
+            for it in "${items[@]}"; do
+                IFS='|' read -r u name why <<<"$it"
+                flags=$(nmcli -g 802-11-wireless-security.psk-flags connection show "$u" 2>/dev/null)
+                if [ "$flags" = 1 ] || [ "$flags" = 2 ] || needs_psk "$u"; then
+                    local p; p=$(wallet_psk "$u")
+                    # shorter than any Wi-Fi password: not something usable from the wallet
+                    if [ ${#p} -lt 8 ]; then p=""; else note "$name: password from KDE Wallet"; fi
+                    while [ -z "$p" ]; do
+                        read -rsp "  password for $name (nothing shows; Enter alone skips it): " p </dev/tty; echo
+                        [ -z "$p" ] && break
+                        [ ${#p} -ge 8 ] && break
+                        say "wi-fi passwords have at least 8 characters"
+                        p=""
+                    done
+                    [ -z "$p" ] && { note "skipped $name"; continue; }
+                    if nmcli connection modify "$u" 802-11-wireless-security.psk-flags 0 802-11-wireless-security.psk "$p" connection.permissions ""; then say "saved $name"; else say "could not save $name, see above"; fi
+                else
+                    if nmcli connection modify "$u" connection.permissions ""; then say "$name now connects before login"; else say "could not change $name, see above"; fi
+                fi
+            done ;;
+        *) note "left as they are" ;;
+        esac
+    fi
+    # ---- autostart: Plasma's helpers that make no sense here. Plasma keeps them; this only applies under Hyprland ----
+    local f d found=""
+    # an earlier version of AMM021's command could leave a junk file here
+    find "$HOME/.config/autostart" -maxdepth 1 -type f -name '*●*' -delete 2>/dev/null || true
+    for f in $(grep -ls 'xwaylandvideobridge' /etc/xdg/autostart/*.desktop "$HOME"/.config/autostart/*.desktop 2>/dev/null || true); do
+        d=$HOME/.config/autostart/${f##*/}
+        found=1
+        if grep -qs 'NotShowIn=.*Hyprland' "$d" 2>/dev/null; then note "xwaylandvideobridge is already stopped under Hyprland"; continue; fi
+        mkdir -p "$HOME/.config/autostart"
+        local body; body=$(grep -v '^NotShowIn=' "$f")
+        printf '%s\nNotShowIn=Hyprland;\n' "$body" > "$d"
+        say "stopped xwaylandvideobridge under Hyprland. To undo: delete $d"
+    done
+    [ -n "$found" ] || note "xwaylandvideobridge has no autostart entry here, so something else starts it"
+    say "done. Reboot to check."
+}
+
 install_flow() { # the guided install: questions, one password, then straight through
     ask_setup
     extras
@@ -558,8 +650,9 @@ case "${1:-}" in
         DRY=1; install_flow ;;
     --update) update ;;
     --update-rest) update_rest "${2:-}" ;;
+    --fix-plasma) fix_plasma ;;
     ""|--with) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
         [ "${1:-}" = --with ] && WITH="${*:2}" # both comma- and space-separated
         install_flow ;;
-    *) echo "usage: $0 [--with telegram,spotify,clash,pywalfox | --links | --greeter | --dry-run | --update]"; exit 1 ;;
+    *) echo "usage: $0 [--with telegram,spotify,clash,pywalfox | --links | --greeter | --dry-run | --update | --fix-plasma]"; exit 1 ;;
 esac
