@@ -24,10 +24,18 @@ PanelWindow {
     ]
 
     property bool ready: false
+    property bool leaving: false // dismissed: the card glides out first, welcomed lands when it has
     Timer { running: true; interval: 1500; onTriggered: root.ready = true } // after the login settles
-    property real t: ready ? 1 : 0
+    property real t: ready && !leaving ? 1 : 0
     Behavior on t { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
-    function done() { Theme.state.welcomed = true; }
+    function done() {
+        if (leaving) return;
+        leaving = true;
+        bye.restart();
+    }
+    // welcomed unloads this window (shell.qml's LazyLoader), so it is only set
+    // once the fade has run -- setting it in done() cut the card off mid-air
+    Timer { id: bye; interval: 380; onTriggered: Theme.state.welcomed = true }
 
     visible: ready
     anchors { left: true; right: true; top: true; bottom: true }
