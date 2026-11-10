@@ -33,6 +33,7 @@ PACMAN=(
 AUR=(
     qtengine darkly-bin bibata-cursor-theme-bin
     zen-browser-bin
+    localsend-bin # LocalSend -- Super+Ctrl+S sends the clipboard, Nautilus right-click (with nautilus-python)
     libinput-gestures # the 4-finger tap only -- the swipes are Hyprland-native (config/libinput-gestures.conf)
 )
 
@@ -52,6 +53,7 @@ G=config/quickshell/glyph
 # repo path -> path in $HOME
 LINKS=(
     "config/hypr                                .config/hypr"
+    "config/nautilus-python/localsend.py        .local/share/nautilus-python/extensions/localsend.py"
     "$G                                         .config/quickshell/glyph"
     "config/quickshell/rice                     .config/quickshell/rice"
     "config/quickshell/rice/rice                .local/bin/rice"
@@ -172,6 +174,10 @@ links() {
     # overwriting -- once they're yours they're yours (AMM021's installer does the same)
     local w
     for w in "$DOTS"/assets/wallpapers/*.jpg; do [ -e "$HOME/Pictures/Wallpapers/$(basename "$w")" ] || cp "$w" "$HOME/Pictures/Wallpapers/"; done
+    # LocalSend starts dark on OLED black (its accent follows the GTK one); only before its first
+    # run -- after that its settings are the user's
+    local ls="$HOME/.local/share/org.localsend.localsend_app/shared_preferences.json"
+    [ -e "$ls" ] || { mkdir -p "${ls%/*}"; echo '{"flutter.ls_theme":"dark","flutter.ls_color":"oled"}' > "$ls"; }
     fc-cache -f >/dev/null
     command -v gsettings >/dev/null || return 0 # --links on a system without GNOME schemas
     # dark mode for Zen, Electron and libadwaita (through the portal) and a dark gtk3 base for our gtk.css
