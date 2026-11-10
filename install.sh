@@ -535,7 +535,7 @@ fix_plasma() { # coming from KDE Plasma (AMM021's --fix-plasma): things that wor
     local f d found=""
     # an earlier version of AMM021's command could leave a junk file here
     find "$HOME/.config/autostart" -maxdepth 1 -type f -name '*●*' -delete 2>/dev/null || true
-    for f in $(grep -ls 'xwaylandvideobridge' /etc/xdg/autostart/*.desktop "$HOME"/.config/autostart/*.desktop 2>/dev/null || true); do
+    while IFS= read -r f; do # line by line, not word-split: an entry's name can hold a space
         d=$HOME/.config/autostart/${f##*/}
         found=1
         if grep -qs 'NotShowIn=.*Hyprland' "$d" 2>/dev/null; then note "xwaylandvideobridge is already stopped under Hyprland"; continue; fi
@@ -543,7 +543,7 @@ fix_plasma() { # coming from KDE Plasma (AMM021's --fix-plasma): things that wor
         local body; body=$(grep -v '^NotShowIn=' "$f")
         printf '%s\nNotShowIn=Hyprland;\n' "$body" > "$d"
         say "stopped xwaylandvideobridge under Hyprland. To undo: delete $d"
-    done
+    done < <(grep -ls 'xwaylandvideobridge' /etc/xdg/autostart/*.desktop "$HOME"/.config/autostart/*.desktop 2>/dev/null || true)
     [ -n "$found" ] || note "xwaylandvideobridge has no autostart entry here, so something else starts it"
     say "done. Reboot to check."
 }
