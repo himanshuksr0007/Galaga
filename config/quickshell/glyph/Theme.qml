@@ -87,7 +87,7 @@ Singleton {
             property int briSteps: 20      // brightness from the keys: divisions per scale, 40/20/10 -- step 2.5/5/10 %
             property bool quickHover: true // quick settings on hover at the right edge
             property bool deckHover: true  // deck -- bottom-center panel, slides out on hovering the edge
-            property var deck: ["clock", "weather", "perf", "net", "media"] // its sections in order, see decks
+            property var deck: ["clock", "weather", "perf", "net", "media", "min"] // its sections in order, see decks
             property var bar: ["layout", "wifi", "bluetooth", "sound", "notes", "battery", "mode", "power"] // bar tray from top to bottom, see bars
             property bool barTitle: true   // window title stacked in the bar
             // recording (quick/Rec, Sys.recArgs)
@@ -102,7 +102,7 @@ Singleton {
     // bento widgets: id -> width in cells (3-column x 3-row grid, 220 each). Does not fit -- not shown
     readonly property var kinds: ({ weather: 1, calendar: 1, cpu: 1, ram: 1, gpu: 1, disk: 1, battery: 1, buds: 1, player: 2, system: 3, cat: 1, cava: 1 })
     // deck sections
-    readonly property var decks: ["clock", "weather", "perf", "net", "media"]
+    readonly property var decks: ["clock", "weather", "perf", "net", "media", "min"]
     // bar tray
     readonly property var bars: ["layout", "wifi", "bluetooth", "sound", "notes", "battery", "mode", "power"]
 

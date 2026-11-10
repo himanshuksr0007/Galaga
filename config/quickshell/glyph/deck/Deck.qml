@@ -15,12 +15,25 @@ Scope {
     property var on: null // the screen where it is open
     function toggle() { on = on ? null : Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? Quickshell.screens[0]; }
 
-    readonly property var ids: Theme.state.deck.filter(id => Theme.decks.includes(id))
+    // "min" (minimised windows) is a fixed section at the right end: a state file saved before
+    // it existed does not list it, so it is appended when missing rather than staying invisible
+    readonly property var ids: { const l = Theme.state.deck.filter(id => Theme.decks.includes(id)); if (!l.includes("min")) l.push("min"); return l; }
     readonly property int h: 232 // section height in layout pixels
 
     // open -- detailed polling (detailed is set by Home via deckOpen) and processes with frequency
     Binding { target: Sys; property: "deckOpen"; value: root.on !== null }
     Binding { target: SysStats; property: "perf"; value: root.on !== null }
+
+    // opening re-syncs the window model, or a window parked before the deck first
+    // opened can take minutes to show in the minimised section: Quickshell's
+    // movewindow handler resolves the destination workspace WITHOUT creating it,
+    // and the special:minimized workspace only enters the model through a full
+    // refresh (its createworkspace event is parsed as an int id, which a special
+    // workspace's name does not survive) -- so a park the event path dropped sits
+    // in the model with its old workspace until something unrelated refreshes it.
+    // refreshToplevels() re-reads the client list and resolves every window's
+    // workspace with creation on: the dropped park lands immediately.
+    onOnChanged: if (on !== null) Hyprland.refreshToplevels()
 
     SystemClock { id: clock; precision: SystemClock.Minutes }
     readonly property var en: Qt.locale("en_US")
@@ -99,15 +112,22 @@ Scope {
                                 required property string modelData
                                 required property int index
                                 spacing: 16
-                                // between sections -- a column of dots
+                                // between sections -- a column of dots; before "min" a thin line instead
+                                // (fg: white in the dark scheme, black in the light one)
                                 Image {
-                                    visible: cell.index > 0
+                                    visible: cell.index > 0 && cell.modelData !== "min"
                                     width: 4
                                     height: root.h
                                     fillMode: Image.TileVertically
                                     source: "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="4" height="10"><circle cx="2" cy="5" r="1.5" fill="#${Theme.hex(Theme.s3)}"/></svg>`)
                                 }
-                                Loader { sourceComponent: ({ clock: clockC, weather: weatherC, perf: perfC, net: netC, media: mediaC })[cell.modelData] }
+                                Rectangle {
+                                    visible: cell.index > 0 && cell.modelData === "min"
+                                    width: 1
+                                    height: root.h
+                                    color: Theme.fg
+                                }
+                                Loader { sourceComponent: ({ clock: clockC, weather: weatherC, perf: perfC, net: netC, media: mediaC, min: minC })[cell.modelData] }
                             }
                         }
                     }
@@ -333,6 +353,180 @@ Scope {
                     }
                     Item { width: 1; height: 8 }
                     Controls { anchors.horizontalCenter: parent.horizontalCenter; size: 20; play: 48 }
+                }
+            }
+
+            // minimised windows (parked on special:minimized by the white title-bar button /
+            // Super+Alt+M): icon + name; click brings the window back to the current
+            // workspace, right-click opens a small menu over the row (Restore / Close).
+            // Membership reads the toplevel's typed workspace property: Quickshell updates it
+            // on every movewindow event, so this binding re-evaluates as windows park and
+            // return. Do NOT read the workspace out of lastIpcObject -- that is a snapshot
+            // from the last j/clients fetch (shell start / config reload) and never changes
+            // when a window moves, which left this section permanently empty. The class still
+            // comes from lastIpcObject: it never changes during a window's life, and the
+            // launcher's windows mode reads it the same way. Icons resolve like the
+            // launcher's (DesktopEntries heuristic).
+            Component {
+                id: minC
+                Item {
+                    id: minSec
+                    width: 184
+                    height: root.h
+
+                    // right-click menu state: which parked window it acts on, and how
+                    // far down the section it opens (kept inside the section)
+                    property string menuAddr: ""
+                    property real menuY: 0
+                    // the deck closing takes the menu with it
+                    readonly property bool deckOpen: win.open
+                    onDeckOpenChanged: if (!deckOpen) menuAddr = ""
+                    function openMenu(addr, y) {
+                        menuAddr = addr;
+                        menuY = Math.max(0, Math.min(y, root.h - 78));
+                    }
+
+                    Column {
+                        id: minCol
+                        width: parent.width
+                        spacing: 8
+                        Lb { id: minLabel; text: "minimised"; px: 10 }
+                        readonly property var mins: Hyprland.toplevels.values
+                            .filter(t => t.workspace?.name === "special:minimized")
+                            .map(t => {
+                                const cls = t.lastIpcObject?.class ?? "";
+                                const icon = DesktopEntries.heuristicLookup(cls)?.icon;
+                                return { name: t.title || cls, src: icon ? Quickshell.iconPath(icon, true) : "", addr: t.address };
+                            })
+                        // the exact inverse of the park in titlebars.lua, plus follow: the window
+                        // lands on the workspace you are looking at, focused. The workspace is a
+                        // STRING selector, like every other dispatch in this shell (the bar's
+                        // workspace switch, the launcher's focus, the park itself): the bare
+                        // number was the one form no other call site sends, and the click died
+                        // silently with it -- a rejected dispatch only ever logs. The deck
+                        // closes on restore: the window coming back is the result, it is
+                        // what you should see. The address takes the 0x form: Quickshell's
+                        // toplevel address is bare hex, Hyprland's address: selector wants
+                        // the prefix -- without it the dispatch matches nothing and fails
+                        // silently (the launcher's focus learned this first; these two call
+                        // sites never got the memo, so restore and close both died here).
+                        function restore(addr) {
+                            const ws = Hyprland.focusedWorkspace;
+                            minSec.menuAddr = "";
+                            if (ws) {
+                                Hyprland.dispatch(`hl.dsp.window.move({ window = "address:0x${addr}", workspace = "${ws.id}", follow = true })`);
+                                root.on = null;
+                            }
+                        }
+                        function closeWin(addr) {
+                            minSec.menuAddr = "";
+                            Hyprland.dispatch(`hl.dsp.window.close({ window = "address:0x${addr}" })`);
+                        }
+                        ListView {
+                            id: minList
+                            visible: minCol.mins.length > 0
+                            width: parent.width
+                            height: root.h - minLabel.height - minCol.spacing // the rest of the section height
+                            clip: true
+                            spacing: 4
+                            boundsBehavior: Flickable.StopAtBounds
+                            model: minCol.mins
+                            delegate: Rectangle {
+                                id: minRow
+                                required property var modelData
+                                width: minList.width
+                                height: 30
+                                radius: 10
+                                color: hov.hovered ? Theme.s2 : "transparent"
+                                Row {
+                                    x: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 8
+                                    Item {
+                                        width: 18
+                                        height: 18
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        Image { anchors.fill: parent; source: modelData.src; visible: !!modelData.src }
+                                        Rectangle { visible: !modelData.src; anchors.centerIn: parent; width: 7; height: 7; radius: 3.5; color: Theme.s3 }
+                                    }
+                                    Lb { width: minList.width - 42; elide: Text.ElideRight; anchors.verticalCenter: parent.verticalCenter; text: modelData.name; px: 11; color: Theme.fg }
+                                }
+                                HoverHandler { id: hov }
+                                // TapHandlers, one per button -- the input pattern of every
+                                // other row in this shell (launcher cells, clipboard entries,
+                                // quick notifications), and the one this row shipped with.
+                                // A MouseArea in a ListView delegate was tried instead and
+                                // its clicks never arrived: the view's own press handling
+                                // and a MouseArea fight over the press, while pointer
+                                // handlers negotiate the grab with the view instead of
+                                // competing for it. Each handler owns exactly one button,
+                                // so neither can shadow the other.
+                                TapHandler {
+                                    acceptedButtons: Qt.LeftButton
+                                    onTapped: minCol.restore(modelData.addr)
+                                }
+                                TapHandler {
+                                    acceptedButtons: Qt.RightButton
+                                    onTapped: {
+                                        const p = minRow.mapToItem(minSec, 0, 0);
+                                        minSec.openMenu(modelData.addr, p.y + minRow.height + 2);
+                                    }
+                                }
+                            }
+                        }
+                        // nothing parked: the box stays, quietly labelled in dots -- never a blank gap
+                        Column {
+                            visible: minCol.mins.length === 0
+                            width: parent.width
+                            Item { width: 1; height: 30 }
+                            Num { anchors.horizontalCenter: parent.horizontalCenter; text: "nothing"; font.pixelSize: 26; color: Theme.grey }
+                            Num { anchors.horizontalCenter: parent.horizontalCenter; text: "minimised"; font.pixelSize: 26; color: Theme.grey }
+                        }
+                    }
+
+                    // a click anywhere else in the section closes the menu (and is
+                    // eaten -- it was aimed at the menu, not at what sits under it)
+                    MouseArea {
+                        anchors.fill: parent
+                        visible: minSec.menuAddr !== ""
+                        z: 5
+                        onClicked: minSec.menuAddr = ""
+                    }
+                    // the menu, in the panel's own language: an s2 card, rows light
+                    // up s3. Restore is the left-click action; Close closes the
+                    // window by address (its row then leaves the list live)
+                    Rectangle {
+                        visible: minSec.menuAddr !== ""
+                        x: 0
+                        y: minSec.menuY
+                        z: 6
+                        width: 184
+                        height: 72
+                        radius: 14
+                        color: Theme.s2
+                        border { width: 1; color: Theme.s3 }
+                        Column {
+                            anchors { fill: parent; margins: 4 }
+                            Rectangle {
+                                width: parent.width
+                                height: 32
+                                radius: 10
+                                color: rHov.hovered ? Theme.s3 : "transparent"
+                                Lb { x: 12; anchors.verticalCenter: parent.verticalCenter; text: "Restore"; px: 11; color: Theme.fg }
+                                HoverHandler { id: rHov }
+                                TapHandler { onTapped: minCol.restore(minSec.menuAddr) }
+                            }
+                            Rectangle {
+                                width: parent.width
+                                height: 32
+                                radius: 10
+                                color: cHov.hovered ? Theme.s3 : "transparent"
+                                Lb { x: 12; anchors.verticalCenter: parent.verticalCenter; text: "Close"; px: 11; color: Theme.fg }
+                                HoverHandler { id: cHov }
+                                TapHandler { onTapped: minCol.closeWin(minSec.menuAddr) }
+                            }
+                        }
+                    }
                 }
             }
         }

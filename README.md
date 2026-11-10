@@ -138,6 +138,12 @@ GTK apps, the minimise button in their *own* headerbar still does nothing — it
 same minimise request Hyprland cannot honour. That is a platform limitation, not a
 theming miss; `Super+Alt+M` works on every window, GTK apps included.
 
+Parked windows are listed in the **deck** (bottom edge): a fixed **minimised** section at
+its right end, behind a thin line, shows each parked window's icon and name — click one
+and it moves back to the current workspace, focused. The list is live (it reads the
+Hyprland window model directly), scrolls when full, and reads "nothing minimised" in
+dots when empty.
+
 Exceptions and notes:
 
 - Fullscreen windows, picture-in-picture and XWayland popups get no bar.
