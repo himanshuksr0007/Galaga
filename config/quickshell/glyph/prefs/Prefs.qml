@@ -572,7 +572,18 @@ PanelWindow {
 
                 Column {
                     spacing: 14
-                    Toggle { width: 200; text: "light"; on: Theme.light; onFlip: Theme.state.light = !Theme.state.light }
+                    Toggle { width: 200; text: "light"; on: Theme.light; onFlip: { Theme.state.themeMode = 0; Theme.state.light = !Theme.state.light; } }
+                    Pick {
+                        label: "theme"
+                        opts: ["light", "dark", "auto"]
+                        cur: Theme.state.themeMode === 1 ? 2 : Theme.light ? 0 : 1
+                        onPicked: i => {
+                            if (i === 2) Theme.state.themeMode = 1;
+                            else { Theme.state.themeMode = 0; Theme.state.light = i === 0; }
+                        }
+                    }
+                    TimeStep { visible: Theme.state.themeMode === 1; label: "light at"; value: Theme.state.lightAt; onMoved: v => Theme.state.lightAt = v }
+                    TimeStep { visible: Theme.state.themeMode === 1; label: "dark at"; value: Theme.state.darkAt; onMoved: v => Theme.state.darkAt = v }
                     Toggle { width: 200; text: "dot grid"; on: Theme.state.grid; onFlip: Theme.state.grid = !Theme.state.grid }
                     Toggle { width: 200; text: "orb"; on: Theme.state.orb; onFlip: Theme.state.orb = !Theme.state.orb }
                     Toggle { width: 200; text: "24 hours"; on: Theme.state.clock24; onFlip: Theme.state.clock24 = !Theme.state.clock24 }
@@ -1243,5 +1254,48 @@ PanelWindow {
         }
         Lb { id: actL; x: 76; anchors.verticalCenter: parent.verticalCenter; text: act.text; color: act.activeFocus ? Theme.fg : Theme.grey }
         TapHandler { onTapped: act.hit() }
+    }
+
+    // small round stepper button (theme times)
+    component Round: Rectangle {
+        id: rd
+        property string text
+        signal hit
+        width: 40
+        height: 40
+        radius: 20
+        color: rd.activeFocus ? Theme.s3 : Theme.s2
+        activeFocusOnTab: true
+        Keys.onPressed: e => {
+            if (e.key !== Qt.Key_Space && e.key !== Qt.Key_Return && e.key !== Qt.Key_Enter) return;
+            rd.hit();
+            e.accepted = true;
+        }
+        Text {
+            anchors.centerIn: parent
+            text: rd.text
+            font { family: Theme.ui; pixelSize: 20 }
+            color: Theme.fg
+        }
+        TapHandler { onTapped: rd.hit() }
+        HoverHandler { cursorShape: Qt.PointingHandCursor }
+    }
+
+    // a time of day: Doto hh:mm, steppers move 15 minutes (wraps at midnight)
+    component TimeStep: Row {
+        id: ts
+        property string label
+        property int value // minutes after midnight
+        signal moved(int v)
+        spacing: 12
+        function put(v) { ts.moved(((v % 1440) + 1440) % 1440); }
+        Lb { anchors.verticalCenter: parent.verticalCenter; text: ts.label }
+        Round { text: "−"; onHit: ts.put(ts.value - 15) }
+        Num {
+            anchors.verticalCenter: parent.verticalCenter
+            text: `${String(Math.floor(ts.value / 60)).padStart(2, "0")}:${String(ts.value % 60).padStart(2, "0")}`
+            font.pixelSize: 34
+        }
+        Round { text: "+"; onHit: ts.put(ts.value + 15) }
     }
 }

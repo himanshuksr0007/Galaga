@@ -66,7 +66,23 @@ ShellRoot {
         hypr();
         Rules.night();
         Rules.idle();
+        autoTheme();
     }
+    // theme auto (prefs LOOK / FEATURES): light between lightAt and darkAt (minutes after
+    // midnight; lightAt past darkAt reads as an overnight span, equal -- no switch). It
+    // applies through the one machinery everything uses -- state.light, which Theme.apply
+    // and the GTK/kitty writers follow. A manual flip (prefs LOOK, quick's dark tile)
+    // sets themeMode back to 0, and that choice holds until auto is picked again. The
+    // 30 s tick also catches up after suspend or a late login: the first tick that sees
+    // the wrong side fixes it.
+    function autoTheme() {
+        if (Theme.state.themeMode !== 1) return;
+        const d = new Date(), m = d.getHours() * 60 + d.getMinutes();
+        const L = Theme.state.lightAt, D = Theme.state.darkAt;
+        const want = L === D ? Theme.state.light : L < D ? (m >= L && m < D) : (m >= L || m < D);
+        if (want !== Theme.state.light) Theme.state.light = want;
+    }
+    Timer { interval: 30000; repeat: true; running: true; onTriggered: shell.autoTheme() }
     // what lives in the hypr config. It re-reads it itself: save any hypr file (the links are live -- both git pull and branch
     // switch), hyprctl reload -- and it returns the variables.lua defaults: demonshot borders, monitor, input, animations. We apply
     // ours again. hyprctl eval does not send configreloaded -- no loop. Night light and hypridle -- their own processes, reload does not touch them
@@ -87,6 +103,9 @@ ShellRoot {
     Connections {
         target: Theme.state
         function onRoundingChanged() { Theme.apply(); }
+        function onThemeModeChanged() { shell.autoTheme(); }
+        function onLightAtChanged() { shell.autoTheme(); }
+        function onDarkAtChanged() { shell.autoTheme(); }
     }
     // ultra mode enables/disables blur and shadows on top of the settings -- repaint windows (refresh rate and motion are set by Rules.setMode itself).
     // Game -- the same plus animations
