@@ -50,7 +50,7 @@ ShellRoot {
                 screen: s.modelData
                 onMarkClicked: launcher.toggle()
                 onTrayClicked: quick.toggle()
-                onPowerClicked: power.visible ? power.close() : power.open()
+                onPowerClicked: power.toggle()
                 onClockClicked: cal.toggle()
             }
         }
@@ -104,7 +104,7 @@ ShellRoot {
     Shortcut { name: "quick"; description: "quick settings"; onPressed: quick.toggle() }
     Shortcut { name: "ward"; description: "quick settings"; onPressed: quick.toggle() } // Super+N in demonshot -- same toggles
     Shortcut { name: "settings"; description: "settings"; onPressed: prefs.toggle() }
-    Shortcut { name: "power"; description: "power menu"; onPressed: power.visible ? power.close() : power.open() }
+    Shortcut { name: "power"; description: "power menu"; onPressed: power.toggle() }
     Shortcut { name: "shot"; description: "screenshot"; onPressed: shot.open() }
     Shortcut { name: "pact"; description: "vpn: clash verge"; onPressed: vpn.toggle() }
     Shortcut { name: "clip"; description: "clipboard"; onPressed: clip.toggle() }

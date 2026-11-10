@@ -20,28 +20,36 @@ PanelWindow {
         ["LOG OUT", () => Hyprland.dispatch("hl.dsp.exit()")]
     ]
 
+    // entrance like the other surfaces (launcher, charms): scrim fades in,
+    // content rises a little and fades with it -- instead of popping in whole
+    property bool shown: false
+    property real t: shown ? 1 : 0
+    Behavior on t { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+
     function open() {
         sel = 2;
         SysStats.sample(); // fresh uptime
-        visible = true;
+        shown = true;
     }
-    function close() { visible = false; }
+    function close() { shown = false; }
+    function toggle() { shown ? close() : open(); }
     function accept() {
         close();
         items[sel][1]();
     }
 
-    visible: false
+    visible: t > 0
     anchors { left: true; right: true; top: true; bottom: true }
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: shown ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     WlrLayershell.namespace: "glyph-power"
 
     Rectangle {
         anchors.fill: parent
         color: Theme.fade(Theme.bg, 0.96)
+        opacity: root.t
         MouseArea { anchors.fill: parent; onClicked: root.close() }
     }
 
@@ -61,6 +69,8 @@ PanelWindow {
             x: 240
             anchors.verticalCenter: parent.verticalCenter
             spacing: 26
+            opacity: root.t
+            transform: Translate { y: 24 * (1 - root.t) }
             Repeater {
                 model: root.items
                 Row {
@@ -95,6 +105,7 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             width: 460
             height: 460
+            opacity: root.t
             Ring { anchors.fill: parent; n: 60; dot: 10; f: SysStats.uptime / (6 * 3600) }
             Column {
                 anchors.centerIn: parent
@@ -118,6 +129,7 @@ PanelWindow {
             x: 240
             anchors { bottom: parent.bottom; bottomMargin: 70 }
             spacing: 34
+            opacity: root.t
             Lb { text: "↑↓ select" }
             Lb { text: "↵ confirm" }
             Lb { text: "esc cancel" }
