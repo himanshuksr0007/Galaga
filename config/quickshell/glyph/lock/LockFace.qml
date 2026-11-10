@@ -52,6 +52,17 @@ Item {
     // hide the password's length (prefs LOOK, off by default): three fixed dots that pulse
     // on each key instead of one dot per character. Off -- the dot count is the length, exactly
     readonly property bool hideLen: Theme.state.lockHideLen
+    // power from the lock (AMM021's lock power menu): sleep, reboot, power off -- the session
+    // lock only (session flag); the greeter face never shows it. Reboot and power off take a
+    // second press within 5 s: a locked session can hold unsaved work. systemctl, as in power/
+    readonly property var powerActs: [["sleep", "suspend"], ["reboot", "reboot"], ["power off", "poweroff"]]
+    property int armed: -1
+    Timer { id: disarm; interval: 5000; onTriggered: root.armed = -1 }
+    function powerAct(i) {
+        if (i > 0 && armed !== i) { armed = i; disarm.restart(); return; }
+        armed = -1;
+        Quickshell.execDetached(["systemctl", powerActs[i][1]]);
+    }
     // password check: a wave runs over the entered dots
     property real wave: 0
     NumberAnimation on wave { running: root.auth.busy; from: 0; to: 1; duration: 700; loops: Animation.Infinite }
@@ -70,6 +81,8 @@ Item {
             if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) root.auth.submit();
             else if (e.key === Qt.Key_Escape) root.auth.buffer = "";
             else if (e.key === Qt.Key_Backspace) root.auth.buffer = root.auth.buffer.slice(0, -1);
+            // F10/F11/F12 -- the power list below; a held key (auto-repeat) doesn't count as a press
+            else if (root.session && e.key >= Qt.Key_F10 && e.key <= Qt.Key_F12) { if (!e.isAutoRepeat) root.powerAct(e.key - Qt.Key_F10); }
             // Ctrl/Alt/Super + key is a shortcut, never a password character (Shift alone is fine --
             // capitals are; numpad digits carry KeypadModifier, not one of these three)
             else if (e.text && e.text.charCodeAt(0) >= 32
@@ -143,29 +156,53 @@ Item {
             Lb { visible: root.bat.isLaptopBattery; anchors.verticalCenter: parent.verticalCenter; text: Math.round(root.bat.percentage * 100) }
         }
         Column {
-            visible: Theme.state.unread > 0
             opacity: root.ph(0.45, 0.85)
             x: 44
             anchors { bottom: parent.bottom; bottomMargin: 44 }
-            spacing: 8
-            Row {
-                spacing: 16
-                Icon { anchors.verticalCenter: parent.verticalCenter; text: "\u{F009A}"; font.pixelSize: 17 }
-                Lb { anchors.verticalCenter: parent.verticalCenter; text: `${Theme.state.unread} notifications` }
-            }
-            // the summary itself -- session lock only, like the player above
+            spacing: 28
             Column {
-                visible: root.session && Theme.state.featLockMedia
-                spacing: 4
+                visible: Theme.state.unread > 0
+                spacing: 8
+                Row {
+                    spacing: 16
+                    Icon { anchors.verticalCenter: parent.verticalCenter; text: "\u{F009A}"; font.pixelSize: 17 }
+                    Lb { anchors.verticalCenter: parent.verticalCenter; text: `${Theme.state.unread} notifications` }
+                }
+                // the summary itself -- session lock only, like the player above
+                Column {
+                    visible: root.session && Theme.state.featLockMedia
+                    spacing: 4
+                    Repeater {
+                        model: Theme.state.peek.slice(0, 2)
+                        Lb {
+                            required property var modelData
+                            width: 560
+                            elide: Text.ElideRight
+                            text: `${modelData.app} · ${modelData.summary}`
+                            px: 11
+                            color: Theme.grey
+                        }
+                    }
+                }
+            }
+            // power -- session lock only, like the summary: a click, or F10 F11 F12 (see the keys above)
+            Column {
+                visible: root.session
+                spacing: 9
+                Row {
+                    spacing: 10
+                    Lb { text: "power"; color: Theme.grey }
+                    Lb { text: "f10 f11 f12"; px: 10; color: Theme.grey }
+                }
                 Repeater {
-                    model: Theme.state.peek.slice(0, 2)
-                    Lb {
+                    model: root.powerActs
+                    Row {
                         required property var modelData
-                        width: 560
-                        elide: Text.ElideRight
-                        text: `${modelData.app} · ${modelData.summary}`
-                        px: 11
-                        color: Theme.grey
+                        required property int index
+                        spacing: 12
+                        Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 9; height: 9; radius: 4.5; color: root.armed === index ? Theme.red : Theme.s3 }
+                        Lb { text: root.armed === index ? `press again to ${modelData[0]}` : modelData[0]; color: root.armed === index ? Theme.red : Theme.fg }
+                        MouseArea { anchors.fill: parent; enabled: !root.auth.leaving; onClicked: root.powerAct(index) }
                     }
                 }
             }
