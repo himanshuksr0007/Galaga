@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.UPower
@@ -540,6 +541,41 @@ PanelWindow {
             k: 3
             caption: "look · the home screen, live"
             property bool dim: false // colon is dimmed
+
+            // profile photo: set copies the file next to glyph.json (state.avatar) and to
+            // ~/.face; a ~/.face that was already there is backed up into the state dir
+            // first, and clear brings it back (or removes ours). The lock reads
+            // state.avatar; the greeter gets its copy from install.sh --greeter.
+            property string photoMsg: ""
+            function setPhoto() {
+                const raw = photoIn.text.trim();
+                const p = raw.startsWith("~/") ? Quickshell.env("HOME") + raw.slice(1) : raw;
+                if (!p) { photoMsg = "type a path first"; return; }
+                photoSet.exec(["sh", "-c",
+                    'st="${XDG_STATE_HOME:-$HOME/.local/state}/rice"; mkdir -p "$st"; src="$1"; [ -f "$src" ] || { echo missing; exit 1; }\n' +
+                    'ext="${src##*.}"; case "$ext" in jpg|jpeg|png|webp|JPG|JPEG|PNG|WEBP) ;; *) ext=png ;; esac\n' +
+                    '[ -f "$HOME/.face" ] && [ ! -f "$st/face-backup" ] && cp "$HOME/.face" "$st/face-backup"\n' +
+                    'cp "$src" "$st/avatar.$ext" && cp "$src" "$HOME/.face" && printf "%s" "$st/avatar.$ext"',
+                    "glyph-photo", p]);
+            }
+            function clearPhoto() { photoClear.running = true; }
+            Process {
+                id: photoSet
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        const t = text.trim();
+                        if (t && t !== "missing") { Theme.state.avatar = t; look.photoMsg = ""; photoIn.text = ""; }
+                        else look.photoMsg = "no such file";
+                    }
+                }
+            }
+            Process {
+                id: photoClear
+                command: ["sh", "-c",
+                    'st="${XDG_STATE_HOME:-$HOME/.local/state}/rice"; rm -f "$st"/avatar.*\n' +
+                    'if [ -f "$st/face-backup" ]; then mv "$st/face-backup" "$HOME/.face"; else rm -f "$HOME/.face"; fi']
+                onExited: { Theme.state.avatar = ""; look.photoMsg = ""; }
+            }
             Timer { running: look.visible && root.visible && Theme.state.blink; interval: 500; repeat: true; onTriggered: look.dim = !look.dim }
 
             Row {
@@ -599,6 +635,66 @@ PanelWindow {
                     }
                 }
             }
+
+            // profile photo: a path field and a live preview -- the picker this shell can
+            // stand behind (there is no file dialog in its toolkit). Set -- the photo shows
+            // on the lock (and, after install.sh --greeter, at boot); clear -- back to dots.
+            Row {
+                spacing: 14
+                Item {
+                    width: 72
+                    height: 72
+                    Ring { anchors.fill: parent; n: 24; dot: 3; f: 1 }
+                    Item {
+                        visible: pvImg.status === Image.Ready
+                        anchors { fill: parent; margins: 12 }
+                        layer.enabled: true
+                        layer.effect: MultiEffect { maskEnabled: true; maskSource: pvMask; maskThresholdMin: 0.5; maskSpreadAtMin: 1 }
+                        Image {
+                            id: pvImg
+                            anchors.fill: parent
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                            sourceSize: Qt.size(96, 96)
+                            source: {
+                                const t = photoIn.text.trim();
+                                const p = t.startsWith("~/") ? Quickshell.env("HOME") + t.slice(1) : t;
+                                return p ? "file://" + p : Theme.state.avatar ? "file://" + Theme.state.avatar : "";
+                            }
+                        }
+                    }
+                    Rectangle { id: pvMask; anchors { fill: parent; margins: 12 } radius: width / 2; visible: false; layer.enabled: true }
+                    Rectangle { visible: pvImg.status !== Image.Ready; anchors.centerIn: parent; width: 10; height: 10; radius: 5; color: Theme.fg }
+                }
+                Rectangle {
+                    width: 360
+                    height: 72
+                    radius: 36
+                    color: Theme.s2
+                    border { width: photoIn.activeFocus ? 1 : 0; color: Theme.fg }
+                    Lb { id: photoL; x: 30; anchors.verticalCenter: parent.verticalCenter; text: "photo"; color: photoIn.activeFocus ? Theme.fg : Theme.grey }
+                    TextInput {
+                        id: photoIn
+                        anchors { left: photoL.right; leftMargin: 24; right: parent.right; rightMargin: 30; verticalCenter: parent.verticalCenter }
+                        font { family: Theme.ui; pixelSize: 20 }
+                        color: Theme.fg
+                        selectionColor: Theme.s3
+                        clip: true
+                        activeFocusOnTab: true
+                        Text { visible: !photoIn.text; text: Theme.state.avatar || "~/Pictures/me.png"; font: photoIn.font; color: Theme.mute }
+                        Keys.onPressed: e => {
+                            if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) look.setPhoto();
+                            else if (e.key === Qt.Key_Up || e.key === Qt.Key_Down) root.go(root.sel + (e.key === Qt.Key_Up ? -1 : 1));
+                            else if (e.key === Qt.Key_Escape) stage.forceActiveFocus();
+                            else return;
+                            e.accepted = true;
+                        }
+                    }
+                }
+                Act { icon: "\u{F012C}"; text: "set"; onHit: look.setPhoto() }
+                Act { visible: !!Theme.state.avatar; icon: "\u{F0156}"; text: "clear"; onHit: look.clearPhoto() }
+            }
+            Lb { visible: !!look.photoMsg; text: look.photoMsg; px: 10; color: Theme.red }
 
             // name in the greeting; empty -- $USER
             Rectangle {

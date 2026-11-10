@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Networking
 import Quickshell.Services.UPower
@@ -21,6 +22,9 @@ Item {
     // who is logging in. Lock: the session's own user and ~/.face. Greeter: the picked user, face resolved by greet.qml
     property string userName: Quickshell.env("USER")
     property string face: `file://${Quickshell.env("HOME")}/.face`
+    // the custom profile photo (prefs LOOK), as a file:// url: set -- the photo itself,
+    // round-clipped inside the dot ring; empty -- the dotted face below, which stays the default
+    property string photo: ""
     property bool switcher: false
     property var users: []
     property bool usersOpen: false
@@ -137,7 +141,23 @@ Item {
                 transform: Translate { y: 24 * (1 - root.ph(0.3, 0.7)) }
                 Ring { anchors.fill: parent; n: 32; f: root.t > 0.35 ? 1 : 0 } // lights up and fades in a wave around the circle
                 // face as dots, like covers; no file -- Art gradient
-                Art { anchors { fill: parent; margins: 18 } url: root.face; step: 3 }
+                Art { visible: photoImg.status !== Image.Ready; anchors { fill: parent; margins: 18 } url: root.face; step: 3 }
+                // the custom photo, round-clipped (the shot card's mask pattern); wins over the dots when it loads
+                Item {
+                    visible: photoImg.status === Image.Ready
+                    anchors { fill: parent; margins: 18 }
+                    layer.enabled: true
+                    layer.effect: MultiEffect { maskEnabled: true; maskSource: faceMask; maskThresholdMin: 0.5; maskSpreadAtMin: 1 }
+                    Image {
+                        id: photoImg
+                        anchors.fill: parent
+                        fillMode: Image.PreserveAspectCrop
+                        source: root.photo
+                        sourceSize: Qt.size(192, 192)
+                        asynchronous: true
+                    }
+                }
+                Rectangle { id: faceMask; anchors { fill: parent; margins: 18 } radius: width / 2; visible: false; layer.enabled: true }
             }
             Text {
                 visible: !root.switcher

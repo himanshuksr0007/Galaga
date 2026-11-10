@@ -312,6 +312,19 @@ greeter() { # boot login: greetd + the lock's face as the greeter (./install.sh 
         echo "  /usr/share/fonts/glyph"
     fi
 
+    # profile photos for the greeter face: the greeter user cannot read a ~/.face inside a
+    # 700 home, so each human user's face gets a world-readable copy of its own (the face
+    # itself is not a secret -- AccountsService keeps the same file world-readable too).
+    # No ~/.face -- nothing copied for that user, and their face falls back to dots.
+    sudo mkdir -p /etc/greetd/faces
+    local gu guid ghome
+    while IFS=: read -r gu _ guid _ _ ghome _; do
+        { [ "$guid" -ge 1000 ] && [ "$guid" -lt 60000 ] && [ -f "$ghome/.face" ]; } 2>/dev/null || continue
+        sudo cp "$ghome/.face" "/etc/greetd/faces/$gu"
+        sudo chmod 644 "/etc/greetd/faces/$gu"
+        echo "  /etc/greetd/faces/$gu"
+    done < <(getent passwd)
+
     # greetd's own files (config, the stripped compositor config, the launcher script):
     # a changed one that already exists goes to the backup first -- once, only on change
     local f

@@ -40,7 +40,7 @@ ShellRoot {
             "  [ \"$uid\" -lt 60000 ] || continue\n" +
             "  case \"$sh\" in */nologin|*/false|\"\") continue ;; esac\n" +
             "  face=\"\"\n" +
-            "  for c in \"/var/lib/AccountsService/icons/$name\" \"$home/.face\"; do\n" +
+            "  for c in \"/etc/greetd/faces/$name\" \"/var/lib/AccountsService/icons/$name\" \"$home/.face\"; do\n" +
             "    if [ -r \"$c\" ]; then face=\"$c\"; break; fi\n" +
             "  done\n" +
             "  printf 'USER\\t%s\\t%s\\n' \"$name\" \"$face\"\n" +
@@ -205,6 +205,10 @@ ShellRoot {
             switcher: true
             userName: gate.user
             face: gate.face ? "file://" + gate.face : ""
+            // the synced profile photo (install.sh --greeter copies ~/.face to
+            // /etc/greetd/faces/<user>, the one place this user can always read):
+            // shown as the photo; any other face source keeps the dotted rendering
+            photo: gate.face.startsWith("/etc/greetd/faces/") ? "file://" + gate.face : ""
             users: shell.users.filter(u => u.name !== gate.user)
             onUserPicked: name => gate.pick(name)
         }

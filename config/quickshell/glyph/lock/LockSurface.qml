@@ -16,5 +16,6 @@ WlSessionLockSurface {
         anchors.fill: parent
         auth: root.auth
         layout: root.layout
+        photo: Theme.state.avatar ? "file://" + Theme.state.avatar : ""
     }
 }
