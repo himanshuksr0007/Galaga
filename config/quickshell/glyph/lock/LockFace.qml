@@ -327,7 +327,7 @@ Item {
             Lb {
                 anchors.horizontalCenter: parent.horizontalCenter
                 opacity: root.ph(0.8, 1)
-                text: root.auth.busy ? "checking…" : root.auth.fail ? "wrong password · try again" : "enter password"
+                text: root.auth.busy ? "checking…" : root.auth.fail ? (root.auth.msg || "wrong password · try again") : "enter password"
                 color: root.auth.fail ? Theme.red : Theme.grey
             }
         }

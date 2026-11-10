@@ -372,6 +372,7 @@ greeter() { # boot login: greetd + the lock's face as the greeter (./install.sh 
     say "no login screen at boot? Ctrl+Alt+F3 -> log in on the text console -> run the rollback"
 }
 
+
 [ "$EUID" -eq 0 ] && { echo "run as your user, sudo will ask by itself"; exit 1; }
 
 case "${1:-}" in

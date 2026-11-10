@@ -133,6 +133,7 @@ ShellRoot {
         id: gate
         property string buffer: ""
         property bool fail: false
+        property string msg: "" // what pam itself said (faillock's lockout, say) -- the face shows it over its own text
         property bool leaving: false
         property bool busy: false
         property string user: ""
@@ -142,6 +143,7 @@ ShellRoot {
         function submit() {
             if (!buffer || busy || leaving || !user) return;
             fail = false;
+            msg = "";
             busy = true;
             // the password stays in buffer (the face counts its dots) and is answered
             // to greetd's prompt when it arrives in onAuthMessage
@@ -156,6 +158,7 @@ ShellRoot {
             live = false;
             busy = false;
             fail = false;
+            msg = "";
             leaving = false;
             buffer = "";
             user = name;
@@ -168,13 +171,16 @@ ShellRoot {
         target: Greetd
         function onAuthMessage(message, error, responseRequired, echoResponse) {
             // password-only flow: answer the prompts that want the password, ignore the rest
-            // (info texts, recoverable errors like a misread fingerprint -- the face has no place for them)
+            // (info texts, recoverable errors like a misread fingerprint -- the face has no place for them);
+            // an error text is kept: faillock's lockout notice arrives this way and beats a generic "wrong"
+            if (error && message) gate.msg = message;
             if (responseRequired) { gate.live = true; Greetd.respond(gate.buffer); }
         }
         function onAuthFailure(message) {
             gate.live = false;
             gate.busy = false;
             gate.buffer = "";
+            if (message) gate.msg = message; // pam's own words (a faillock lockout) over the generic failure
             gate.fail = true; // the face shakes and goes red, as on the lock
         }
         function onError(error) {

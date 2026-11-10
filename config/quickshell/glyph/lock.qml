@@ -17,6 +17,7 @@ ShellRoot {
         id: gate
         property string buffer: ""
         property bool fail: false
+        property string msg: "" // the greeter fills this from pam; the lock's PamContext reports only a result
         property bool leaving: false // password accepted: the surface finishes the exit, then unlockT releases the lock
         readonly property bool busy: pam.active
         function submit() {
