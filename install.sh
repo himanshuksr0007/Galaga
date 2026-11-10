@@ -170,9 +170,10 @@ links() {
     gsettings set org.gnome.desktop.interface color-scheme prefer-dark
     gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark
     # window buttons for apps that read it from here (the rest read settings.ini):
-    # close only, on the left -- minimise/maximise are not rendered in GTK headerbars
-    # because their clicks cannot work on Hyprland (see term/gtk-3.0/settings.ini)
-    gsettings set org.gnome.desktop.wm.preferences button-layout 'close:appmenu'
+    # close and maximise, on the left -- maximise works for these apps (rules.lua
+    # exempts them from the maximise suppression); minimise is not rendered
+    # because its click cannot work on Hyprland (see term/gtk-3.0/settings.ini)
+    gsettings set org.gnome.desktop.wm.preferences button-layout 'close,maximize:appmenu'
 }
 
 browser_prefs() { # firefox/zen: built-in window buttons off (config/browser/user.js) -- hyprbars draws them instead

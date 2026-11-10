@@ -78,12 +78,14 @@ scrollbar slider:hover, scrollbar slider:active { background-color: #8C8C8C; }
 
 /* ---- window buttons: the same traffic lights as the hyprbars bars (hyprland/titlebars.lua).
    Apps with headerbars draw their own buttons; settings.ini next to this file renders
-   ONLY the close button (gtk-decoration-layout=close:appmenu), and here it becomes the
-   same red disc, with a bold glyph (term/window-buttons/, linked into gtk-3.0/ and
-   gtk-4.0/ by install.sh) that appears only while the button group is hovered -- a plain
-   disc otherwise, like the bars. Minimise/maximise are not rendered in these headerbars
-   at all: their clicks send requests Hyprland cannot honour, so there is nothing here
-   to paint -- see README "Window buttons".
+   close and maximise (gtk-decoration-layout=close,maximize:appmenu), and here they
+   become the same red / black discs, with bold glyphs (term/window-buttons/, linked
+   into gtk-3.0/ and gtk-4.0/ by install.sh) that appear only while the button group
+   is hovered -- plain discs otherwise, like the bars. Maximise works: the click's
+   request is honoured because hypr/hyprland/rules.lua exempts these apps from its
+   maximise suppression. Minimise is not rendered in these headerbars at all: its
+   click is dropped inside Hyprland, so there is nothing honest to paint --
+   see README "Window buttons".
    The two toolkits need different rules, so this file carries both:
    GTK3 paints the disc on the button itself; in GTK4 the button is transparent and the
    visible disc is its image node (the default theme gives it a 30px round background),
@@ -99,8 +101,11 @@ headerbar .titlebutton {
 }
 headerbar .titlebutton image { opacity: 0; }
 headerbar .titlebutton.close { background-color: #D71921; }
+headerbar .titlebutton.maximize { background-color: #000000; }
 headerbar:hover .titlebutton.close { background-image: url("window-buttons/close.svg"); }
+headerbar:hover .titlebutton.maximize { background-image: url("window-buttons/maximize.svg"); }
 headerbar .titlebutton.close:hover { background-color: #AE131B; }
+headerbar .titlebutton.maximize:hover { background-color: #2A2A2A; }
 /* unfocused window: discs dim, like the bars' ash inactive buttons */
 headerbar:backdrop .titlebutton { opacity: 0.55; }
 
@@ -118,6 +123,9 @@ windowcontrols button > image {
     background-repeat: no-repeat; background-position: center; background-size: 14px 14px;
 }
 windowcontrols button.close > image { background-color: #D71921; }
+windowcontrols button.maximize > image { background-color: #000000; }
 windowcontrols:hover button.close > image { background-image: url("window-buttons/close.svg"); }
+windowcontrols:hover button.maximize > image { background-image: url("window-buttons/maximize.svg"); }
 windowcontrols button.close:hover > image { background-color: #AE131B; }
+windowcontrols button.maximize:hover > image { background-color: #2A2A2A; }
 windowcontrols:backdrop button > image { opacity: 0.55; }
