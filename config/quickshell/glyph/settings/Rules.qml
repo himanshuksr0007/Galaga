@@ -61,6 +61,12 @@ Singleton {
             property bool motion: true
             property bool ultra: false   // ultra mode (setMode 0): 60 Hz and no decorations on top of the settings
             property bool game: false    // game mode, like caelestia: no animations, blur, shadows, gaps or rounding, tearing (Theme.apply)
+            // what game mode keeps (prefs -> WINDOWS -> in a game); tearing is always on in it (Isaqdn03's choices)
+            property bool gameGaps: false   // gaps, border and rounding as set
+            property bool gameMotion: false // animations
+            property bool gameBlur: false
+            property bool gameShadow: false
+            property bool gameDnd: true     // auto game mode (services/Game) turns on do not disturb
             // Colors
             property int palette: 0
             property bool paintHypr: true
@@ -335,9 +341,9 @@ Singleton {
     }
     // what is actually set: ultra overrides the settings -- the lowest screen refresh rate, otherwise the closest to the selected
     readonly property int hz: store.ultra ? rates[0] : refreshHz
-    readonly property bool moving: store.motion && !store.ultra && !store.game
-    readonly property bool blurOn: store.blur && !store.ultra && !store.game
-    readonly property bool shadowOn: store.shadow && !store.ultra && !store.game
+    readonly property bool moving: store.motion && !store.ultra && (!store.game || store.gameMotion)
+    readonly property bool blurOn: store.blur && !store.ultra && (!store.game || store.gameBlur)
+    readonly property bool shadowOn: store.shadow && !store.ultra && (!store.game || store.gameShadow)
 
     // shell startup: everything except brightness (it is changed by the keys and OSD, we must not overwrite it on every launch)
     function applyAll() {

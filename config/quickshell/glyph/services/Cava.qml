@@ -11,7 +11,8 @@ Singleton {
     id: root
 
     property var users: ({})
-    readonly property bool active: Object.keys(users).length > 0
+    // a fullscreen game (services/Game) stops cava too: no FFT to pay for mid-game
+    readonly property bool active: Object.keys(users).length > 0 && !Game.playing
     function use(name, on) {
         if (!!users[name] === on) return;
         const u = Object.assign({}, users);

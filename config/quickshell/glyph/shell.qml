@@ -24,6 +24,7 @@ import "shot"
 import "vpn"
 import "wall"
 import "welcome"
+import "services"
 
 // glyph: rice in the spirit of nothing os. Home on the wallpaper, bar, launcher, quick settings,
 // Glyph strips at the edges instead of OSD, notification island, power menu, settings, deck (bottom dashboard), clipboard, charms (emoji and symbols), screenshots, vpn, wallpapers. Lock -- a separate process (lock.qml).
@@ -47,6 +48,7 @@ ShellRoot {
     Shot { id: shot }
     Vpn { id: vpn }
     LazyLoader { active: !Theme.state.welcomed; Welcome {} } // the first-login card; FEATURES brings it back
+    readonly property bool autoGame: Game.on // starts services/Game: a fullscreen game turns on game mode and dnd
     Walls { id: walls }
 
     Variants {

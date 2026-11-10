@@ -226,6 +226,8 @@ Singleton {
             property var wsNames: ({})         // desktop id (as string) -> name; missing -- just the number
             property var wsWalls: ({})         // desktop id (as string) -> wallpaper path; missing/"" -- the global wall above
             property bool featShot: true       // shot: grab text (OCR) and scan QR modes (shot/Shot.qml)
+            property bool featGameAuto: true   // a fullscreen game turns on game mode (+ dnd) by itself (services/Game.qml)
+            property var gameAuto: null        // services/Game: what game mode and dnd were before it took them; null -- it isn't holding them
             property string avatar: ""         // profile photo: the copy in the state dir; "" -- the dotted face (lock/LockFace.qml)
             property bool lockHideLen: false // lock: three fixed dots while typing, the password's length doesn't show (SenulMapa's idea, AMM021's port)
             property bool lockOneScreen: false // lock: the full face only on the screen in focus, the others get a plain cover
@@ -268,13 +270,13 @@ Singleton {
     function apply() {
         // game mode (Rules.store.game) -- on top of the settings, like ultra: border 1, no gaps or rounding, tearing for
         // windows with immediate (games, hyprland/rules.lua). Exit -- your values return, allow_tearing -- false, as in general.lua
-        const r = Rules.store, g = r.game;
+        const r = Rules.store, g = r.game, flat = g && !r.gameGaps; // flat -- game mode without "keep gaps"
         const c = x => `"rgb(${hex(x)})"`;
         // shadow: in dark -- a barely visible white glow, in light -- a soft black
         const shadow = light ? "rgba(0000002E)" : `rgba(${hex(fg)}1A)`;
-        hypr(`hl.config({ general = { gaps_in = ${g ? 0 : r.gapsIn}, gaps_out = ${g ? 0 : r.gapsOut}, border_size = ${g ? 1 : r.border}, allow_tearing = ${g}, `
+        hypr(`hl.config({ general = { gaps_in = ${flat ? 0 : r.gapsIn}, gaps_out = ${flat ? 0 : r.gapsOut}, border_size = ${flat ? 1 : r.border}, allow_tearing = ${g}, `
            + `col = { active_border = ${c(fg)}, inactive_border = ${c(s3)} } }, `
-           + `decoration = { rounding = ${g ? 0 : st.rounding}, blur = { enabled = ${Rules.blurOn} }, shadow = { enabled = ${Rules.shadowOn}, color = "${shadow}" } }, `
+           + `decoration = { rounding = ${flat ? 0 : st.rounding}, blur = { enabled = ${Rules.blurOn} }, shadow = { enabled = ${Rules.shadowOn}, color = "${shadow}" } }, `
            + `group = { col = { border_active = ${c(fg)}, border_inactive = ${c(s3)}, border_locked_active = ${c(fg)}, border_locked_inactive = ${c(mute)} }, `
            + `groupbar = { font_family = "${mono}", text_color = ${c(fg)}, col = { active = ${c(s3)}, inactive = ${c(s1)}, locked_active = ${c(s3)}, locked_inactive = ${c(s1)} } } }, `
            + `misc = { background_color = ${c(bg)} } })`);
