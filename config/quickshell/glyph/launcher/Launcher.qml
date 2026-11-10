@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
+import Quickshell.Services.SystemTray
 import Quickshell.Wayland
 import qs
 import qs.components
@@ -17,7 +18,7 @@ PanelWindow {
 
     property int mode: 0
     property int sel: 0
-    readonly property var modes: ["apps", "run", "windows", "calc", "style"]
+    readonly property var modes: ["apps", "run", "windows", "calc", "style", "tray"]
     readonly property string query: input.text
     property var uses: ({}) // app id -> how many times opened
 
@@ -43,6 +44,13 @@ PanelWindow {
         function onValuesChanged() { appsT.restart(); }
     }
     // windows -- only while the windows mode is open: otherwise any title change would rebuild the list
+    // tray -- only while the tray mode is open: otherwise every new message (telegram's tooltip counter)
+    // would rebuild the list. The name is the tooltip (discord's title is empty). A menu-only item
+    // (onlyMenu) doesn't close the launcher on click -- its menu opens under it instead
+    readonly property var tray: !visible || mode !== 5 ? [] : SystemTray.items.values.map(i => ({
+        name: i.tooltipTitle || i.title || i.id, src: i.icon, extra: i.id.toLowerCase(), tray: i,
+        keep: i.onlyMenu, run: () => i.onlyMenu || i.activate()
+    }))
     readonly property var wins: !visible || mode !== 2 ? [] : Hyprland.toplevels.values.map(t => {
         const cls = t.lastIpcObject?.class ?? "";
         return { name: t.title, src: icon(DesktopEntries.heuristicLookup(cls)?.icon), extra: cls.toLowerCase(),
@@ -178,6 +186,7 @@ PanelWindow {
         else if (mode === 4) b = Theme.styles.map(x => ({ head: x.head, items: filter(x.items.map(it => Object.assign({ extra: "", keep: true }, it)), q) })).filter(x => x.items.length);
         else if (mode === 3) b = [];
         else if (mode === 2) b = [{ head: "windows", sub: String(wins.length), items: filter(wins, q) }];
+        else if (mode === 5) b = [{ head: "tray", sub: String(tray.length), items: filter(tray, q) }];
         else if (q) {
             const r = filter(apps, q);
             b = [{ head: "results", sub: String(r.length), items: r }];
@@ -201,6 +210,7 @@ PanelWindow {
     Behavior on t { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
 
     function open() {
+        menuOpen = false;
         focusT.stop(); // a window from the last opening doesn't steal this one's focus
         input.text = "";
         mode = 0;
@@ -257,7 +267,7 @@ PanelWindow {
         if (mode === 3 && query.trim()) calc.exec(["qalc", "-t", query]); // exec cancels the previous calculation
         else calcOut = "";
     }
-    onModeChanged: { sel = 0; flick.contentY = 0; computeSmart(); if (mode === 3) queryChanged(); }
+    onModeChanged: { sel = 0; flick.contentY = 0; menuOpen = false; computeSmart(); if (mode === 3) queryChanged(); }
     // list shrank without a new query (a window closed in windows) -- cursor past the end, cur empty
     onFlatChanged: sel = Math.max(0, Math.min(sel, flat.length - 1))
 
@@ -319,7 +329,7 @@ PanelWindow {
                     Text {
                         visible: !input.text
                         x: 6
-                        text: ["Search apps, files, commands", "Run a command", "Find a window", "2 + 2, 20 usd to eur…"][root.mode]
+                        text: ["Search apps, files, commands", "Run a command", "Find a window", "2 + 2, 20 usd to eur…", "Colour from nothing, the wallpaper or a palette", "Apps running in the background"][root.mode]
                         font: input.font
                         color: Theme.mute
                     }
@@ -470,6 +480,94 @@ PanelWindow {
                 }
             }
         }
+        // a tray app's menu: under its circle, within the panel's width; downward it leaves the panel, like a popover
+        Rectangle {
+            id: menu
+            property real mt: root.menuOpen && root.mode === 5 ? 1 : 0
+            Behavior on mt { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+            visible: mt > 0 && rows.count > 0
+            x: Math.max(panel.x + 20, Math.min(panel.x + panel.width - width - 20, (root.peek?.x ?? 0) - width / 2))
+            y: (root.peek?.y ?? 0) + 14 + 12 * (1 - mt)
+            width: 320
+            height: list.height + 20
+            Behavior on x { enabled: menu.visible; NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+            Behavior on height { enabled: menu.visible; NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+            opacity: root.t * mt
+            radius: Theme.corner(28)
+            color: Theme.s2
+            border { width: 1; color: Theme.s3 }
+            clip: true
+            MouseArea { anchors.fill: parent } // a miss lands here, not on the dim -- that would close the launcher
+            HoverHandler { id: menuHov }
+            QsMenuOpener { id: opener; menu: root.sub.length ? root.sub[root.sub.length - 1] : root.peek?.tray?.menu ?? null }
+
+            Column {
+                id: list
+                x: 10
+                y: 10
+                width: parent.width - 20
+
+                Item {
+                    visible: root.sub.length > 0
+                    width: list.width
+                    height: 40
+                    Rectangle { anchors.fill: parent; radius: Theme.corner(20); color: backHov.hovered ? Theme.s3 : "transparent" }
+                    Icon { x: 12; anchors.verticalCenter: parent.verticalCenter; text: "\u{F0141}"; color: Theme.grey }
+                    Lb { x: 38; anchors.verticalCenter: parent.verticalCenter; text: "back"; px: 11 }
+                    HoverHandler { id: backHov; cursorShape: Qt.PointingHandCursor }
+                    TapHandler { onTapped: root.sub = root.sub.slice(0, -1) }
+                }
+                Repeater {
+                    id: rows
+                    model: opener.children
+                    Item {
+                        id: row
+                        required property QsMenuEntry modelData
+                        readonly property bool sep: modelData.isSeparator
+                        readonly property bool on: modelData.checkState === Qt.Checked
+                        width: list.width
+                        height: sep ? 13 : 40
+                        Rectangle { visible: row.sep; anchors.centerIn: parent; width: parent.width - 28; height: 1; color: Theme.s3 }
+                        Rectangle { visible: !row.sep; anchors.fill: parent; radius: Theme.corner(20); color: rowHov.hovered && row.modelData.enabled ? Theme.s3 : "transparent" }
+                        Text {
+                            visible: !row.sep
+                            anchors { left: parent.left; leftMargin: 16; right: parent.right; rightMargin: 40; verticalCenter: parent.verticalCenter }
+                            textFormat: Text.PlainText
+                            elide: Text.ElideRight
+                            text: row.modelData.text
+                            font { family: Theme.ui; pixelSize: 15 }
+                            color: row.modelData.enabled ? Theme.fg : Theme.mute
+                        }
+                        // справа: подменю — шеврон; галочка или радио — точка, отмечен — белая, нет — кольцо
+                        Icon {
+                            visible: row.modelData.hasChildren
+                            anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
+                            text: "\u{F0142}"
+                            color: Theme.grey
+                        }
+                        Rectangle {
+                            visible: row.modelData.buttonType !== QsMenuButtonType.None && !row.modelData.hasChildren
+                            anchors { right: parent.right; rightMargin: 16; verticalCenter: parent.verticalCenter }
+                            width: 12
+                            height: 12
+                            radius: 6
+                            color: row.on ? Theme.fg : "transparent"
+                            border { width: 1.5; color: row.on ? Theme.fg : Theme.mute }
+                        }
+                        HoverHandler { id: rowHov; enabled: !row.sep; cursorShape: row.modelData.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
+                        TapHandler {
+                            enabled: !row.sep && row.modelData.enabled
+                            onTapped: {
+                                if (row.modelData.hasChildren) return root.sub = root.sub.concat([row.modelData]);
+                                row.modelData.triggered();
+                                root.close();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
     }
 
     // letters of all apps whose rows are visible now: "A-F"
@@ -490,6 +588,25 @@ PanelWindow {
     }
 
     // app: circle 88 with a glyph or dotted icon, label -- matched letters white
+    // ---- a tray app's menu: hover a circle -- a card under it with its menu items. A submenu replaces the
+    // list in place, with "back" on top; an entry runs and closes the launcher. Left both the circle and
+    // the card -- it fades. Mouse only; arrows into it if someone asks ----
+    property Item hotCell: null // the circle under the cursor
+    property var peek: null // { tray, x, y }: whose menu, and where its cell's bottom is; held while the card fades
+    property var sub: [] // open submenus; the last is on screen
+    property bool menuOpen: false
+    readonly property bool menuHot: !!hotCell || menuHov.hovered
+    onMenuHotChanged: if (!menuHot) menuT.restart()
+    Timer { id: menuT; interval: 300; onTriggered: if (!root.menuHot) root.menuOpen = false }
+    function hover(cell) {
+        const p = cell.mapToItem(stage, cell.width / 2, cell.height);
+        if (!menuOpen || peek?.tray !== cell.modelData.tray) sub = [];
+        peek = { tray: cell.modelData.tray, x: p.x, y: p.y };
+        hotCell = cell;
+        sel = cell.modelData.k;
+        menuOpen = true;
+    }
+
     component Cell: Column {
         id: cell
         required property int index
@@ -542,6 +659,10 @@ PanelWindow {
             }
             TapHandler { onTapped: { root.sel = cell.modelData.k; root.launch(); } }
             HoverHandler { cursorShape: Qt.PointingHandCursor }
+            HoverHandler {
+                enabled: root.mode === 5 && !!cell.modelData.tray
+                onHoveredChanged: if (hovered) root.hover(cell); else if (root.hotCell === cell) root.hotCell = null
+            }
         }
         Text {
             id: label
