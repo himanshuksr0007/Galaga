@@ -371,6 +371,20 @@ you had returns — the shell remembers it across restarts, so a reboot
 mid-battery doesn't strand you. Picking a mode by hand while on battery
 takes over from it: the automatic return is cancelled and your pick stands.
 
+**Shell performance** *(Prefs → POWER → shell)*. Not the cpu — the modes
+above own that, through the daemon. This is what the glyph shell itself
+spends: how often it samples `/proc` for its stats, re-checks recording and
+airplane state (a process spawn each time), and reads an external monitor's
+brightness back over DDC (a ~300 ms `ddcutil` call each time). **Full** is
+the rice as shipped (2 s / 3 s / 5 s). **Trim** runs every one of those at
+half rate, and the home orb breathes at half rate with them. **Lite** runs
+them at quarter rate (8 s / 12 s / 20 s) and stands the eye-candy down: the
+cava visualisers (the edges' VU meter, home's matrix) stop registering, so
+the cava process never starts for them; the RunCat freezes and stops asking
+for cpu figures; the spinning covers stop; the orb holds still. One key,
+everything derived from it — flip it and the shell re-binds live, restart
+and it simply reads the key back.
+
 <div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
 
 <h2 align="center">Screens, colour and the small things</h2>
