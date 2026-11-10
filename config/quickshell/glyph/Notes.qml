@@ -47,6 +47,12 @@ Singleton {
         return m < 1 ? "now" : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h`;
     }
 
-    // count -- into state: the lock writes "3 notifications"
-    onListChanged: if (Theme.state.unread !== list.length) Theme.state.unread = list.length
+    // count -- into state: the lock writes "3 notifications". The newest few ride along
+    // as plain fields (state.peek): the lock is a separate process and the state file is
+    // the channel it already reads the count through -- its face shows them as a summary
+    onListChanged: {
+        if (Theme.state.unread !== list.length) Theme.state.unread = list.length;
+        const pk = list.slice(-3).reverse().map(n => ({ app: n.appName || "app", summary: n.summary ?? "" }));
+        if (JSON.stringify(pk) !== JSON.stringify(Theme.state.peek)) Theme.state.peek = pk;
+    }
 }

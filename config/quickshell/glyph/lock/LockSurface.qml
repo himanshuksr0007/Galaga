@@ -16,6 +16,7 @@ WlSessionLockSurface {
         anchors.fill: parent
         auth: root.auth
         layout: root.layout
+        session: true // the session lock: media controls + notification summary (the greeter leaves this off)
         photo: Theme.state.avatar ? "file://" + Theme.state.avatar : ""
     }
 }

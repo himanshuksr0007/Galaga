@@ -25,6 +25,10 @@ Item {
     // the custom profile photo (prefs LOOK), as a file:// url: set -- the photo itself,
     // round-clipped inside the dot ring; empty -- the dotted face below, which stays the default
     property string photo: ""
+    // true only on the session lock (LockSurface): media controls and the notification
+    // summary live there. The greeter shares this face but has no session to read a
+    // player or a summary from, so it leaves this false and its face is unchanged
+    property bool session: false
     property bool switcher: false
     property var users: []
     property bool usersOpen: false
@@ -99,6 +103,19 @@ Item {
             text: [Weather.ok ? `${Math.round(Weather.now.temp)}° ${Weather.name(Weather.now.code)}` : "",
                    Media.player?.trackTitle ? `${Media.player.trackTitle} — ${Media.player.trackArtist}` : ""].filter(Boolean).join(" · ")
         }
+        // the player, with controls -- session lock only (see session above): cover as
+        // dots, the shared Controls row. On the lock surface the clicks land; in the
+        // greeter this block never exists.
+        Row {
+            visible: root.session && Theme.state.featLockMedia && !!Media.player
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: 646
+            spacing: 18
+            opacity: root.ph(0.35, 0.75)
+            transform: Translate { y: 16 * (1 - root.ph(0.35, 0.75)) }
+            Art { anchors.verticalCenter: parent.verticalCenter; width: 54; height: 54; url: Media.player?.trackArtUrl ?? ""; step: 3 }
+            Controls { anchors.verticalCenter: parent.verticalCenter; size: 20; play: 46 }
+        }
 
         Row {
             anchors { right: parent.right; rightMargin: 44 }
@@ -119,14 +136,33 @@ Item {
             }
             Lb { visible: root.bat.isLaptopBattery; anchors.verticalCenter: parent.verticalCenter; text: Math.round(root.bat.percentage * 100) }
         }
-        Row {
+        Column {
             visible: Theme.state.unread > 0
             opacity: root.ph(0.45, 0.85)
             x: 44
             anchors { bottom: parent.bottom; bottomMargin: 44 }
-            spacing: 16
-            Icon { anchors.verticalCenter: parent.verticalCenter; text: "\u{F009A}"; font.pixelSize: 17 }
-            Lb { anchors.verticalCenter: parent.verticalCenter; text: `${Theme.state.unread} notifications` }
+            spacing: 8
+            Row {
+                spacing: 16
+                Icon { anchors.verticalCenter: parent.verticalCenter; text: "\u{F009A}"; font.pixelSize: 17 }
+                Lb { anchors.verticalCenter: parent.verticalCenter; text: `${Theme.state.unread} notifications` }
+            }
+            // the summary itself -- session lock only, like the player above
+            Column {
+                visible: root.session && Theme.state.featLockMedia
+                spacing: 4
+                Repeater {
+                    model: Theme.state.peek.slice(0, 2)
+                    Lb {
+                        required property var modelData
+                        width: 560
+                        elide: Text.ElideRight
+                        text: `${modelData.app} · ${modelData.summary}`
+                        px: 11
+                        color: Theme.grey
+                    }
+                }
+            }
         }
 
         Column {
