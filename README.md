@@ -202,10 +202,19 @@ minimised section — into the section's **current** place in the deck, computed
 from the section order on every park: reorder the sections in settings and the
 windows follow the section. Show-desktop's windows warp as a short cascade. If
 the shell is not running, or the snapshot fails, the park is a plain park,
-exactly as before — the effect can never eat a minimise. Restore has no reverse
-warp, deliberately: a parked window is unmapped, so there are no fresh pixels to
-un-warp — only the stale snapshot from park time, and animating stale content
-would be a fake. Turn the effect off in **Prefs → DECK → genie · minimise**.
+exactly as before — the effect can never eat a minimise. Turn the effect off in
+**Prefs → FEATURES → genie · minimise**.
+
+**The way back (genie · restore).** Restoring reverses the lamp — with one honest
+caveat, stated plainly: a parked window is unmapped, so there are no fresh pixels
+to un-warp. What expands out of the minimised section is the **park-time
+snapshot**, kept per parked window for exactly this (at most 12, in the runtime
+dir; gone when the window leaves `special:minimized` any other way, and on shell
+restart). The real window is moved back *first*, underneath the expanding
+picture, and the picture's last frames crossfade into it — the end state is the
+live window, not the snapshot. A window parked before the feature was on (or
+whose snapshot was evicted) restores plainly, as before. Off in
+**Prefs → FEATURES → genie · restore** — snapshots are then not kept at all.
 
 Exceptions and notes:
 
@@ -234,6 +243,105 @@ Exceptions and notes:
 
 <div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
 
+<h2 align="center">Features</h2>
+
+Every feature below has its own switch in **Prefs → FEATURES** (Super+I). Off means
+off — the surface does not render and the behaviour does not run. Visual features
+default on; the one behaviour change, essential-only notifications, defaults off.
+
+**Reactive glyph edges** *(FEATURES → reactive edges; also needs the edges master
+switch in Prefs → SHELL)*. The glyph's edge strips gain standing jobs. While music
+plays, the right strip is a VU meter fed by the same cava process the home Glyph
+Matrix uses (one process, shared — the strips never start a second one); the
+volume/brightness/mic flash takes the strip while it is up and the meter returns
+when it fades. The bottom strip fills with the battery percentage while charging.
+Priority on the bottom strip: a task's progress, then the focus drain, then
+charging. Red stays where it always was — essential notifications and the mic
+flash; nothing new turns red.
+
+**Exposé** *(FEATURES → exposé)*. `Super` + `` ` `` tiles every window on the
+current desktop as cards — icon, title, app, real size — in the desktops
+overview's chrome, settling in with a stagger. Click or arrows + Enter focuses
+the window; right-click closes the window; `Escape` closes the exposé. Like the
+overview, there are no live thumbnails (toplevel capture of inactive windows is
+the unreliable case in Quickshell 0.3); the card is the same information in the
+shell's line language.
+
+**Lock screen media + summary** *(FEATURES → lock media)*. The session lock gains
+the player — dotted cover, title, play/pause/skip — and, under the notification
+count, the newest two notification summaries. **Session lock only**: the greeter
+shares the same face but has no session behind it, so its face is unchanged. The
+summaries ride the shell's state file, the channel the lock process already reads
+the unread count through.
+
+**Essential notifications** *(FEATURES → essential only + the app picker under
+it)*. The shell's notification server is the hook, so this is real filtering, not
+a skin: with the mode on, only picked apps' notifications raise an island tile
+and the edge flash. Everything else still arrives — silently, into quick
+settings' history, drawn muted. Urgency is not filtered: a critical notification
+always gets its red edge and its history border, picked or not. Do-not-disturb
+still silences all but critical. Matching is by the notification's desktop entry;
+a notification whose app sends none is matched by name or icon against the picked
+apps, and unmatched means not essential. With the mode on and **no apps picked,
+nothing is essential** — that is the literal setting, and the picker says so.
+Notifications that carry progress (downloads, copies) are not filtered — their
+task owns the bottom strip, never a tile.
+
+**Launcher smarts** *(FEATURES → launcher smarts)*. In apps mode the query is
+understood before it is searched, and the answer sits in a strip above the
+results: an arithmetic line is answered by the same `qalc` the calculator mode
+uses; a conversion comes from a built-in table (length, mass, data, time, speed,
+volume, temperature — **no currency**: there is no rate source to convert money
+with honestly); `kill <app>` matches the app's running windows and closes them
+all; and files under your home directory join the results as their own block
+(`find`, depth 3, hidden folders skipped, 24 at most) and open with `xdg-open`.
+The strip holds Enter until Down hands the keys to the grid — Enter on it copies
+the maths/conversion result or runs the kill.
+
+**Focus timer in the bar** *(FEATURES → focus in bar)*. The focus timer (it
+already lived in the clock panel and drains the glyph's bottom edge) gets a bar
+part: a ring that empties as it runs, the remaining time under it in Doto, and a
+hover/click card with presets (15/25/45/60), a ±5-minute stepper and
+start/pause/resume/reset. Completion still flashes the edges and raises a tile.
+State is **session-scoped** — a shell restart resets the timer; that was already
+true of the clock-panel timer and is unchanged.
+
+**Theme: auto + your own times** *(Prefs → LOOK → theme)*. Light / Dark / **Auto**.
+Auto is a schedule, checked every 30 seconds and once at shell start (so login
+and wake-from-suspend land on the right side): light from the first time until
+the second, dark otherwise; defaults 07:00 → 19:00, both editable in LOOK while
+Auto is on (15-minute steps), and a span that wraps past midnight works. Picking
+Light or Dark by hand — in LOOK or from quick settings — holds until you switch
+back to Auto; that is what manual means. Both times equal: the schedule never
+fires and the current side holds.
+
+**Named desktops + per-desktop wallpapers** *(FEATURES → named desktops; edit in
+Prefs → DESKTOPS)*. Each workspace 1–10 can carry a name — shown on the desktops
+overview cards — and a wallpaper from the wallpaper folder. The wallpaper runs
+through the existing wall module: switching desktop changes the path and the wave
+crossfades, no second engine. Picking a file makes its screen copy in the wall
+cache with the usual conversion. Unset is the default: the number and the global
+wallpaper.
+
+**Screenshot: grab text + scan QR** *(FEATURES → shot text + qr)*. Two modes join
+the shot pill: **text** runs the framed region through tesseract, **qr** through
+zbarimg (QR and barcodes). The decoded text goes to the clipboard and onto the
+result card in place of the thumbnail; a scanned link opens on click. They read
+the frozen frame the shot module already captured, so the timer does not apply.
+Nothing read shows as nothing read. Packages: `tesseract`, `tesseract-data-eng`,
+`zbar` (installed by `install.sh`).
+
+**Profile picture** *(Prefs → LOOK → photo)*. The lock/greeter avatar is the dot
+ring by default. Set a photo — a path field with a live preview (Quickshell 0.3
+has no native file dialog; the field is the honest version) — and it is copied to
+the shell's state dir and to `~/.face` (a previous `~/.face` is backed up first,
+and Clear restores it). The lock shows it round-clipped inside the dot ring. The
+greeter runs as its own user and cannot read your home: `./install.sh --greeter`
+syncs each user's `~/.face` to `/etc/greetd/faces/<user>` (mode 644), which the
+greeter tries first. No photo anywhere → the dots, as before.
+
+<div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
+
 <h2 align="center">Gestures</h2>
 
 Windows-style trackpad gestures, on the compositor's own engine, so the left/right
@@ -246,6 +354,9 @@ switch tracks your fingers 1:1:
 | **3 fingers down** | show desktop: every window on this desktop parks into `special:minimized` — they wait in the deck's minimised section and restore from there |
 | **4-finger tap** | quick settings |
 | **5 fingers down** | sleep |
+
+Keyboard, same family: `Super` `Tab` — the desktops overview; `Super` `` ` `` — the
+exposé, every window on the current desktop as cards (Prefs → FEATURES → exposé).
 
 The tap is the odd one out: neither Hyprland's gesture engine nor libinput has a tap
 shape, so one small daemon (libinput-gestures, AUR) watches for it alone — a short
