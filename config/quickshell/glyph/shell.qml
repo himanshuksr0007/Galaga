@@ -1,3 +1,6 @@
+//@ pragma IconTheme Rice
+// the shell's icon theme is its own, not qtengine's: if that isn't loaded, Qt
+// looks only in hicolor, and apps with generic icon names (kcalc and friends) get empty circles
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
