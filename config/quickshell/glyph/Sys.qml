@@ -61,7 +61,7 @@ Singleton {
     Process {
         running: true
         command: ["hyprctl", "devices", "-j"]
-        stdout: StdioCollector { onStreamFinished: root.kbd = JSON.parse(this.text).keyboards.find(k => k.main)?.active_keymap ?? "" }
+        stdout: StdioCollector { onStreamFinished: { try { root.kbd = JSON.parse(this.text).keyboards.find(k => k.main)?.active_keymap ?? ""; } catch (e) {} } }
     }
     Connections {
         target: Hyprland
