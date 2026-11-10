@@ -11,7 +11,15 @@ Rectangle {
 
     readonly property var st: Theme.state
 
-    height: list.height + 32
+    // opens like the Picker above it: grows and fades on t, driven by `open`
+    property bool open: false
+    property real t: open ? 1 : 0
+    Behavior on t { NumberAnimation { duration: 250; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+
+    visible: t > 0
+    height: (list.height + 32) * t
+    opacity: t
+    clip: true
     radius: 30
     color: Theme.s2
 

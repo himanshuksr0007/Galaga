@@ -57,8 +57,15 @@ Rectangle {
         ask = o;
     }
 
-    visible: kind === "wifi" || kind === "bt"
-    height: list.height + 32
+    // the card grows and fades in instead of snapping: height follows t, the
+    // column above it in Quick rides the binding, so the whole panel glides
+    property real t: kind === "wifi" || kind === "bt" ? 1 : 0
+    Behavior on t { NumberAnimation { duration: 250; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+
+    visible: t > 0
+    height: (list.height + 32) * t
+    opacity: t
+    clip: true
     radius: 30
     color: Theme.s2
 
