@@ -28,6 +28,7 @@ My fork of [**glyph-rice**](https://github.com/Nebelung-cloud/glyph-rice) by [**
 | **Prefs** | settings, bar and home layout | `Super` `I` |
 | **Shot** | screenshots, editor, recording | `Print` |
 | **Clip** | clipboard history | `Super` `V` |
+| **Share** | clipboard to the LAN via LocalSend (`localsend-bin`) — files as files, image as png, text as a message | `Super` `Ctrl` `S` |
 | **Charms** | emoji, kaomoji, symbols | `Super` `.` |
 | **Walls** | wallpapers as dots — or vivid, in their own colours | `Super` `Shift` `W` |
 | **VPN** | Clash Verge panel | `Super` `P` |
@@ -64,11 +65,18 @@ git clone https://github.com/yasakei/glyph-rice ~/.local/share/glyph
 ~/.local/share/glyph/install.sh                  # Arch: packages, services, symlinks
 ~/.local/share/glyph/install.sh --with telegram  # same, extras picked up front
 ~/.local/share/glyph/install.sh --links          # any distro: symlinks only
+~/.local/share/glyph/install.sh --dry-run        # the whole plan printed, nothing changed
+~/.local/share/glyph/install.sh --update         # pull, then refresh only what changed
+~/.local/share/glyph/install.sh --uninstall      # links away, your old files back
+~/.local/share/glyph/install.sh --fix-plasma     # from KDE Plasma: Wi-Fi + autostart fixes
 ~/.local/share/glyph/install.sh --greeter        # optional, Arch: boot login screen (replaces sddm)
 ```
 
-Without `--with` it asks which extras to add: `telegram` (`Super` `D`), `spotify` with Spicetify (`Super` `M`),
-`clash` for the VPN panel. Old configs go to `~/.dots-backup-<date>/`. Wallpapers are read from `~/Pictures/Wallpapers`.
+Without `--with` it asks everything up front — file manager (`thunar` or `dolphin`), login screen
+(keep yours, or the glyph face) and which extras to add: `telegram` (`Super` `D`),
+`spotify` with Spicetify (`Super` `M`), `clash` for the VPN panel, `pywalfox` so Firefox follows the
+palette. One password, then it runs unattended. Old configs go to `~/.dots-backup-<date>/`.
+Wallpapers are read from `~/Pictures/Wallpapers`.
 
 | `config/` | goes to |
 |---|---|
@@ -510,6 +518,7 @@ And if the greeter ever fails to appear: Hyprland keeps VT switching alive, so
 Either way, when PAM itself has something to say — a faillock lockout, say — the greeter shows PAM's own words
 instead of a generic "denied".
 
+
 <div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
 
 <h2 align="center">Dependencies</h2>
@@ -560,6 +569,25 @@ What my fork changes on top of upstream:
   the release is detected by polling the key state instead of `bindr` (`hypr/hyprland/keybinds.lua`)
 - gestures: workspace swipe horizontal, 4 fingers; 3 fingers for the special workspace
 - keys: `Super` `Q` closes a window, `Super` `T` opens the terminal
+
+From the forks — a batch of this fork's work was first built in other forks of the rice and
+ported here change by change; every ported commit names its author in a `Co-authored-by:` trailer:
+
+- [**AMM021**](https://github.com/AMM021/rice_nothing): the lock screen's
+  power menu, the first-login welcome card and its wallpapers, the guided installer
+  (dry run, `--update`, `--uninstall`, `--fix-plasma`), drive automount, and the game-mode
+  and quick-outputs ports below.
+- [**Isaqdn03**](https://github.com/Isaqdn03/glyph-rice): DDC deferred refresh and the
+  `--skip-ddc-checks` calls, the cava NaN guard, auto game mode, the palette following into
+  tmux, Firefox (via pywalfox) and Vesktop, LocalSend, the home weather centring and section
+  hides, the quick settings outputs list.
+- [**SenulMapa**](https://github.com/SenulMapa/glyph-rice): the lock length-hiding idea, the
+  portrait scale fix, the monitor/input guards.
+- [**Dimashyt**](https://github.com/Dimashyt/glyph-rice): GPU load on Intel iGPUs.
+
+The Vesktop theme stands on [refact0r's midnight](https://github.com/refact0r/midnight-discord)
+(MIT), and the LocalSend Nautilus extension follows Omarchy's (MIT). The five welcome
+wallpapers are CC0 — generated for the rice with ImageMagick.
 
 <div align="center"><img src="assets/divider-dots.svg" width="720" alt=""></div>
 
