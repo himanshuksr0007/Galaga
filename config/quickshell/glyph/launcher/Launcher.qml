@@ -7,14 +7,17 @@ import qs
 import qs.components
 
 // launcher: tap Super or Super+Space. Panel 860 centered, screen dims to 74%. Search pill with a red caret,
-// modes as chips (Tab): apps / run / windows / calc. No query -- "recent" and all apps in a grid of 6, alphabet on the right.
+// modes as chips (Tab): apps / run / windows / calc / style. No query -- "recent" and all apps in a grid of 6, alphabet on the right.
+// style -- colour, like scheme in caelestia: where from (nothing, wallpaper, palette), under it -- the wallpaper tones and
+// variants (tonal spot...) or the palettes (catppuccin, rose pine...), the theme (Theme.styles, the same as STYLE in settings).
+// Circles are samples, a dot in one -- what is set. Upstream gave style the run slot; run stays here, style is its own chip
 // Appears like Charms and Clip: rises 24 and fades. Icons -- the theme's icons as dots in circles; selected -- white circle
 PanelWindow {
     id: root
 
     property int mode: 0
     property int sel: 0
-    readonly property var modes: ["apps", "run", "windows", "calc"]
+    readonly property var modes: ["apps", "run", "windows", "calc", "style"]
     readonly property string query: input.text
     property var uses: ({}) // app id -> how many times opened
 
@@ -172,6 +175,7 @@ PanelWindow {
         const q = query.trim().toLowerCase();
         let b;
         if (mode === 1) b = q ? [{ head: "run", items: [{ name: query, glyph: "\u{F018D}", hl: [], run: () => Quickshell.execDetached(["sh", "-c", query]) }] }] : [];
+        else if (mode === 4) b = Theme.styles.map(x => ({ head: x.head, items: filter(x.items.map(it => Object.assign({ extra: "", keep: true }, it)), q) })).filter(x => x.items.length);
         else if (mode === 3) b = [];
         else if (mode === 2) b = [{ head: "windows", sub: String(wins.length), items: filter(wins, q) }];
         else if (q) {
@@ -227,6 +231,7 @@ PanelWindow {
         }
         const it = cur;
         if (!it) return;
+        if (it.keep) return it.run(); // style samples apply in place -- the launcher stays open
         close();
         if (it.id) {
             uses = Object.assign({}, uses, { [it.id]: (uses[it.id] ?? 0) + 1 });
@@ -500,15 +505,22 @@ PanelWindow {
         width: body.width / 6
         height: 88 + spacing + label.implicitHeight
         spacing: 10
-        onOnChanged: if (on) flick.ensure(mapToItem(body, 0, 0).y, height)
+        onOnChanged: if (on) flick.ensure(mapToItem(body, 0, 0).y - 8, height + 8) // 8 -- a sample's ring above the circle
 
         Rectangle {
+            id: disc
             visible: cell.near
             anchors.horizontalCenter: parent.horizontalCenter
             width: 88
             height: 88
             radius: 44
-            color: cell.on ? Theme.fg : Theme.s2
+            color: cell.modelData.fill ?? (cell.on ? Theme.fg : Theme.s2)
+            border { width: cell.modelData.fill ? 1 : 0; color: Theme.s3 } // a black sample on the panel
+            // a sample under the cursor gets a ring around it: filling it white would lose the colour. dot -- the
+            // palette's accent; what is set now -- a dot in the middle
+            Rectangle { visible: cell.on && !!cell.modelData.fill; anchors.centerIn: parent; width: 104; height: 104; radius: 52; color: "transparent"; border { width: 2; color: Theme.fg } }
+            Rectangle { id: inner; visible: !!cell.modelData.dot; anchors.centerIn: parent; width: 40; height: 40; radius: 20; color: cell.modelData.dot ?? "transparent" }
+            Rectangle { visible: !!cell.modelData.now; anchors.centerIn: parent; width: 14; height: 14; radius: 7; color: Theme.on(inner.visible ? inner.color : disc.color) }
             Icon {
                 anchors.centerIn: parent
                 visible: !!cell.modelData.glyph

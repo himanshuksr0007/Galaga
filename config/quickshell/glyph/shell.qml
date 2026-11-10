@@ -72,23 +72,27 @@ ShellRoot {
     // motion, night light and hypridle; on top Theme.apply -- its own border colors, rounding and kitty. We call it on theme change too
     Component.onCompleted: {
         hypr();
+        if (Theme.state.paint) Theme.apps(); // rice start points the links at term/ -- the colour must be brought back
         Rules.night();
         Rules.idle();
         autoTheme();
     }
     // theme auto (prefs LOOK / FEATURES): light between lightAt and darkAt (minutes after
     // midnight; lightAt past darkAt reads as an overnight span, equal -- no switch). It
-    // applies through the one machinery everything uses -- state.light, which Theme.apply
-    // and the GTK/kitty writers follow. A manual flip (prefs LOOK, quick's dark tile)
-    // sets themeMode back to 0, and that choice holds until auto is picked again. The
-    // 30 s tick also catches up after suspend or a late login: the first tick that sees
-    // the wrong side fixes it.
+    // applies through Theme.setLight -- the one door every light/dark change uses -- so
+    // the schedule picks light/dark WITHIN the colour source STYLE picked (nothing, the
+    // wallpaper's tones, or a palette and its pair). A manual flip (prefs LOOK, quick's
+    // dark tile) sets themeMode back to 0, and that choice holds until auto is picked
+    // again. The 30 s tick also catches up after suspend or a late login: the first
+    // tick that sees the wrong side fixes it.
     function autoTheme() {
         if (Theme.state.themeMode !== 1) return;
         const d = new Date(), m = d.getHours() * 60 + d.getMinutes();
         const L = Theme.state.lightAt, D = Theme.state.darkAt;
         const want = L === D ? Theme.state.light : L < D ? (m >= L && m < D) : (m >= L || m < D);
-        if (want !== Theme.state.light) Theme.state.light = want;
+        // through setLight, like every light/dark change: STYLE picks the colour source, this schedule
+        // only picks light or dark within it (a palette without a pair keeps its own theme)
+        if (want !== Theme.light) Theme.setLight(want);
     }
     Timer { interval: 30000; repeat: true; running: true; onTriggered: shell.autoTheme() }
     // what lives in the hypr config. It re-reads it itself: save any hypr file (the links are live -- both git pull and branch
@@ -111,7 +115,26 @@ ShellRoot {
     }
     Connections {
         target: Theme
-        function onLightChanged() { Theme.apply(); }
+        function onLightChanged() { paint.restart(); }
+        function onGreysChanged() { paint.restart(); }
+    }
+    // theme or colour changed (style, new wallpaper) -- windows, kitty, gtk and qt. After 300 ms: a new
+    // wallpaper's tones do not arrive at once, and gtk should not be nudged twice
+    Timer { id: paint; interval: 300; onTriggered: { Theme.apply(); Theme.apps(); } }
+    // wallpaper tones (Theme.pick) -- here, not in Theme: the lock loads Theme too and ready-made tones from
+    // glyph.json are enough for it. Empty -- the wallpaper copy did not load (greys yield 16 colours): the old
+    // tones stay. New wallpaper -- from the first tone
+    ColorQuantizer {
+        source: Theme.url(Theme.wallSrc(Theme.wall))
+        depth: 4
+        rescaleSize: 64
+        onColorsChanged: {
+            if (!colors.length) return;
+            const t = Theme.pick(colors);
+            if (t.join() === Theme.state.tones.join()) return;
+            Theme.state.tones = t;
+            Theme.state.paintAt = 0;
+        }
     }
     Connections {
         target: Theme.state

@@ -20,10 +20,10 @@ PanelWindow {
 
     property int sel: 0
     signal wallRequested // wallpapers -- their own screen (wall/Walls), opened by shell.qml
-    readonly property var sections: ["HOME", "DECK", "BAR", "LOOK", "WINDOWS", "DISPLAY", "AUDIO", "POWER", "INPUT", "IDLE", "SHELL", "FEATURES", "DESKTOPS"]
+    readonly property var sections: ["HOME", "DECK", "BAR", "LOOK", "STYLE", "WINDOWS", "DISPLAY", "AUDIO", "POWER", "INPUT", "IDLE", "SHELL", "FEATURES", "DESKTOPS"]
     readonly property string moves: "shift ←→ move · ↵ swap · del drop · drag"
     readonly property string rings: "drag round the rings · scroll"
-    readonly property var hints: [moves, moves, moves, "", rings, rings, "click or ←→ a device", "↵ or click a mode", rings, "drag the marks", "", "", ""]
+    readonly property var hints: [moves, moves, moves, "", "hover to preview · ↵ or click sets it", rings, "drag a screen to move it · " + rings, "click or ←→ a device", "↵ or click a mode", rings, "drag the marks", "", "", ""]
     readonly property var r: Rules.store
 
     // glyphs for home views, deck sections and the bar tray
@@ -687,14 +687,14 @@ PanelWindow {
 
                 Column {
                     spacing: 14
-                    Toggle { width: 200; text: "light"; on: Theme.light; onFlip: { Theme.state.themeMode = 0; Theme.state.light = !Theme.state.light; } }
+                    Toggle { width: 200; text: "light"; on: Theme.light; onFlip: { Theme.state.themeMode = 0; Theme.setLight(!Theme.light); } }
                     Pick {
                         label: "theme"
                         opts: ["light", "dark", "auto"]
                         cur: Theme.state.themeMode === 1 ? 2 : Theme.light ? 0 : 1
                         onPicked: i => {
                             if (i === 2) Theme.state.themeMode = 1;
-                            else { Theme.state.themeMode = 0; Theme.state.light = i === 0; }
+                            else { Theme.state.themeMode = 0; Theme.setLight(i === 0); }
                         }
                     }
                     TimeStep { visible: Theme.state.themeMode === 1; label: "light at"; value: Theme.state.lightAt; onMoved: v => Theme.state.lightAt = v }
@@ -810,9 +810,127 @@ PanelWindow {
             }
         }
 
+        // ---- STYLE: where colour is from and where it lands. On top -- a desktop in the palette of the sample under
+        // the cursor or in focus (none -- the current one): bar, quick settings, kitty, player, the Glyph strip; right of
+        // it the roles as callouts, like a drawing: which colour goes where. Under it, where the colour is from and the
+        // theme; then what the source has: the wallpaper as dots (click -- the picker), its tones and variants (the ring
+        // -- how much colour) or the palettes by group. The same choice as the launcher's style (Theme.styles). Samples
+        // by index: a new Theme.styles does not recreate the circles on every pick, and focus stays where it was ----
+        Page {
+            id: tint
+            k: 4
+            property Item hot: null // the sample under the cursor or in focus
+            readonly property var p: hot?.item.pal ?? Theme.pal
+            readonly property string src: Theme.state.paint === "scheme" ? (Theme.pal.group === "more" ? "" : Theme.pal.group + " ") + Theme.pal.name
+                : Theme.state.paint === "wall" && Theme.tones.length ? `wallpaper · ${Theme.pal.name}` : "nothing"
+            caption: `style · ${src} · ${Theme.light ? "light" : "dark"}` + (hot && !hot.item.now ? `   →   ${hot.item.name} · ↵ sets it` : "")
+            function block(h) { return Theme.styles.find(b => b.head === h)?.items ?? []; }
+            function peek(sw) {
+                if (sw.peek) hot = sw;
+                else if (hot === sw) hot = null;
+            }
+
+            Desk { p: tint.p }
+
+            Row {
+                spacing: 24
+                Pick {
+                    label: "from"
+                    opts: ["nothing", "wall", "palette"]
+                    cur: ["", "wall", "scheme"].indexOf(Theme.state.paint)
+                    onPicked: i => Theme.state.paint = ["", "wall", "scheme"][i]
+                }
+                Pick { label: "theme"; opts: ["dark", "light"]; cur: Theme.light ? 1 : 0; onPicked: i => Theme.setLight(i === 1) }
+            }
+
+            // what the source has. One height for all: the Page is centered, and the layout would jump when the source
+            // changes. ponytail: 300 by eye, palettes in two rows; if it grows -- the Item grows past it
+            Item {
+                width: 1040
+                height: Math.max(300, own.height)
+                Column {
+                    id: own
+                    spacing: 28
+                    Lb { visible: !Theme.state.paint; text: "black · white dots · one red — nothing to pick"; color: Theme.mute }
+                    Row {
+                        visible: Theme.state.paint === "wall"
+                        spacing: 34
+                        // the wallpaper as dots; click -- the picker
+                        Rectangle {
+                            width: 168
+                            height: 105
+                            radius: 14
+                            color: "transparent"
+                            border { width: Theme.wall ? 0 : 1; color: Theme.s3 }
+                            Image {
+                                anchors.fill: parent
+                                source: visible ? Theme.url(Theme.wallSrc(Theme.wall)) : "" // not visible -- no texture
+                                fillMode: Image.PreserveAspectCrop
+                                sourceSize: Qt.size(336, 210)
+                                asynchronous: true
+                                layer.enabled: true
+                                layer.effect: Dm { step: 4 }
+                            }
+                            Lb { visible: !Theme.wall; anchors.centerIn: parent; px: 10; text: "no wallpaper" }
+                            TapHandler {
+                                onTapped: {
+                                    root.close();
+                                    root.wallRequested();
+                                }
+                            }
+                            HoverHandler { cursorShape: Qt.PointingHandCursor }
+                        }
+                        Column {
+                            spacing: 6
+                            Lb { text: Theme.tones.length ? "tones · from the wallpaper" : "no colour in it · click it for another" }
+                            Row {
+                                Repeater {
+                                    model: tint.block("tones").length
+                                    Swatch { id: tw; item: tint.block("tones")[index] ?? ({ name: "" }); onPeekChanged: tint.peek(tw) }
+                                }
+                            }
+                        }
+                    }
+                    Column {
+                        visible: Theme.state.paint === "wall" && Theme.tones.length > 0
+                        spacing: 6
+                        Lb { text: "variant · how much colour, like material you" }
+                        Row {
+                            Repeater {
+                                model: tint.block("variant").length
+                                Swatch { id: vw; item: tint.block("variant")[index] ?? ({ name: "" }); onPeekChanged: tint.peek(vw) }
+                            }
+                        }
+                    }
+                    // palettes by group -- the blocks between source and theme
+                    Flow {
+                        visible: Theme.state.paint === "scheme"
+                        width: 1040
+                        spacing: 40
+                        Repeater {
+                            model: Theme.state.paint === "scheme" ? Theme.styles.length - 2 : 0
+                            Column {
+                                id: sb
+                                required property int index
+                                readonly property var block: Theme.styles[index + 1] ?? ({ head: "", items: [] })
+                                spacing: 6
+                                Lb { text: sb.block.head }
+                                Row {
+                                    Repeater {
+                                        model: sb.block.items.length
+                                        Swatch { id: pw; item: sb.block.items[index] ?? ({ name: "" }); onPeekChanged: tint.peek(pw) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // ---- WINDOWS: desktop with two windows using live ring values. Window animation -- only if motion ----
         Page {
-            k: 4
+            k: 5
             caption: `windows · hyprland · gaps ${gIn.v} / ${gOut.v} · border ${bord.v} · rounding ${rnd.v}`
 
             Row {
@@ -883,7 +1001,7 @@ PanelWindow {
         // one's: brightness (the built-in's), logical px, scale and hz, bar and home on it. Night light -- on all ----
         Page {
             id: disp
-            k: 5
+            k: 6
             readonly property var m: Rules.mons.find(x => x.name === root.mon) ?? Rules.mon
             readonly property var w: Rules.want(m)
             caption: `display · ${m.name.toLowerCase()} · ${m.w} × ${m.h} · ${m.hz} hz`
@@ -1019,7 +1137,7 @@ PanelWindow {
         // ---- AUDIO: output and input -- volume, mute, level, the default device (prefs/Audio) ----
         Page {
             id: audioPage
-            k: 6
+            k: 7
             caption: aud.caption
             Audio { id: aud; live: audioPage.visible && root.shown }
         }
@@ -1027,7 +1145,7 @@ PanelWindow {
         // ---- POWER: power modes (Rules.modes) -- four circles, the ring glows with strength, the selected one white.
         // ultra -- power saver plus 60 Hz, no animations, blur or shadows on top of the settings ----
         Page {
-            k: 7
+            k: 8
             caption: `power · ${Rules.modes[Rules.mode].what} · ${Rules.hz} hz`
 
             Row {
@@ -1070,7 +1188,7 @@ PanelWindow {
         // ---- INPUT: hold a key -- first dot immediately, delay pause, then rate per second; on live rings ----
         Page {
             id: inp
-            k: 8
+            k: 9
             caption: "input · keyboard · touchpad"
             property int n: 0 // how many "typed"; 0 -- key released
             Timer {
@@ -1129,7 +1247,7 @@ PanelWindow {
         // ---- IDLE: minute scale without input. Dots dim on each event: awake -> locked -> screen off -> asleep.
         // Labels stretch along, past 60 -- never ----
         Page {
-            k: 9
+            k: 10
             caption: "idle · minutes without input · hypridle"
 
             Item {
@@ -1184,7 +1302,7 @@ PanelWindow {
 
         // ---- SHELL: the rice mark and the name of the live shell; the switcher -- the Rice app ----
         Page {
-            k: 10
+            k: 11
             caption: "shell · quickshell"
 
             Row {
@@ -1224,7 +1342,7 @@ PanelWindow {
         // the profile photo in LOOK. The essential app picker is below the switches, on this page ----
         Page {
             id: feats
-            k: 11
+            k: 12
             caption: "features · one switch each · off is fully off"
 
             // installed apps for the essential picker -- built once the entry list settles,
@@ -1338,7 +1456,7 @@ PanelWindow {
         // conversion the wallpaper picker runs, so the wave crossfade has pixels to work with ----
         Page {
             id: dpage
-            k: 12
+            k: 13
             caption: "name + wallpaper per desktop"
             property int dws: 1
             property var wallFiles: []
