@@ -348,6 +348,29 @@ greeter runs as its own user and cannot read your home: `./install.sh --greeter`
 syncs each user's `~/.face` to `/etc/greetd/faces/<user>` (mode 644), which the
 greeter tries first. No photo anywhere → the dots, as before.
 
+**Power modes** *(quick settings, the bar's battery card, Prefs → POWER)*. Four
+modes, and every one of them is wired to something real. The cpu side is
+power-profiles-daemon's own profile — the same one `powerprofilesctl` drives:
+**eco** is its power-saver, **balanced** is balanced, **max** is performance
+(only where the hardware offers it). The shell just sets it, so
+`powerprofilesctl get` always agrees with what the shell shows, and the daemon
+itself remembers it across reboots. **Ultra** is eco plus a layer of the
+shell's own, laid over your settings without editing them: the main screen
+drops to its lowest refresh rate, animations, blur and shadows switch off —
+leave ultra and your refresh rate and looks come back whole. Game mode
+composes on top in the same derived way (its "keep" choices win while a game
+runs; neither mode touches the other's switches). Two honest edges: if the
+daemon isn't answering, Prefs → POWER says so in red instead of pretending —
+the cpu profile then can't change, though ultra's screen and looks still
+apply — and install.sh won't enable the daemon over **tuned** or **tlp**,
+which manage the same knobs; it prints what switching over takes instead.
+
+**Ultra on battery** *(Prefs → POWER → ultra on battery; laptops, off by
+default)*. Unplug and ultra takes over by itself; plug back in and the mode
+you had returns — the shell remembers it across restarts, so a reboot
+mid-battery doesn't strand you. Picking a mode by hand while on battery
+takes over from it: the automatic return is cancelled and your pick stands.
+
 <div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
 
 <h2 align="center">Screens, colour and the small things</h2>
