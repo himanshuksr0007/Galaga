@@ -30,7 +30,7 @@ for _, key in ipairs({
     -- Super+<key> binds below
     "Q", "W", "E", "R", "T", "A", "D", "F", "G", "K", "L", "C", "V", "M", "N", "P",
     "Z", "X", "U", "S", "H", "I", "space", "Escape",
-    "Comma", "Period", "Minus", "Equal", "Backslash",
+    "Comma", "Period", "Minus", "Equal", "Backslash", "grave",
     "left", "right", "up", "down",
     "Page_Up", "Page_Down", "F12",
     "mouse:272", "mouse:273", "mouse:274", "mouse:275", "mouse:276", "mouse:277",
@@ -46,6 +46,7 @@ hl.bind("SUPER + N", hl.dsp.global("shell:ward"))
 hl.bind("SUPER + P", hl.dsp.global("shell:pact"))
 hl.bind("SUPER + A", hl.dsp.global("shell:quick")) -- glyph quick settings
 hl.bind("SUPER + Tab", hl.dsp.global("shell:desktops")) -- desktops overview (also 3-finger swipe up)
+hl.bind("SUPER + grave", hl.dsp.global("shell:expose")) -- exposé: every window on this desktop (glyph only)
 hl.bind("SUPER + SHIFT + W", hl.dsp.global("shell:wall")) -- glyph wallpapers
 hl.bind(vars.kbSession, hl.dsp.global("shell:power"))
 hl.bind(vars.kbPower, hl.dsp.global("shell:power"))
