@@ -7,24 +7,24 @@ import qs
 import qs.components
 import qs.settings
 
-// настройки glyph: Super+I. Не форма, а предметы. Слева столбец слов Doto, как в меню питания, — выбранное крупно, с красной
-// точкой. Справа раздел вживую: дом — макет бенто 3 × 3, deck — экран с панелью у края, окна — рабочий стол с зазорами,
-// простой — шкала минут, по которой гаснет экран. Числа — кольца точек (тянуть по кругу, колесо), тумблеры — пилюли,
-// где выезжает белое. ↑↓ — разделы, Tab — по предметам, ←→ — менять, esc — закрыть.
-// Всё сразу в деле: Theme.state (glyph.json) и Rules.store (rules.json, общий с demonshot) + нужный apply.
-// Зазоры/рамка/blur/тени — через Theme.apply: Rules.windows() вернул бы окнам вид demonshot
+// glyph settings: Super+I. Not a form but objects. On the left a column of Doto words, as in the power menu -- the selected one large, with a red
+// dot. On the right the section live: home -- a 3 x 3 bento mockup, deck -- a screen with a panel at the edge, windows -- a desktop with gaps,
+// idle -- a minute scale along which the screen dims. Numbers -- rings of dots (drag around, wheel), toggles -- pills,
+// where white slides in. Up/down -- sections, Tab -- between objects, left/right -- change, esc -- close.
+// Everything applied immediately: Theme.state (glyph.json) and Rules.store (rules.json, shared with demonshot) + the needed apply.
+// Gaps/border/blur/shadows -- via Theme.apply: Rules.windows() would give windows the demonshot look
 PanelWindow {
     id: root
 
     property int sel: 0
-    signal wallRequested // обои — свой экран (wall/Walls), его открывает shell.qml
+    signal wallRequested // wallpapers -- their own screen (wall/Walls), opened by shell.qml
     readonly property var sections: ["HOME", "DECK", "BAR", "LOOK", "WINDOWS", "DISPLAY", "POWER", "INPUT", "IDLE", "SHELL"]
     readonly property string moves: "shift ←→ move · ↵ swap · del drop · drag"
     readonly property string rings: "drag round the rings · scroll"
     readonly property var hints: [moves, moves, moves, "", rings, rings, "↵ or click a mode", rings, "drag the marks", ""]
     readonly property var r: Rules.store
 
-    // глифы видов дома, секций deck и трея бара
+    // glyphs for home views, deck sections and the bar tray
     readonly property var icons: ({
         weather: "\u{F0595}", calendar: "\u{F00ED}", cpu: "\u{F061A}", ram: "\u{F035B}", gpu: "\u{F08AE}", disk: "\u{F02CA}",
         battery: "\u{F0079}", buds: "\u{F02CB}", player: "\u{F040A}", system: "\u{F0128}", cat: "\u{F011B}", cava: "\u{F0EA2}",
@@ -32,10 +32,10 @@ PanelWindow {
         layout: "\u{F030C}", wifi: "\u{F05A9}", bluetooth: "\u{F00AF}", sound: "\u{F057E}", notes: "\u{F009A}",
         mode: "\u{F04C5}", power: "\u{F0425}"
     })
-    // круглые виджеты дома, остальные — квадрат 40. ponytail: ram/gpu/disk/battery — догадка (кольца); решит Home — поправить
+    // round home widgets, the rest -- a 40 square. ponytail: ram/gpu/disk/battery -- a guess (rings); Home will decide -- fix it
     readonly property var rounds: ["weather", "cpu", "ram", "gpu", "disk", "battery", "buds", "cava"]
 
-    // ---- открытие: сам себе анимация (у слоёв glyph в hypr no_anim). Раздел помнится между открытиями ----
+    // ---- opening: its own animation (glyph layers in hypr have no_anim). The section is remembered between openings ----
     property bool shown: false
     property real t: shown ? 1 : 0
     Behavior on t { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
@@ -47,11 +47,11 @@ PanelWindow {
     function toggle() { shown ? close() : open(); }
     function go(i) {
         sel = (i + sections.length) % sections.length;
-        stage.forceActiveFocus(); // фокус в скрытом разделе потерялся бы
+        stage.forceActiveFocus(); // focus would be lost in a hidden section
     }
 
-    // ---- списки id в Theme.state: виджеты дома, секции deck, трей бара. Правим копию — JsonAdapter пишет файл на присваивание.
-    // Все возвращают новый курсор ----
+    // ---- id lists in Theme.state: home widgets, deck sections, bar tray. We edit a copy -- JsonAdapter writes the file on assignment.
+    // All return a new cursor ----
     function edit(key, f) {
         const a = Theme.state[key].slice();
         f(a);
@@ -68,7 +68,7 @@ PanelWindow {
         edit(key, a => a.splice(i, 1));
         return Math.max(0, Math.min(i, n - 2));
     }
-    // ↵ на выбранном: следующий из all, которого ещё нет. В пустом списке — первый свободный
+    // Enter on the selected one: the next from all that is not there yet. In an empty list -- the first free one
     function cycle(key, i, all) {
         const a = Theme.state[key];
         if (all.every(k => a.includes(k))) return i;
@@ -78,7 +78,7 @@ PanelWindow {
         edit(key, b => b[i] = all[j]);
         return i;
     }
-    // лоток: есть — убрать, нет — поставить за выбранным
+    // tray: if present -- remove, if not -- insert after the selected one
     function flip(key, w, cur) {
         const a = Theme.state[key], i = a.indexOf(w);
         if (i >= 0) {
@@ -89,7 +89,7 @@ PanelWindow {
         edit(key, b => b.splice(at, 0, w));
         return at;
     }
-    // клавиши списка в фокусе: ←→ выбрать, shift ←→ переставить, ↵/пробел — сменить вид, del — убрать. -1 — клавиша не наша
+    // list keys in focus: left/right select, shift left/right reorder, Enter/space -- change view, del -- remove. -1 -- not our key
     function nav(e, key, cur, all) {
         const n = Theme.state[key].length, d = e.key === Qt.Key_Left ? -1 : e.key === Qt.Key_Right ? 1 : 0;
         if (d && (e.modifiers & Qt.ShiftModifier)) return move(key, cur, cur + d);
@@ -98,8 +98,8 @@ PanelWindow {
         if (e.key === Qt.Key_Delete || e.key === Qt.Key_Backspace) return cut(key, cur);
         return -1;
     }
-    // укладка бенто, как у дома (и как grid-auto-flow в концепте): слева направо, сверху вниз; не влез в ряд — со следующего,
-    // дыра остаётся; рядов три, дальше — мимо
+    // bento layout, like home (and like grid-auto-flow in the concept): left to right, top to bottom; does not fit in a row -- next row,
+    // the hole remains; three rows, beyond that -- skipped
     function pack(ids) {
         let row = 0, col = 0;
         return ids.map((w, i) => {
@@ -118,10 +118,10 @@ PanelWindow {
     readonly property string hello: { const h = clock.date.getHours(); return h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; }
     readonly property string who: (Theme.state.name || Quickshell.env("USER")).replace(/&/g, "&amp;").replace(/</g, "&lt;")
 
-    // имя и подпись текущего шелла — из его rice.json (тот же, что рисует приложение Rice)
+    // name and label of the current shell -- from its rice.json (the same one the Rice app draws)
     property var meta: ({})
     FileView { path: Quickshell.shellPath("rice.json"); onLoaded: try { root.meta = JSON.parse(text()); } catch (e) {} }
-    // «switch shell» — только когда есть из чего выбирать: другие шеллы, папки с rice.json рядом (Demon's Shot…)
+    // "switch shell" -- only when there is something to choose from: other shells, folders with rice.json nearby (Demon's Shot...)
     property int shells: 1
     Process {
         running: root.visible
@@ -139,9 +139,9 @@ PanelWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: Theme.bg // сплошной: сквозь 5% просвечивали яркие куски окон позади
+        color: Theme.bg // solid: bright window pieces showed through at 5%
         opacity: root.t
-        MouseArea { anchors.fill: parent; onClicked: stage.forceActiveFocus() } // мимо — только снять фокус; закрывает esc
+        MouseArea { anchors.fill: parent; onClicked: stage.forceActiveFocus() } // outside -- only drop focus; esc closes
     }
 
     Stage {
@@ -157,7 +157,7 @@ PanelWindow {
             e.accepted = true;
         }
 
-        // разделы: выбранный крупно с красной точкой (пока печатают имя, красное — каретка, точка белеет)
+        // sections: selected one large with a red dot (while typing a name, red is the caret, the dot turns white)
         Column {
             x: 150 - 30 * (1 - root.t)
             anchors.verticalCenter: parent.verticalCenter
@@ -200,8 +200,8 @@ PanelWindow {
             Lb { text: "esc close"; TapHandler { onTapped: root.close() } }
         }
 
-        // ---- HOME: дом в масштабе 168/220 — те же виды, порядок и укладка. Клик — выбрать, ещё клик или ↵ — следующий вид,
-        // тянуть — встать на место того, на кого бросили. Что не влезло в 3 × 3 — справа бледным контуром ----
+        // ---- HOME: home at 168/220 scale -- same views, order and layout. Click -- select, another click or Enter -- next view,
+        // drag -- take the place of the one you dropped onto. What did not fit in 3 x 3 -- on the right as a pale outline ----
         Page {
             id: home
             k: 0
@@ -217,12 +217,12 @@ PanelWindow {
                 grid.forceActiveFocus();
                 cur = cur === i ? root.cycle("widgets", i, Object.keys(Theme.kinds)) : i;
             }
-            // бросили в точку p сетки: на виджет — его место, в пустую ячейку — за последним до неё; мимо сетки — ничего
+            // dropped at grid point p: on a widget -- its place, in an empty cell -- after the last one before it; outside the grid -- nothing
             function land(i, p) {
                 if (p.x < 0 || p.y < 0 || p.x > grid.width || p.y > grid.height) return;
                 const at = Math.min(2, Math.floor(p.y / 184)) * 3 + Math.min(2, Math.floor(p.x / 184));
                 const hit = placed.find(c => c.row * 3 + c.col <= at && at < c.row * 3 + c.col + c.span);
-                const n = placed.filter(c => c.row * 3 + c.col < at).length; // влезшие — всегда начало списка
+                const n = placed.filter(c => c.row * 3 + c.col < at).length; // fitted ones -- always the start of the list
                 cur = root.move("widgets", i, hit ? hit.i : i < n ? n - 1 : n);
             }
 
@@ -294,14 +294,14 @@ PanelWindow {
             }
         }
 
-        // ---- DECK: экран, снизу по центру — deck, справа — быстрые настройки; оба вылезают по наведению на свой край.
-        // Секции deck по порядку, как в панели; лоток — какие есть ----
+        // ---- DECK: screen, bottom center -- deck, right -- quick settings; both slide out on hovering their edge.
+        // deck sections in order, as in the panel; tray -- which ones exist ----
         Page {
             id: deck
             k: 1
             caption: `deck · ${Theme.state.deck.length} of ${Theme.decks.length} sections · bottom edge`
             property int cur: 0
-            // тянут секцию from (-1 — никого): dx — сдвиг курсора в px макета, at — где она в полосе, to — куда встанет
+            // dragging section from (-1 -- none): dx -- cursor shift in layout px, at -- where it is in the strip, to -- where it will land
             property int from: -1
             property real dx: 0
             readonly property real at: Math.max(10, Math.min(10 + (Theme.state.deck.length - 1) * 104, 10 + from * 104 + dx))
@@ -311,7 +311,7 @@ PanelWindow {
                 spacing: 40
 
                 Mini {
-                    // края, что ловят курсор: снизу — deck, справа — быстрые настройки
+                    // edges that catch the cursor: bottom -- deck, right -- quick settings
                     Seg {
                         anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 8 }
                         width: 320
@@ -354,7 +354,7 @@ PanelWindow {
                                 required property int index
                                 readonly property bool on: deck.cur === index
                                 readonly property bool hot: on && strip.activeFocus
-                                // пока тянут: эта — за курсором, те, что между ней и местом броска, — на шаг к её месту
+                                // while dragging: this one follows the cursor, those between it and the drop point -- one step toward its place
                                 readonly property int slot: deck.from < 0 ? index
                                     : index > deck.from && index <= deck.to ? index - 1
                                     : index < deck.from && index >= deck.to ? index + 1 : index
@@ -391,7 +391,7 @@ PanelWindow {
                                     id: dd
                                     target: null
                                     yAxis.enabled: false
-                                    // без target сдвиг — в px сцены, а Stage масштабирован
+                                    // without target the shift is in scene px, while Stage is scaled
                                     onActiveTranslationChanged: deck.dx = activeTranslation.x / Theme.s
                                     onActiveChanged: {
                                         if (active) {
@@ -399,7 +399,7 @@ PanelWindow {
                                             deck.from = ds.index;
                                             return;
                                         }
-                                        // бросок — после сигнала: смена списка пересоздаёт секции, в том числе эту
+                                        // drop -- after the signal: changing the list recreates the sections, including this one
                                         const from = deck.from, to = deck.to;
                                         Qt.callLater(() => {
                                             deck.from = -1;
@@ -428,13 +428,13 @@ PanelWindow {
             }
         }
 
-        // ---- BAR: трей бара столбиком, как в баре, — по порядку сверху вниз; подписи сбоку. Лоток — что есть ----
+        // ---- BAR: bar tray stacked, as in the bar -- top to bottom; labels on the side. Tray -- what exists ----
         Page {
             id: bar
             k: 2
             caption: `bar · ${Theme.state.bar.length} of ${Theme.bars.length} in the tray · left edge`
             property int cur: 0
-            // тянут from (-1 — никого): dy — сдвиг курсора в px макета, at — где он в столбике, to — куда встанет
+            // dragging from (-1 -- none): dy -- cursor shift in layout px, at -- where it is in the column, to -- where it will land
             property int from: -1
             property real dy: 0
             readonly property real at: Math.max(10, Math.min(10 + (Theme.state.bar.length - 1) * 68, 10 + from * 68 + dy))
@@ -533,12 +533,12 @@ PanelWindow {
             }
         }
 
-        // ---- LOOK: дом в миниатюре следует за тумблерами; имя — в пилюлю ----
+        // ---- LOOK: home in miniature follows the toggles; name -- into a pill ----
         Page {
             id: look
             k: 3
             caption: "look · the home screen, live"
-            property bool dim: false // двоеточие погасло
+            property bool dim: false // colon is dimmed
             Timer { running: look.visible && root.visible && Theme.state.blink; interval: 500; repeat: true; onTriggered: look.dim = !look.dim }
 
             Row {
@@ -564,7 +564,7 @@ PanelWindow {
                         lineHeight: 1.1
                         color: Theme.fg
                     }
-                    // Glyph-полосы: справа громкость, снизу прогресс
+                    // Glyph strips: volume on the right, progress at the bottom
                     Seg { visible: Theme.state.edges; x: parent.width - 12; y: 140; width: 4; height: 200; n: 12; f: 0.6; vertical: true }
                     Seg { visible: Theme.state.edges; x: 230; y: parent.height - 10; width: 300; height: 4; n: 24; f: 0.4 }
                 }
@@ -588,7 +588,7 @@ PanelWindow {
                 }
             }
 
-            // имя в приветствии; пусто — $USER
+            // name in the greeting; empty -- $USER
             Rectangle {
                 width: 760
                 height: 72
@@ -623,7 +623,7 @@ PanelWindow {
             }
         }
 
-        // ---- WINDOWS: рабочий стол с двумя окнами по живым значениям колец. Анимация окон — только если motion ----
+        // ---- WINDOWS: desktop with two windows using live ring values. Window animation -- only if motion ----
         Page {
             k: 4
             caption: `windows · hyprland · gaps ${gIn.v} / ${gOut.v} · border ${bord.v} · rounding ${rnd.v}`
@@ -639,7 +639,7 @@ PanelWindow {
                             id: wnd
                             required property int index
                             readonly property real o: gOut.v * desk.k
-                            readonly property real l: 78 * desk.k + o // бар 64 + отступ 14
+                            readonly property real l: 78 * desk.k + o // bar 64 + gap 14
                             readonly property real w: (desk.width - l - o - 2 * gIn.v * desk.k) / 2
                             x: index ? l + w + 2 * gIn.v * desk.k : l
                             y: o
@@ -673,7 +673,7 @@ PanelWindow {
                     }
                 }
 
-                // ponytail: blur и тени в макете не видны (плоский чёрный) — только тумблеры
+                // ponytail: blur and shadows are not visible in the mockup (flat black) -- toggles only
                 Column {
                     spacing: 14
                     Toggle { width: 200; text: "blur"; on: root.r.blur; onFlip: { root.r.blur = !root.r.blur; Theme.apply(); } }
@@ -687,11 +687,11 @@ PanelWindow {
                 Dial { id: gIn; label: "gaps in"; to: 30; value: root.r.gapsIn; onMoved: v => { root.r.gapsIn = v; Theme.apply(); } }
                 Dial { id: gOut; label: "gaps out"; to: 60; value: root.r.gapsOut; onMoved: v => { root.r.gapsOut = v; Theme.apply(); } }
                 Dial { id: bord; label: "border"; to: 6; n: 24; value: root.r.border; onMoved: v => { root.r.border = v; Theme.apply(); } }
-                Dial { id: rnd; label: "rounding"; to: 40; value: Theme.state.rounding; onMoved: v => Theme.state.rounding = v } // shell.qml сам зовёт Theme.apply
+                Dial { id: rnd; label: "rounding"; to: 40; value: Theme.state.rounding; onMoved: v => Theme.state.rounding = v } // shell.qml calls Theme.apply itself
             }
         }
 
-        // ---- DISPLAY: яркость большим кольцом (живая, из sysfs), экран точками — с масштабом точки крупнее и реже ----
+        // ---- DISPLAY: brightness as a big ring (live, from sysfs), screen as dots -- with scale the dots are bigger and sparser ----
         Page {
             k: 5
             caption: `display · ${Rules.mon.name.toLowerCase()} · ${Rules.hz} hz`
@@ -702,7 +702,7 @@ PanelWindow {
                     visible: Sys.hasBri
                     spacing: 22
                     Dial { anchors.horizontalCenter: parent.horizontalCenter; size: 340; n: 60; live: true; label: "brightness"; value: Math.round(Sys.bri * 100); onMoved: v => Sys.setBri(v / 100) }
-                    // шаг клавиш яркости: делений на шкалу (Backlight.steps)
+                    // brightness key step: divisions per scale (Backlight.steps)
                     Pick { anchors.horizontalCenter: parent.horizontalCenter; label: "step"; opts: ["2.5%", "5%", "10%"]; cur: [40, 20, 10].indexOf(Theme.state.briSteps); onPicked: i => Theme.state.briSteps = [40, 20, 10][i] }
                 }
                 Column {
@@ -742,8 +742,8 @@ PanelWindow {
             }
         }
 
-        // ---- POWER: режимы питания (Rules.modes) — четыре круга, кольцо горит по силе, выбранный белый.
-        // ultra — power saver и ещё 60 Гц, без анимаций, blur и теней поверх настроек ----
+        // ---- POWER: power modes (Rules.modes) -- four circles, the ring glows with strength, the selected one white.
+        // ultra -- power saver plus 60 Hz, no animations, blur or shadows on top of the settings ----
         Page {
             k: 6
             caption: `power · ${Rules.modes[Rules.mode].what} · ${Rules.hz} hz`
@@ -785,12 +785,12 @@ PanelWindow {
             Lb { visible: !PowerProfiles.hasPerformanceProfile; text: "no performance profile on this machine" }
         }
 
-        // ---- INPUT: держишь клавишу — первая точка сразу, пауза delay, дальше rate в секунду; по живым кольцам ----
+        // ---- INPUT: hold a key -- first dot immediately, delay pause, then rate per second; on live rings ----
         Page {
             id: inp
             k: 7
             caption: "input · keyboard · touchpad"
-            property int n: 0 // сколько «напечатано»; 0 — клавиша отпущена
+            property int n: 0 // how many "typed"; 0 -- key released
             Timer {
                 running: inp.visible && root.visible
                 repeat: true
@@ -844,8 +844,8 @@ PanelWindow {
             Pick { label: "layout switch"; opts: Rules.switches.map(s => s[0]); cur: root.r.kbSwitch; onPicked: i => { root.r.kbSwitch = i; Rules.input(); } }
         }
 
-        // ---- IDLE: шкала минут без ввода. Точки тускнеют на каждом событии: бодр → заперт → экран погас → спит.
-        // Метки тянутся вдоль, правее 60 — never ----
+        // ---- IDLE: minute scale without input. Dots dim on each event: awake -> locked -> screen off -> asleep.
+        // Labels stretch along, past 60 -- never ----
         Page {
             k: 8
             caption: "idle · minutes without input · hypridle"
@@ -869,7 +869,7 @@ PanelWindow {
                         color: [Theme.fg, Theme.grey, Theme.mute, Theme.s3][lvl]
                     }
                 }
-                // never — пустое кольцо за шкалой
+                // never -- an empty ring beyond the scale
                 Rectangle { x: 62 * 15 - 7; y: 243; width: 14; height: 14; radius: 7; color: "transparent"; border { width: 1; color: Theme.mute } }
                 Repeater {
                     model: [0, 15, 30, 45, 60]
@@ -900,7 +900,7 @@ PanelWindow {
             }
         }
 
-        // ---- SHELL: знак райса и имя живого шелла; переключатель — приложение Rice ----
+        // ---- SHELL: the rice mark and the name of the live shell; the switcher -- the Rice app ----
         Page {
             k: 9
             caption: "shell · quickshell"
@@ -938,7 +938,7 @@ PanelWindow {
         }
     }
 
-    // раздел справа: виден только выбранный (Tab ходит лишь по видимым), появляется снизу вверх
+    // section on the right: only the selected one is visible (Tab walks only visible ones), appears bottom-up
     component Page: Column {
         required property int k
         property string caption
@@ -953,7 +953,7 @@ PanelWindow {
         Lb { text: parent.caption }
     }
 
-    // экран в миниатюре 16:10: обои (сетка точек, если включена) и бар; k — логический px экрана в px макета
+    // screen in 16:10 miniature: wallpaper (dot grid, if enabled) and bar; k -- logical screen px in layout px
     component Mini: Rectangle {
         readonly property real k: width / ((Rules.mon.w || 2880) / Rules.scale)
         width: 760
@@ -978,7 +978,7 @@ PanelWindow {
         }
     }
 
-    // пустая ячейка макета: 4 × 4 погасших точки
+    // empty mockup cell: 4 x 4 dimmed dots
     component Dots: Grid {
         columns: 4
         padding: 30
@@ -989,8 +989,8 @@ PanelWindow {
         }
     }
 
-    // виджет в макете дома: круг или квадрат 40 (в масштабе), иконка точками, имя. Выбранный — белая обводка,
-    // в фокусе — белый целиком. Не влез — бледный контур
+    // widget in the home mockup: circle or 40 square (scaled), dotted icon, name. Selected -- white outline,
+    // in focus -- entirely white. Did not fit -- pale outline
     component Tile: Rectangle {
         id: tile
         required property var modelData // { id, i, row, col, span, fits }
@@ -1005,7 +1005,7 @@ PanelWindow {
         color: hot ? Theme.fg : modelData.fits ? Theme.s1 : "transparent"
         border { width: on ? 2 : 1; color: on ? Theme.fg : modelData.fits ? Theme.s2 : Theme.mute }
         z: drag.active ? 1 : 0
-        // без target сдвиг — в px сцены, а Stage масштабирован
+        // without target the shift is in scene px, while Stage is scaled
         readonly property real dx: drag.activeTranslation.x / Theme.s
         readonly property real dy: drag.activeTranslation.y / Theme.s
         transform: Translate { x: drag.active ? tile.dx : 0; y: drag.active ? tile.dy : 0 }
@@ -1034,7 +1034,7 @@ PanelWindow {
             Lb { visible: tile.cell > 100; anchors.horizontalCenter: parent.horizontalCenter; text: tile.modelData.id; px: 10; color: tile.hot ? Theme.ink : Theme.grey }
         }
         TapHandler { onTapped: home.tap(tile.modelData.i) }
-        // бросок — после сигнала: смена списка пересоздаёт плитки, в том числе эту
+        // drop -- after the signal: changing the list recreates the tiles, including this one
         DragHandler {
             id: drag
             target: null
@@ -1049,8 +1049,8 @@ PanelWindow {
         }
     }
 
-    // метка простоя: ножка до шкалы, число Doto и имя. Тянуть вдоль шкалы, ←→ — по минуте; правее 60 — never (0).
-    // Пока тянут — своё v, в rules.json и hypridle — на отпускании или через 400 мс тишины
+    // idle label: leg to the scale, Doto number and name. Drag along the scale, left/right -- by a minute; past 60 -- never (0).
+    // while dragging -- its own v, in rules.json and hypridle -- on release or after 400 ms of silence
     component Mark: Item {
         id: mk
         property int row
@@ -1101,7 +1101,7 @@ PanelWindow {
         }
     }
 
-    // кнопка: пилюля с иконкой в круге. Клик, ↵, пробел
+    // button: pill with an icon in a circle. Click, Enter, space
     component Act: Rectangle {
         id: act
         property string icon

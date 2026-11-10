@@ -78,22 +78,22 @@ local function move_actions(win)
     end
 end
 
--- special ws: открыть/закрыть, а если там пусто — запустить его программу из vars.apps (замена caelestia toggle).
--- apps читаем при нажатии, а не при загрузке: user.lua грузится после биндов и меняет их там
+-- special ws: open/close, and if it is empty, launch its app from vars.apps (caelestia toggle replacement).
+-- we read apps on keypress, not at load: user.lua loads after the keybinds and changes them there
 local function toggle_special(name)
     return function()
         local cmd = vars.apps[name]
         for _, ws in ipairs(hl.get_workspaces()) do
             if ws.name == "special:" .. name and ws.windows > 0 then cmd = nil end
         end
-        -- сначала показать, потом запускать: hypr открывает окно там, где был фокус в момент запуска,
-        -- и при обратном порядке прятал воркспейс, едва окно появится
+        -- show first, launch after: hypr opens the window where focus was at launch time,
+        -- and in the reverse order it would hide the workspace as soon as the window appears
         hl.dispatch(hl.dsp.workspace.toggle_special(name))
         if cmd then hl.exec_cmd(cmd) end
     end
 end
 
--- запись экрана gpu-screen-recorder: тот же бинд ещё раз — стоп
+-- gpu-screen-recorder screen capture: the same keybind again -- stop
 local function record(region, sound)
     return function()
         local mon = hl.get_active_monitor()

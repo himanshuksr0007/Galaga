@@ -4,17 +4,17 @@ import Quickshell.Wayland
 import qs
 import qs.components
 
-// календарь и фокус-таймер: клик по часам бара. Панель 440 справа от бара, по центру — напротив часов, выезжает слева.
-// Месяц сеткой 7×6 (сегодня — белый круг), стрелки и ←→ листают, клик по месяцу — обратно к сегодня. Ниже таймер:
-// кольцо точек заполняется по часовой, пресеты минут, старт/пауза (и пробел), сброс. Пока идёт — Glyph заливает нижнюю полосу.
-// Esc или клик мимо — закрыть
+// calendar and focus timer: click the bar clock. Panel 440 to the right of the bar, centered -- opposite the clock, slides in from the left.
+// Month as a 7x6 grid (today -- white circle), arrows and left/right scroll, click on the month -- back to today. Below the timer:
+// ring of dots fills clockwise, minute presets, start/pause (and space), reset. While running -- Glyph fills the bottom strip.
+// Esc or click outside -- close
 PanelWindow {
     id: root
 
     property bool open: false
     function toggle() { open = !open; }
     function close() { open = false; }
-    property int shift: 0 // месяцев от текущего
+    property int shift: 0 // months from the current one
     onOpenChanged: if (open) shift = 0
 
     property real t: open ? 1 : 0
@@ -31,7 +31,7 @@ PanelWindow {
     SystemClock { id: clock; precision: SystemClock.Hours }
     readonly property var en: Qt.locale("en_US")
     readonly property var month: new Date(clock.date.getFullYear(), clock.date.getMonth() + shift, 1)
-    readonly property int lead: (month.getDay() + 6) % 7 // дней прошлого месяца до понедельника
+    readonly property int lead: (month.getDay() + 6) % 7 // days of the previous month before Monday
 
     Rectangle {
         anchors.fill: parent
@@ -43,7 +43,7 @@ PanelWindow {
     Stage {
         Rectangle {
             id: panel
-            x: 92 - 24 * (1 - root.t) // правый край пилюли бара (14 + 64) и зазор 14
+            x: 92 - 24 * (1 - root.t) // right edge of the bar pill (14 + 64) and gap 14
             anchors.verticalCenter: parent.verticalCenter
             width: 440
             height: col.height + 52
@@ -60,7 +60,7 @@ PanelWindow {
                 else return;
                 e.accepted = true;
             }
-            MouseArea { anchors.fill: parent } // клик по панели не закрывает
+            MouseArea { anchors.fill: parent } // clicking the panel does not close it
 
             Column {
                 id: col

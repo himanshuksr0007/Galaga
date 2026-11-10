@@ -3,15 +3,15 @@ pragma Singleton
 import QtQuick
 import Quickshell
 
-// фокус-таймер: крутит панель часов (cal/Cal), пока идёт — Glyph заливает нижнюю полосу. Считает до end, а не тиками —
-// не уплывает, если тик опоздал. ponytail: живёт в памяти, перезапуск шелла сбрасывает; переживать — в Theme.state
+// focus timer: turns the clock panel (cal/Cal) while running -- Glyph fills the bottom strip. Counts to end, not by ticks --
+// does not drift if a tick is late. ponytail: lives in memory, a shell restart resets it; to persist -- in Theme.state
 Singleton {
     id: root
 
     property int minutes: 25
     property bool running: false
     property real end: 0
-    property real rest: minutes * 60000 // остаток на паузе
+    property real rest: minutes * 60000 // remaining while paused
     property real now: Date.now()
     readonly property real left: running ? Math.max(0, end - now) : rest
     readonly property real f: 1 - left / (minutes * 60000)

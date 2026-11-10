@@ -18,9 +18,9 @@ import "shot"
 import "vpn"
 import "wall"
 
-// glyph: rice в духе nothing os. Дом на обоях, бар, лаунчер, быстрые настройки,
-// Glyph-полосы по краям вместо OSD, остров уведомлений, меню питания, настройки, deck (дашборд снизу), буфер обмена, чары (эмодзи и символы), скриншоты, vpn, обои. Блокировка — отдельный процесс (lock.qml).
-// Переключается с demonshot через `rice switch` / приложение Rice — бинды hypr общие (shell:*), каждый шелл берёт свои
+// glyph: rice in the spirit of nothing os. Home on the wallpaper, bar, launcher, quick settings,
+// Glyph strips at the edges instead of OSD, notification island, power menu, settings, deck (bottom dashboard), clipboard, charms (emoji and symbols), screenshots, vpn, wallpapers. Lock -- a separate process (lock.qml).
+// Switches from demonshot via `rice switch` / the Rice app -- hypr keybinds are shared (shell:*), each shell takes its own
 ShellRoot {
     id: shell
 
@@ -56,16 +56,16 @@ ShellRoot {
         }
     }
 
-    // hypr как у demonshot: его Rules (settings/Rules.qml, тот же ~/.config/demonshot/rules.json) ставит монитор, ввод,
-    // движение, ночник и hypridle; сверху Theme.apply — свои цвета рамок, скругление и kitty. Его же зовём при смене темы
+    // hypr like demonshot: its Rules (settings/Rules.qml, the same ~/.config/demonshot/rules.json) sets the monitor, input,
+    // motion, night light and hypridle; on top Theme.apply -- its own border colors, rounding and kitty. We call it on theme change too
     Component.onCompleted: {
         hypr();
         Rules.night();
         Rules.idle();
     }
-    // то, что живёт в конфиге hypr. Он перечитывает его сам: сохранили любой файл hypr (ссылки живые — и git pull, и смена
-    // ветки), hyprctl reload — и возвращает умолчания variables.lua: рамки demonshot, монитор, ввод, анимации. Накладываем
-    // своё заново. hyprctl eval configreloaded не шлёт — петли нет. Ночник и hypridle — свои процессы, reload их не трогает
+    // what lives in the hypr config. It re-reads it itself: save any hypr file (the links are live -- both git pull and branch
+    // switch), hyprctl reload -- and it returns the variables.lua defaults: demonshot borders, monitor, input, animations. We apply
+    // ours again. hyprctl eval does not send configreloaded -- no loop. Night light and hypridle -- their own processes, reload does not touch them
     function hypr() {
         Rules.monitor();
         Rules.input();
@@ -84,33 +84,33 @@ ShellRoot {
         target: Theme.state
         function onRoundingChanged() { Theme.apply(); }
     }
-    // режим ultra включает/снимает blur и тени поверх настроек — окна перекрасить (герцы и движение ставит сам Rules.setMode).
-    // Игровой — то же и ещё анимации
+    // ultra mode enables/disables blur and shadows on top of the settings -- repaint windows (refresh rate and motion are set by Rules.setMode itself).
+    // Game -- the same plus animations
     Connections {
         target: Rules.store
         function onUltraChanged() { Theme.apply(); }
         function onGameChanged() { Rules.motion(); Theme.apply(); }
     }
 
-    // тап Super — лаунчер. Гасит Super+<key> и решает, когда открывать, hyprland/keybinds.lua (опрос клавиши):
-    // глобалка отдаёт только pressed, без released, поэтому отпускание обрабатывается на стороне hypr
+    // tap Super -- launcher. Super+<key> swallows and decides when to open, hyprland/keybinds.lua (key polling):
+    // the global only gives pressed, without released, so the release is handled on the hypr side
     Shortcut {
         name: "launcher"
-        description: "лаунчер (тап Super)"
+        description: "launcher (tap Super)"
         onPressed: launcher.toggle()
     }
-    // Super+Space (алтарь у demonshot) — deck, дашборд снизу: лаунчер и так на тапе Super
-    Shortcut { name: "altar"; description: "deck: дашборд снизу"; onPressed: deck.toggle() }
-    Shortcut { name: "quick"; description: "быстрые настройки"; onPressed: quick.toggle() }
-    Shortcut { name: "ward"; description: "быстрые настройки"; onPressed: quick.toggle() } // Super+N у demonshot — те же тумблеры
-    Shortcut { name: "settings"; description: "настройки"; onPressed: prefs.toggle() }
-    Shortcut { name: "power"; description: "меню питания"; onPressed: power.visible ? power.close() : power.open() }
-    Shortcut { name: "shot"; description: "скриншот"; onPressed: shot.open() }
+    // Super+Space (altar in demonshot) -- deck, bottom dashboard: the launcher is already on tapping Super
+    Shortcut { name: "altar"; description: "deck: bottom dashboard"; onPressed: deck.toggle() }
+    Shortcut { name: "quick"; description: "quick settings"; onPressed: quick.toggle() }
+    Shortcut { name: "ward"; description: "quick settings"; onPressed: quick.toggle() } // Super+N in demonshot -- same toggles
+    Shortcut { name: "settings"; description: "settings"; onPressed: prefs.toggle() }
+    Shortcut { name: "power"; description: "power menu"; onPressed: power.visible ? power.close() : power.open() }
+    Shortcut { name: "shot"; description: "screenshot"; onPressed: shot.open() }
     Shortcut { name: "pact"; description: "vpn: clash verge"; onPressed: vpn.toggle() }
-    Shortcut { name: "clip"; description: "буфер обмена"; onPressed: clip.toggle() }
-    Shortcut { name: "charms"; description: "эмодзи, каомодзи, символы"; onPressed: charms.toggle() }
-    Shortcut { name: "wall"; description: "обои"; onPressed: walls.toggle() }
-    Shortcut { name: "game"; description: "игровой режим"; onPressed: Rules.store.game = !Rules.store.game }
+    Shortcut { name: "clip"; description: "clipboard"; onPressed: clip.toggle() }
+    Shortcut { name: "charms"; description: "emoji, kaomoji, symbols"; onPressed: charms.toggle() }
+    Shortcut { name: "wall"; description: "wallpapers"; onPressed: walls.toggle() }
+    Shortcut { name: "game"; description: "game mode"; onPressed: Rules.store.game = !Rules.store.game }
 
     component Shortcut: GlobalShortcut { appid: "shell" }
 }

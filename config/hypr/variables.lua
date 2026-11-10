@@ -1,11 +1,11 @@
 local scheme = require("scheme.demonshot")
 local home   = os.getenv("HOME")
 
--- DEMONSHOT_NESTED=1 Hyprland -c …/rice/config/hypr/hyprland.lua — вложенная сессия для отладки:
--- системные демоны уже работают снаружи
+-- DEMONSHOT_NESTED=1 Hyprland -c .../rice/config/hypr/hyprland.lua -- nested session for debugging:
+-- the system daemons are already running outside
 local nested = os.getenv("DEMONSHOT_NESTED") ~= nil
--- какой шелл живой (demonshot, glyph…), решает rice: `rice switch <имя>` или приложение Rice.
--- Путь полный: ~/.local/bin в PATH у hypr нет
+-- which shell is alive (demonshot, glyph...), decided by rice: `rice switch <name>` or the Rice app.
+-- Full path: hypr does not have ~/.local/bin in PATH
 local rice   = home .. "/.config/quickshell/rice/rice"
 
 return {
@@ -17,16 +17,16 @@ return {
 
     -- Shell
     rice                       = rice,
-    lockCmd                    = rice .. " lock", -- лок текущего шелла; второй не запускает
+    lockCmd                    = rice .. " lock", -- locks the current shell; a second one does not start
 
     -- Apps
-    terminal                   = "kitty -1", -- single-instance: новые окна из живого процесса, ~40 мс вместо ~400
+    terminal                   = "kitty -1", -- single-instance: new windows from the live process, ~40 ms instead of ~400
     browser                    = "zen-browser",
     fileExplorer               = "thunar",
     audioSettings              = "pavucontrol",
-    -- программы спец-воркспейсов (запускаются, если там пусто) и редактор. Бинды читают их при нажатии,
-    -- так что свои — в user.lua: require("variables").apps.editor = "codium". Не установлено — откроется пустой
-    -- воркспейс. telegram и spotify ставит install.sh --with
+    -- special-workspace apps (launched if the workspace is empty) and the editor. Keybinds read them on press,
+    -- so put yours in user.lua: require("variables").apps.editor = "codium". Not installed -- an empty
+    -- workspace opens. telegram and spotify are installed by install.sh --with
     apps                       = {
         sysmon        = "kitty --class btop -T btop btop",
         music         = "spotify-launcher",
@@ -50,7 +50,7 @@ return {
     blurXray                   = false,
 
     -- Shadow
-    -- лёгкое красное свечение у фокуса
+    -- soft red glow around focus
     shadowEnabled              = true,
     shadowRange                = 10,
     shadowRenderPower          = 4,
@@ -76,7 +76,7 @@ return {
     volumeMax                  = 100,
     cursorTheme                = "Bibata-Modern-Classic",
     cursorSize                 = 23,
-    sleepGestureCmd            = "systemctl suspend-then-hibernate || systemctl suspend", -- нет гибернации — обычный сон
+    sleepGestureCmd            = "systemctl suspend-then-hibernate || systemctl suspend", -- no hibernation -- regular sleep
 
     ------------------
     ---- KEYBINDS ----
@@ -100,7 +100,7 @@ return {
     kbMoveWindow               = "SUPER + Z",
     kbResizeWindow             = "SUPER + X",
     kbWindowPip                = "SUPER + ALT + backslash",
-    kbPinWindow                = "SUPER + SHIFT + P", -- Super+P — vpn-договор
+    kbPinWindow                = "SUPER + SHIFT + P", -- Super+P -- vpn panel
     kbWindowFullscreen         = "SUPER + F",
     kbWindowBorderedFullscreen = "SUPER + ALT + F",
     kbToggleWindowFloating     = "SUPER + ALT + space",

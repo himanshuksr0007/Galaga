@@ -9,9 +9,9 @@ import qs
 import qs.components
 import qs.settings
 
-// бар: вертикальная пилюля у левого края. Сверху знак (кольцо из 16 точек) — лаунчер, центр краснеет, пока запись или микрофон.
-// Воркспейсы точками, заголовок окна столбиком, часы Doto по центру, трей снизу — клик открывает быстрые настройки.
-// Что в трее и в каком порядке, есть ли заголовок — Theme.state (настройки, раздел BAR)
+// bar: a vertical pill at the left edge. At the top the mark (ring of 16 dots) -- launcher, the center turns red while recording or the microphone is on.
+// Workspaces as dots, window title stacked, Doto clock in the center, tray at the bottom -- a click opens quick settings.
+// What is in the tray and in what order, whether there is a title -- Theme.state (settings, BAR section)
 PanelWindow {
     id: root
 
@@ -26,13 +26,13 @@ PanelWindow {
     WlrLayershell.namespace: "glyph-bar"
 
     readonly property int active: Hyprland.focusedWorkspace?.id ?? 0
-    // шесть точек, больше — если занят или открыт дальний
+    // six dots, more -- if occupied or a distant one is open
     readonly property int count: Math.min(10, Math.max(6, active, ...Hyprland.workspaces.values.filter(w => w.toplevels.values.length).map(w => w.id)))
     readonly property var top: ToplevelManager.activeToplevel
     readonly property var bat: UPower.displayDevice
     readonly property var wifi: Networking.devices.values.find(d => d.type === DeviceType.Wifi) ?? null
 
-    // hyprland 0.56 с lua: dispatch принимает lua-выражение
+    // hyprland 0.56 with lua: dispatch accepts a lua expression
     function go(ws) { Hyprland.dispatch(`hl.dsp.focus({ workspace = "${ws}" })`); }
 
     SystemClock { id: clock; precision: SystemClock.Minutes }
@@ -50,7 +50,7 @@ PanelWindow {
 
             WheelHandler { onWheel: e => root.go(e.angleDelta.y > 0 ? "-1" : "+1") }
 
-            // знак: кольцо из точек, центр — красный, пока что-то пишет
+            // mark: ring of dots, center -- red while something is recording
             Item {
                 id: mark
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -68,7 +68,7 @@ PanelWindow {
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.markClicked() }
             }
 
-            // воркспейсы: текущий вытягивается в белую пилюлю, занятые серые, пустые — линия
+            // workspaces: the current one stretches into a white pill, occupied ones grey, empty ones -- a line
             Column {
                 id: ws
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -94,7 +94,7 @@ PanelWindow {
                 }
             }
 
-            // заголовок окна, повёрнутый: от воркспейсов до часов
+            // window title, rotated: from workspaces to the clock
             Item {
                 id: title
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -115,7 +115,7 @@ PanelWindow {
                 }
             }
 
-            // часы столбиком: 14 над 32 и день. Клик — календарь и фокус-таймер (cal/Cal)
+            // clock stacked: 14 above 32 and the day. Click -- calendar and focus timer (cal/Cal)
             Column {
                 id: clk
                 anchors.centerIn: parent
@@ -139,8 +139,8 @@ PanelWindow {
                 }
             }
 
-            // трей — Theme.state.bar по порядку (настройки, раздел BAR). Раскладка, сеть, bluetooth, звук (колесо — громкость),
-            // уведомления, батарея: клик открывает быстрые настройки. Режим питания и питание — свои клики
+            // tray -- Theme.state.bar in order (settings, BAR section). Layout, network, bluetooth, sound (wheel -- volume),
+            // notifications, battery: a click opens quick settings. Power mode and power -- their own clicks
             Column {
                 anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 22 }
                 spacing: 20
@@ -192,7 +192,7 @@ PanelWindow {
             color: Notes.list.length ? Theme.fg : Theme.grey
         }
     }
-    // в вертикальном баре батарея стоит, заряд растёт снизу. На зарядке — молния сверху, заливка дышит, пока заряжается
+    // in a vertical bar the battery stands upright, charge grows from the bottom. Charging -- a bolt on top, the fill breathes while charging
     Component {
         id: batC
         Column {
@@ -201,8 +201,8 @@ PanelWindow {
             spacing: 8
             readonly property bool ac: !UPower.onBattery
             readonly property bool charging: root.bat.state === UPowerDeviceState.Charging
-            // дыхание шагом 20 кадров/с, как шар в home/Back: анимация гнала бы бар на каждом vsync (120 Гц) все часы
-            // зарядки. Косинус с периодом 2,2 с — те же два InOutSine по 1,1 с
+            // breathing at 20 fps, like the orb in home/Back: an animation would drive the bar on every vsync (120 Hz) all the charging
+            // hours. Cosine with period 2.2 s -- the same two InOutSine of 1.1 s
             property real phase: 0
             readonly property real pulse: charging ? 0.675 + 0.325 * Math.cos(phase * Math.PI / 1.1) : 1
             Timer { running: batc.charging; interval: 50; repeat: true; onTriggered: batc.phase = (batc.phase + 0.05) % 2.2; onRunningChanged: batc.phase = 0 }
@@ -227,8 +227,8 @@ PanelWindow {
             Lb { anchors.horizontalCenter: parent.horizontalCenter; text: Math.round(root.bat.percentage * 100); px: 10 }
         }
     }
-    // режим питания засечками (Rules.modes): ultra — одна, performance — все; клик — следующий,
-    // наведение (и на батарею) — карточка с выбором
+    // power mode as ticks (Rules.modes): ultra -- one, performance -- all; click -- next,
+    // hover (and on the battery) -- a card with a choice
     Component {
         id: modeC
         Item {
@@ -264,14 +264,14 @@ PanelWindow {
         }
     }
 
-    // ---- батарея и режим питания: навёл на батарею или засечки — карточка справа от бара, как поповер caelestia.
-    // Заряд Doto, статус, шкала; ниже режимы кругами с засечками — клик выбирает, под курсором — что он делает.
-    // Ушёл и с бара, и с карточки — гаснет ----
+    // ---- battery and power mode: hover the battery or the ticks -- a card to the right of the bar, like caelestia's popover.
+    // Doto charge, status, scale; below, modes as circles with ticks -- a click selects, under the cursor -- what it does.
+    // Left both the bar and the card -- fades ----
     property bool batHot: false
     property bool tickHot: false
     readonly property bool powHot: batHot || tickHot || popHov.hovered
     readonly property bool batLow: UPower.onBattery && root.bat.percentage < 0.15
-    // карточка встаёт низом по тому, на что навели (батарея или засечки); пока видна — не прыгает
+    // the card aligns its bottom to what was hovered (battery or ticks); while visible -- it does not jump
     property real popY: 0
     function peek(it) { if (!pop.visible) popY = it.mapToItem(pill, 0, it.height).y; }
     property bool powOpen: false
@@ -290,7 +290,7 @@ PanelWindow {
         property real t: root.powOpen ? 1 : 0
         Behavior on t { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
         visible: t > 0
-        // от правого края пилюли бара с зазором 14; низом — по popY, растёт вверх
+        // 14 from the right edge of the bar pill; bottom -- at popY, grows upward
         anchor.item: pill
         anchor.rect: Qt.rect(pill.width + 14, root.popY, 1, 1)
         anchor.edges: Edges.Top | Edges.Left
@@ -346,7 +346,7 @@ PanelWindow {
                                     radius: 40
                                     color: mo.on ? Theme.fg : moHov.hovered ? Theme.s3 : Theme.s2
                                     Behavior on color { ColorAnimation { duration: Theme.t } }
-                                    // засечки: сколько горит — такая сила
+                                    // ticks: how many are lit -- that much power
                                     Row {
                                         anchors.centerIn: parent
                                         spacing: 4

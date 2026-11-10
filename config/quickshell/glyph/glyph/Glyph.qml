@@ -7,16 +7,16 @@ import Quickshell.Wayland
 import qs
 import qs.components
 
-// Glyph: края экрана как светодиоды на спинке, вместо OSD и попапов посреди экрана.
-// Сверху — вспышка на уведомление (у критических красная) и «остров» с ним, справа — громкость/яркость снизу вверх,
-// снизу — прогресс долгих задач (уведомления с hint value) или фокус-таймера (Focus). Гаснут через 3 с
+// Glyph: screen edges as LEDs on the back, instead of OSDs and popups in the middle of the screen.
+// At the top -- a flash for a notification (red for critical ones) and an "island" with it, on the right -- volume/brightness bottom-up,
+// at the bottom -- progress of long tasks (notifications with hint value) or the focus timer (Focus). They fade after 3 s
 Scope {
     id: root
 
-    // ---- справа: громкость и яркость ----
+    // ---- right: volume and brightness ----
     property string kind: "vol"
     property real value: 0
-    property bool armed: false // первые значения при старте не показываем
+    property bool armed: false // do not show the first values at startup
     Timer { running: true; interval: 1500; onTriggered: root.armed = true }
     function level(k, v) {
         if (!armed || !Theme.state.edges) return;
@@ -36,21 +36,21 @@ Scope {
     }
     Timer { id: sideT; interval: 3000; onTriggered: side.shown = false }
 
-    // ---- сверху: новое уведомление — вспышка полосы и плашка в стопку острова ----
-    property var note: null // последнее, для вспышки
-    // стопка: снимки полей (уведомление могут закрыть, пока плашка уходит — объекта уже не будет), сам объект — в refs ради действия
+    // ---- top: new notification -- a strip flash and a tile into the island stack ----
+    property var note: null // the last one, for the flash
+    // stack: field snapshots (a notification can be closed while the tile leaves -- the object will be gone), the object itself -- in refs for the action
     ListModel { id: stack }
     property var refs: ({})
     property int seq: 0
     readonly property int most: 4
-    // плашка в стопку: c — { app, summary, body, icon (тема иконок), glyph (nerd font), crit }; ref — уведомление, ради действия
+    // tile into the stack: c -- { app, summary, body, icon (icon theme), glyph (nerd font), crit }; ref -- the notification, for the action
     function push(c, ref) {
         root.note = { urgency: c.crit ? NotificationUrgency.Critical : NotificationUrgency.Normal };
         noteT.restart();
         const key = String(++root.seq);
         if (ref) root.refs[key] = ref;
         stack.insert(0, Object.assign({ key, app: "", summary: "", body: "", icon: "", glyph: "", crit: false, leaving: false }, c));
-        // больше most — старейшая из живых уходит
+        // more than most -- the oldest of the living ones leaves
         let live = 0;
         for (let i = 0; i < stack.count; i++) if (!stack.get(i).leaving && ++live > root.most) stack.setProperty(i, "leaving", true);
     }
@@ -62,8 +62,8 @@ Scope {
         }
     }
 
-    // ---- питание: зарядку включили/выдернули, зарядилась, садится (15% — предупредить, 5% — красным). Плашкой в остров,
-    // мимо истории уведомлений. armed — не на старте ----
+    // ---- power: charger plugged/unplugged, charged, discharging (15% -- warn, 5% -- red). A tile into the island,
+    // past the notification history. armed -- not at startup ----
     readonly property var bat: UPower.displayDevice
     readonly property int pct: Math.round((bat?.percentage ?? 0) * 100)
     property int warned: 100
@@ -121,10 +121,10 @@ Scope {
         }
     }
 
-    // остров: стопка плашек сверху по центру, новые сверху. Белая обводка (критическое — красная), иконка в круге, красная точка.
-    // Каждая — как dynamic island: падает пилюлей, расплывается в плашку, текст проявляется последним; уходит обратно, и её место
-    // схлопывается — нижние подтягиваются. Своя жизнь у каждой 4 с, наведение на стопку держит все.
-    // Окно постоянного размера (под most плашек), мышь ловит только сама стопка
+    // island: stack of tiles at the top center, new ones on top. White outline (critical -- red), icon in a circle, red dot.
+    // Each -- like a dynamic island: falls as a pill, spreads into a tile, text appears last; leaves back, and its place
+    // collapses -- the ones below pull up. Each lives 4 s, hovering the stack holds all.
+    // Fixed-size window (under most tiles), the mouse is caught only by the stack itself
     PanelWindow {
         visible: stack.count > 0
         anchors.top: true
@@ -158,18 +158,18 @@ Scope {
                         required property bool crit
                         required property bool leaving
 
-                        // p 0…1 линейно, у каждой фазы своё ease-out-quart (как glide)
+                        // p 0...1 linear, each phase has its own ease-out-quart (like glide)
                         property real p: 0
                         Component.onCompleted: p = Qt.binding(() => leaving ? 0 : 1)
                         Behavior on p { NumberAnimation { duration: c.leaving ? 450 : 700 } }
                         onPChanged: if (leaving && p <= 0) Qt.callLater(root.forget, key)
                         function ph(a, b) { const x = Math.max(0, Math.min(1, (p - a) / (b - a))); return 1 - Math.pow(1 - x, 4); }
-                        readonly property real drop: ph(0, 0.3)   // пилюля падает
-                        readonly property real grow: ph(0.25, 0.8) // и расплывается в плашку
+                        readonly property real drop: ph(0, 0.3)   // pill falls
+                        readonly property real grow: ph(0.25, 0.8) // and spreads into a tile
                         readonly property real full: Math.max(86, txt.height + 32)
 
                         width: 600
-                        height: (40 + (full - 40) * grow + 12) * drop // место в стопке растёт и схлопывается вместе с плашкой
+                        height: (40 + (full - 40) * grow + 12) * drop // place in the stack grows and collapses with the tile
                         Timer { running: !c.leaving && !hov.hovered; interval: 4000; onTriggered: root.dismiss(c.key) }
 
                         Rectangle {
@@ -183,7 +183,7 @@ Scope {
                             color: Theme.s1
                             border { width: 1; color: c.crit ? Theme.red : Theme.fg }
 
-                            // содержимое — в полный размер по центру: ширина текста не меняется, пока плашка растёт
+                            // content -- at full size in the center: text width does not change while the tile grows
                             Item {
                                 anchors.centerIn: parent
                                 width: 600
@@ -235,12 +235,12 @@ Scope {
                                         color: Theme.grey
                                     }
                                 }
-                                // красная точка — только у самой новой: красное на экране одно
+                                // red dot -- only on the newest one: one red on screen
                                 Rectangle { id: dot; visible: c.index === 0; anchors { right: parent.right; rightMargin: 22; verticalCenter: parent.verticalCenter } width: 12; height: 12; radius: 6; color: Theme.red }
                             }
 
-                            // клик — действие по умолчанию; плашка уходит, в истории остаётся. Уведомление могли уже закрыть —
-                            // от объекта остаётся пустая обёртка без actions
+                            // click -- default action; the tile leaves, stays in history. The notification may already be closed --
+                            // an empty wrapper without actions remains of the object
                             TapHandler {
                                 onTapped: {
                                     root.refs[c.key]?.actions?.find(a => a.identifier === "default")?.invoke();
@@ -254,7 +254,7 @@ Scope {
         }
     }
 
-    // ---- справа ----
+    // ---- right ----
     Edge {
         id: side
         anchors.right: true
@@ -270,14 +270,14 @@ Scope {
             f: root.value
         }
         Tag {
-            vertical: true // у вертикальной полосы и капсула стоит: иконка над числом
+            vertical: true // the capsule stands upright for a vertical strip too: icon above the number
             anchors { right: parent.right; rightMargin: 26; verticalCenter: parent.verticalCenter }
             Icon { text: root.kind === "bri" ? "\u{F00E0}" : Sys.muted ? "\u{F075F}" : "\u{F057E}" }
             Num { text: Math.round(root.value * 100); font.pixelSize: 30 }
         }
     }
 
-    // ---- снизу: прогресс задачи, без неё — идущий фокус-таймер (одной полосой, без капсулы: висит десятки минут) ----
+    // ---- bottom: task progress, without it -- a running focus timer (one strip, no capsule: hangs for tens of minutes) ----
     readonly property var task: Notes.task
     readonly property real progress: task ? Math.max(0, Math.min(100, task.hints.value ?? 0)) / 100 : Focus.f
     Connections {
@@ -306,7 +306,7 @@ Scope {
         }
     }
 
-    // полоса у края: сквозная для мыши, рисуется в пикселях макета
+    // strip at the edge: transparent to the mouse, drawn in layout pixels
     component Edge: PanelWindow {
         property bool shown
         default property alias content: st.data
@@ -318,7 +318,7 @@ Scope {
         WlrLayershell.namespace: "glyph-edge"
         Stage { id: st }
     }
-    // капсула-значение рядом с полосой; vertical — содержимое столбиком
+    // value capsule next to the strip; vertical -- content stacked
     component Tag: Rectangle {
         default property alias content: box.data
         property bool vertical
@@ -336,7 +336,7 @@ Scope {
             verticalItemAlignment: Grid.AlignVCenter
         }
     }
-    // свечение горящих сегментов — единственная «тень» во всём шелле
+    // glow of lit segments -- the only "shadow" in the whole shell
     component Glow: MultiEffect {
         shadowEnabled: true
         shadowColor: Theme.glow

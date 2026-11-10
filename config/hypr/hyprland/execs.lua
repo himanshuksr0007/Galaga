@@ -2,10 +2,10 @@ local vars = require("variables")
 local fn   = require("hyprland.functions")
 
 hl.on("hyprland.start", function()
-    -- Shell: тот, что выбран в rice
+    -- Shell: whichever one is selected in rice
     hl.exec_cmd(vars.rice .. " start")
 
-    -- во вложенной сессии системные демоны уже работают снаружи
+    -- in a nested session the system daemons are already running outside
     if vars.nested then return end
 
     -- Keyring and auth
@@ -30,9 +30,9 @@ hl.on("hyprland.start", function()
     -- Forward bluetooth media commands to MPRIS
     hl.exec_cmd("mpris-proxy")
 
-    -- hypridle поднимает шелл (Rules.idle): тайминги из house rules → ~/.config/demonshot/hypridle.conf
+    -- hypridle starts the shell (Rules.idle): timings from house rules -> ~/.config/demonshot/hypridle.conf
 
-    -- фоновый kitty без окна: первый Super+Q тоже открывается мгновенно
+    -- background kitty without a window: the first Super+Q opens instantly too
     hl.exec_cmd(vars.terminal .. " --start-as=hidden")
 end)
 

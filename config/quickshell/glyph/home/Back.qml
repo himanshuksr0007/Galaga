@@ -5,10 +5,10 @@ import Quickshell.Wayland
 import qs
 import qs.components
 
-// подложка дома, отдельным окном на слое background: сетка точек, полутоновый шар, обои. Сам дом (часы, бенто) — слоем
-// выше, прозрачный: он перерисовывается часто (двоеточие, кольца, крутящаяся обложка), а обои — полноэкранный шейдер,
-// и в одном окне считались бы на каждый его кадр. Здесь кадр — только на волну, смену вида и дыхание шара.
-// Картинка закрыла всё — сетку и шар не рисуем, шар не дышит: окно стоит
+// home backdrop, a separate window on the background layer: dot grid, halftone orb, wallpaper. The home itself (clock, bento) -- on a layer
+// above, transparent: it redraws often (colon, rings, spinning cover), while the wallpaper is a fullscreen shader,
+// and in one window they would be computed on every one of its frames. Here a frame -- only on a wave, view change and orb breathing.
+// The image covers everything -- we do not draw the grid and orb, the orb does not breathe: the window stands still
 PanelWindow {
     id: root
 

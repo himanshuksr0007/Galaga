@@ -3,8 +3,8 @@ import Quickshell
 import Quickshell.Wayland
 import qs
 
-// горячий край: курсор задержался у правого края — быстрые настройки выезжают (Quick.peek). Полоска 2px по нижним 80%:
-// верхний угол и полосы прокрутки у края почти не задевает
+// hot edge: the cursor lingered at the right edge -- quick settings slide out (Quick.peek). A 2px strip over the bottom 80%:
+// it barely touches the top corner and scrollbars at the edge
 PanelWindow {
     id: root
 

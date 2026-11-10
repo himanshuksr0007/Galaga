@@ -8,8 +8,8 @@ import qs
 import qs.components
 import qs.services
 
-// «домашний экран» на слое bottom, прозрачный: часы Doto, приветствие и бенто виджетов. Сетка, шар и обои — под ним, в Back.
-// Окно открылось — всё уходит под него само. Опрос системы и анимации — только пока воркспейс пуст
+// "home screen" on the bottom layer, transparent: Doto clock, greeting and widget bento. Grid, orb and wallpaper -- beneath it, in Back.
+// Window opened -- everything goes under it by itself. System polling and animations -- only while the workspace is empty
 PanelWindow {
     id: root
 
@@ -21,25 +21,25 @@ PanelWindow {
 
     readonly property bool home: (Hyprland.focusedWorkspace?.toplevels.values.length ?? 0) === 0
     Binding { target: SysStats; property: "detailed"; value: root.home || Sys.deckOpen }
-    // не в делегате: уничтоженный Binding значение не возвращает — убрал виджет, а cava работала бы вечно
+    // not in a delegate: a destroyed Binding does not return the value -- remove the widget and cava would run forever
     Binding { target: Cava; property: "active"; value: root.home && bento.model.some(w => w.id === "cava") }
 
     SystemClock { id: clock; precision: SystemClock.Minutes }
     readonly property var en: Qt.locale("en_US")
 
-    // мигающее двоеточие — два кадра в секунду, а не анимация на каждый vsync
+    // blinking colon -- two frames per second, not an animation on every vsync
     property bool dim: false
     Timer { running: root.home && Theme.state.blink; interval: 500; repeat: true; onTriggered: root.dim = !root.dim }
 
     readonly property var player: Media.player
     readonly property var buds: Bluetooth.devices.values.find(d => d.connected && d.batteryAvailable) ?? null
-    property var hist: [] // cpu за минуту: 34 столбца матрицы
+    property var hist: [] // cpu over a minute: 34 matrix columns
     Connections {
         target: SysStats
         function onCpuChanged() { root.hist = root.hist.concat([SysStats.cpu]).slice(-34); }
     }
 
-    function week(d) { // ISO-неделя
+    function week(d) { // ISO week
         const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
         t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
         return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 86400000 + 1) / 7);
@@ -80,9 +80,9 @@ PanelWindow {
             Meta { visible: !!root.buds; icon: "\u{F02CB}"; text: `${root.buds?.name ?? ""} · ${Math.round((root.buds?.battery ?? 0) * 100)}%` }
         }
 
-        // бенто: ячейки 220, зазор 20, сетка 3×3. Какие виджеты и в каком порядке — Theme.state.widgets (настройки), ширины —
-        // Theme.kinds. Кладём слева направо: не влез в ряд — со следующего, в три ряда не влез — не показывается.
-        // Квадрат со скруглением 40 или круг — других форм нет
+        // bento: cells 220, gap 20, 3x3 grid. Which widgets and in what order -- Theme.state.widgets (settings), widths --
+        // Theme.kinds. We place left to right: does not fit in a row -- next row, does not fit in three rows -- not shown.
+        // A square with 40 rounding or a circle -- no other shapes
         Repeater {
             id: bento
             model: {
@@ -107,7 +107,7 @@ PanelWindow {
             }
         }
 
-        // погода
+        // weather
         Component {
             id: weatherW
             W {
@@ -125,7 +125,7 @@ PanelWindow {
                     Lb {
                         anchors.horizontalCenter: parent.horizontalCenter
                         topPadding: 8
-                        width: Math.min(implicitWidth, 160) // хорда круга на этой высоте
+                        width: Math.min(implicitWidth, 160) // chord of the circle at this height
                         elide: Text.ElideRight
                         text: Weather.ok ? `${Weather.name(Weather.now.code)} · ${Math.round(Weather.days[0]?.min)}°/${Math.round(Weather.days[0]?.max)}°` : "no sky"
                     }
@@ -133,7 +133,7 @@ PanelWindow {
             }
         }
 
-        // календарь
+        // calendar
         Component {
             id: calendarW
             W {
@@ -165,7 +165,7 @@ PanelWindow {
             }
         }
 
-        // кольца: cpu, память, видеокарта, диск, батарея
+        // rings: cpu, memory, gpu, disk, battery
         Component { id: cpuW; RingW { f: SysStats.cpu; value: Math.round(SysStats.cpu * 100); label: "cpu %" } }
         Component { id: ramW; RingW { f: SysStats.mem; value: Math.round(SysStats.mem * 100); label: "ram %" } }
         Component { id: gpuW; RingW { f: SysStats.gpu; value: Math.round(SysStats.gpu * 100); label: `gpu · ${Math.round(SysStats.gpuTemp)}°` } }
@@ -181,7 +181,7 @@ PanelWindow {
             }
         }
 
-        // плеер: обложка точками крутится, пока играет
+        // player: cover as dots spins while playing
         Component {
             id: playerW
             W {
@@ -215,14 +215,14 @@ PanelWindow {
                         color: Theme.grey
                     }
                     Item { width: 1; height: 18 }
-                    Seg { width: parent.width; height: 6; n: 24; f: root.player?.lengthSupported && root.player.length > 0 ? Media.position / root.player.length : 0 } // firefox длину не шлёт
+                    Seg { width: parent.width; height: 6; n: 24; f: root.player?.lengthSupported && root.player.length > 0 ? Media.position / root.player.length : 0 } // firefox does not send length
                     Item { width: 1; height: 16 }
                     Controls { size: 22; play: 52 }
                 }
             }
         }
 
-        // наушники кольцом; нет их — громкость
+        // earbuds as a ring; none -- volume
         Component {
             id: budsW
             W {
@@ -244,12 +244,12 @@ PanelWindow {
             }
         }
 
-        // кот: гифка матрицей в тон темы через шейдер обоев (как Wall в look 0). Танцует, только пока дом виден
+        // cat: gif as a matrix in the theme tone via the wallpaper shader (like Wall in look 0). Dances only while home is visible
         Component {
             id: catW
             W {
                 id: cw
-                AnimatedImage { id: cat; anchors.fill: fx; opacity: 0; source: "cat.gif"; playing: root.home } // текстура для fx, см. Wall
+                AnimatedImage { id: cat; anchors.fill: fx; opacity: 0; source: "cat.gif"; playing: root.home } // texture for fx, see Wall
                 ShaderEffect {
                     id: fx
                     anchors { fill: parent; margins: 12 }
@@ -259,7 +259,7 @@ PanelWindow {
                     readonly property size cropB: cropA
                     readonly property color lo: Theme.light ? Theme.fg : Theme.bg
                     readonly property color hi: Theme.light ? Theme.bg : Theme.fg
-                    readonly property color bg: cw.color // прозрачное в гифке — в цвет плитки
+                    readonly property color bg: cw.color // transparent in the gif -- into the tile color
                     readonly property real pitch: 6
                     readonly property real dots: 1
                     readonly property real mono: 1
@@ -274,8 +274,8 @@ PanelWindow {
             }
         }
 
-        // cava матрицей в круге, как Glyph Matrix на спинке Nothing Phone (3): бас в центре, к краям верхи, столбики растут
-        // от середины вверх и вниз. Тишина — погасшие точки. cava работает, только пока дом виден
+        // cava as a matrix in a circle, like Glyph Matrix on the back of Nothing Phone (3): bass in the center, highs toward the edges, bars grow
+        // from the middle up and down. Silence -- dimmed dots. cava runs only while home is visible
         Component {
             id: cavaW
             W {
@@ -290,12 +290,12 @@ PanelWindow {
                             required property int index
                             readonly property int cx: index % 15 - 7
                             readonly property int cy: Math.floor(index / 15) - 7
-                            readonly property int half: Math.floor(Math.sqrt(7.5 * 7.5 - cx * cx)) // полвысоты столбца внутри круга
+                            readonly property int half: Math.floor(Math.sqrt(7.5 * 7.5 - cx * cx)) // half the column height inside the circle
                             readonly property real v: Cava.bars[Math.abs(cx)] ?? 0
                             width: 8
                             height: 8
                             radius: 4
-                            // вне круга — прозрачная, не visible: Grid сдвинул бы остальные
+                            // outside the circle -- transparent, not visible: Grid would shift the rest
                             color: Math.abs(cy) > half ? "transparent" : Math.abs(cy) < v * (half + 1) ? Theme.fg : Theme.s3
                         }
                     }
@@ -303,7 +303,7 @@ PanelWindow {
             }
         }
 
-        // система: цифры и график cpu матрицей
+        // system: numbers and cpu graph as a matrix
         Component {
             id: systemW
             W {
@@ -325,7 +325,7 @@ PanelWindow {
                     width: parent.width - x - 34
                     spacing: 12
                     Lb { text: "cpu · 60 s" }
-                    // верхняя точка столбца белая, под ней серые
+                    // top dot of the column white, below it grey
                     Grid {
                         id: spark
                         width: parent.width
@@ -337,7 +337,7 @@ PanelWindow {
                             Rectangle {
                                 required property int index
                                 readonly property int x_: index % 34
-                                readonly property int up: 8 - Math.floor(index / 34) // 8 сверху … 1 снизу
+                                readonly property int up: 8 - Math.floor(index / 34) // 8 at the top ... 1 at the bottom
                                 readonly property int h: Math.round(1 + 6 * (root.hist[x_ - 34 + root.hist.length] ?? 0))
                                 width: spark.d
                                 height: spark.d
@@ -360,7 +360,7 @@ PanelWindow {
         color: Theme.s1
         border { width: 1; color: Theme.s2 }
     }
-    // круглый виджет: кольцо из точек горит долей f, в центре число и подпись
+    // round widget: ring of dots lit by fraction f, number and label in the center
     component RingW: Rectangle {
         id: rw
         property real f

@@ -1,12 +1,12 @@
 local vars = require("variables")
 local fn   = require("hyprland.functions")
 
--- глобалки шелла — shell:<имя>: их регистрирует тот шелл, что сейчас живой (demonshot, glyph), чего у него нет — молчит
--- Launcher: тап Super. С 0.57 бинды на сам модификатор не срабатывают ни на нажатие, ни на отпускание
--- (hyprwm/Hyprland#15952, #15050), поэтому отпускание Super ловим опросом состояния клавиши, а не bindr.
--- Без гашения Super+1 тоже открыл бы лаунчер — каждый Super+<key> не поглощая снимает тап.
+-- shell globals -- shell:<name>: registered by whichever shell is alive (demonshot, glyph); if it lacks one, it stays silent
+-- Launcher: tap Super. Since 0.57 binds on the modifier itself do not fire on press or release
+-- (hyprwm/Hyprland#15952, #15050), so we catch the Super release by polling the key state instead of bindr.
+-- Without swallowing Super+1 it would open the launcher too -- every Super+<key> that is not consumed cancels the tap.
 local superDown, superTap = false, false
--- бинды на сами модификаторы в 0.57 тоже мертвы, поэтому Super+Shift/Ctrl/Alt смотрим здесь же
+-- binds on the modifiers themselves are also dead in 0.57, so we watch Super+Shift/Ctrl/Alt here as well
 local otherMods = { "Shift_L", "Shift_R", "Control_L", "Control_R", "Alt_L", "Alt_R" }
 hl.timer(function()
     local down = hl.is_key_down("Super_L") or hl.is_key_down("Super_R")
@@ -44,14 +44,14 @@ hl.bind(vars.kbAltar, hl.dsp.global("shell:altar"))
 hl.bind("SUPER + I", hl.dsp.global("shell:settings"))
 hl.bind("SUPER + N", hl.dsp.global("shell:ward"))
 hl.bind("SUPER + P", hl.dsp.global("shell:pact"))
-hl.bind("SUPER + A", hl.dsp.global("shell:quick")) -- быстрые настройки glyph
-hl.bind("SUPER + SHIFT + W", hl.dsp.global("shell:wall")) -- обои glyph
+hl.bind("SUPER + A", hl.dsp.global("shell:quick")) -- glyph quick settings
+hl.bind("SUPER + SHIFT + W", hl.dsp.global("shell:wall")) -- glyph wallpapers
 hl.bind(vars.kbSession, hl.dsp.global("shell:power"))
 hl.bind(vars.kbPower, hl.dsp.global("shell:power"))
 hl.bind(vars.kbLock, hl.dsp.exec_cmd(vars.lockCmd))
-hl.bind(vars.kbRestoreLock, hl.dsp.exec_cmd(vars.lockCmd), { locked = true }) -- лок упал — поднять заново (сессия ещё заблокирована → нужен locked)
+hl.bind(vars.kbRestoreLock, hl.dsp.exec_cmd(vars.lockCmd), { locked = true }) -- lock crashed -- start it again (session still locked -> needs locked)
 
--- Brightness: ставит шелл (services/Backlight) — OSD двигается сразу, brightnessctl догоняет
+-- Brightness: handled by the shell (services/Backlight) -- the OSD moves instantly, brightnessctl catches up
 hl.bind("XF86MonBrightnessUp", hl.dsp.global("shell:briUp"), { locked = true, repeating = true })
 hl.bind("XF86MonBrightnessDown", hl.dsp.global("shell:briDown"), { locked = true, repeating = true })
 
@@ -109,7 +109,7 @@ hl.bind("CTRL + ALT + Tab", hl.dsp.group.next(), { repeating = true })
 hl.bind("CTRL + SHIFT + ALT + Tab", hl.dsp.group.prev(), { repeating = true })
 hl.bind(vars.kbToggleGroup, hl.dsp.group.toggle())
 hl.bind(vars.kbUngroup, hl.dsp.window.move({ out_of_group = true }))
-hl.bind("SUPER + SHIFT + Comma", hl.dsp.group.lock_active())
+hl.bind("SUPER + SHIFT + Comma", hl.dsp.group.lock())
 
 -- Window actions
 hl.bind("SUPER + left", hl.dsp.focus({ direction = "left" }))
@@ -134,8 +134,10 @@ hl.bind(vars.kbMoveWindow, hl.dsp.window.drag(), { mouse = true })
 hl.bind("SUPER + mouse:272", hl.dsp.window.resize(), { mouse = true })
 hl.bind(vars.kbResizeWindow, hl.dsp.window.resize(), { mouse = true })
 hl.bind("CTRL + SUPER + Backslash", hl.dsp.window.center())
-hl.bind("CTRL + SUPER + ALT + Backslash", hl.dsp.window.resize(fn.resize_by_screen(55, 70)))
-hl.bind("CTRL + SUPER + ALT + Backslash", hl.dsp.window.center())
+hl.bind("CTRL + SUPER + ALT + Backslash", function()
+    hl.dispatch(hl.dsp.window.resize(fn.resize_by_screen(55, 70)))
+    hl.dispatch(hl.dsp.window.center())
+end)
 hl.bind(vars.kbWindowPip, function()
     local a = hl.get_active_window()
     if a then

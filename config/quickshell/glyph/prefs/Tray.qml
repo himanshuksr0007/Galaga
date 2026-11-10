@@ -2,9 +2,9 @@ import QtQuick
 import qs
 import qs.components
 
-// лоток видов: круг на каждый. Белый — стоит, серый — стоит, но не влез (dim), тёмный — нет. Клик или ↵ — поставить/убрать;
-// ←→ — курсор (кольцо вокруг), пока лоток в фокусе. widths — ширина в ячейках, точками под именем.
-// Не влез в 1100 (страница начинается с x 800) — переносится, ряды поровну: 12 видов — 6 + 6, а не 11 + 1
+// view tray: a circle for each. White -- present, grey -- present but does not fit (dim), dark -- absent. Click or Enter -- add/remove;
+// left/right -- cursor (ring around it) while the tray is focused. widths -- width in cells, as dots under the name.
+// Does not fit in 1100 (page starts at x 800) -- wraps, rows split evenly: 12 views -- 6 + 6, not 11 + 1
 Grid {
     id: root
 

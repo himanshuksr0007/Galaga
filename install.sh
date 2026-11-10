@@ -1,29 +1,29 @@
 #!/usr/bin/env bash
-# Glyph: ставит всё на чистый Arch и линкует конфиги из этого репо.
-#   ./install.sh                   пакеты + сервисы + симлинки; спросит, что из EXTRA поставить ещё
-#   ./install.sh --with telegram   то же без вопроса (--with "" — только сам рис)
-#   ./install.sh --links           только симлинки (на уже готовой системе)
+# Glyph: installs everything on a clean Arch and links the configs from this repo.
+#   ./install.sh                   packages + services + symlinks; asks which EXTRA to install too
+#   ./install.sh --with telegram   same without the question (--with "" -- just the rice itself)
+#   ./install.sh --links           symlinks only (on an already configured system)
 set -euo pipefail
 
 DOTS="$(cd "$(dirname "$0")" && pwd)"
 BACKUP="$HOME/.dots-backup-$(date +%F_%H-%M-%S)"
 
 PACMAN=(
-    # база
+    # base
     base-devel git curl jq python
-    # сессия
+    # session
     hyprland hypridle hyprsunset hyprpicker xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
     sddm quickshell polkit-gnome gnome-keyring geoclue upower xdg-user-dirs
-    # звук, сеть, bluetooth
+    # audio, network, bluetooth
     pipewire pipewire-pulse pipewire-alsa wireplumber networkmanager bluez bluez-utils power-profiles-daemon
-    # утилиты, которые зовут бинды и шелл
+    # utilities called by keybinds and the shell
     brightnessctl playerctl wl-clipboard cliphist grim slurp swappy imagemagick libvips libqalculate
     gpu-screen-recorder ydotool libnotify trash-cli
-    # терминал и консоль
+    # terminal and console
     kitty fish starship fastfetch btop cava eza zoxide direnv
-    # приложения из variables.lua
+    # apps from variables.lua
     thunar pavucontrol
-    # шрифты (cjk — каомодзи в Charms), иконки (Papirus-Dark — основа темы папок Rice), тёмная база для gtk.css
+    # fonts (cjk -- kaomoji in Charms), icons (Papirus-Dark -- base for the Rice folder theme), dark base for gtk.css
     ttf-jetbrains-mono-nerd noto-fonts noto-fonts-cjk noto-fonts-emoji papirus-icon-theme adw-gtk-theme
 )
 
@@ -32,15 +32,15 @@ AUR=(
     zen-browser-bin
 )
 
-# на выбор, как optional components у caelestia. Что открывают бинды спец-воркспейсов — apps в hypr/variables.lua
+# optional, like caelestia's optional components. What the special-workspace keybinds open -- apps in hypr/variables.lua
 declare -A EXTRA=(
     [telegram]="telegram-desktop"                                        # Super+D
     [spotify]="spotify-launcher spicetify-cli spicetify-marketplace-bin" # Super+M
-    [clash]="clash-verge-rev-bin"                                        # панель VPN, Super+P
+    [clash]="clash-verge-rev-bin"                                        # VPN panel, Super+P
 )
 
 G=config/quickshell/glyph
-# репо-путь → путь в $HOME
+# repo path -> path in $HOME
 LINKS=(
     "config/hypr                                .config/hypr"
     "$G                                         .config/quickshell/glyph"
@@ -62,27 +62,27 @@ LINKS=(
 
 say() { printf '\e[38;2;215;25;33m●\e[0m %s\n' "$*"; }
 
-extras() { # --with или вопрос → в EXT, ставит yay (и из репо) отдельно от AUR
+extras() { # --with or a prompt -> into EXT, installs yay (and repo packages) separately from AUR
     local w; EXT=()
     if [ -z "${WITH+x}" ]; then
-        say "что ещё поставить? через пробел, Enter — ничего"
+        say "what else to install? space-separated, Enter -- nothing"
         for w in "${!EXTRA[@]}"; do printf '  %-9s %s\n' "$w" "${EXTRA[$w]}"; done
         read -rp "  > " WITH || true
     fi
     for w in ${WITH//,/ }; do
-        [ -n "${EXTRA[$w]-}" ] || { echo "нет такого: $w (есть: ${!EXTRA[*]})"; exit 1; }
+        [ -n "${EXTRA[$w]-}" ] || { echo "no such option: $w (available: ${!EXTRA[*]})"; exit 1; }
         EXT+=(${EXTRA[$w]})
     done
 }
 
 packages() {
     say "pacman"
-    # модули pulseaudio требуют его самого — pacman не дал бы заменить его на pipewire-pulse.
-    # Списком, не grep '^pulseaudio-': pulseaudio-alsa и pulseaudio-qt с pipewire живут
+    # pulseaudio modules require pulseaudio itself -- pacman would not let us replace it with pipewire-pulse.
+    # As a list, not grep '^pulseaudio-': pulseaudio-alsa and pulseaudio-qt live fine with pipewire
     local pa; pa=$(pacman -Qq pulseaudio-{bluetooth,jack,lirc,rtp,zeroconf,equalizer,equalizer-ladspa} 2>/dev/null || true)
     [ -z "$pa" ] || sudo pacman -R $pa
-    pacman -Q pulseaudio &>/dev/null && say "pacman спросит «Remove pulseaudio?» — ответь y, его заменит pipewire-pulse"
-    # без --noconfirm: на конфликте (pulseaudio → pipewire-pulse) он ответил бы «нет» и уронил установку
+    pacman -Q pulseaudio &>/dev/null && say "pacman will ask \"Remove pulseaudio?\" -- answer y, pipewire-pulse replaces it"
+    # no --noconfirm: on a conflict (pulseaudio -> pipewire-pulse) it would answer "no" and fail the install
     sudo pacman -Syu --needed "${PACMAN[@]}"
 
     if ! command -v yay >/dev/null; then
@@ -94,14 +94,14 @@ packages() {
     fi
 
     say "aur"
-    # AUR необязателен: упал пакет — сервисы и ссылки всё равно ставим
-    yay -S --needed --noconfirm "${AUR[@]}" || say "aur: встало не всё, см. выше"
-    # отдельно: не собрался spicetify — ядро AUR от этого не страдает
-    [ ${#EXT[@]} -eq 0 ] || yay -S --needed --noconfirm "${EXT[@]}" || say "на выбор: встало не всё, см. выше"
+    # AUR is optional: if a package fails, we still install services and links
+    yay -S --needed --noconfirm "${AUR[@]}" || say "aur: not everything installed, see above"
+    # separately: if spicetify failed to build, the AUR core is unaffected
+    [ ${#EXT[@]} -eq 0 ] || yay -S --needed --noconfirm "${EXT[@]}" || say "optional: not everything installed, see above"
 }
 
 services() {
-    say "сервисы"
+    say "services"
     sudo systemctl enable NetworkManager bluetooth power-profiles-daemon
     systemctl is-enabled -q display-manager.service 2>/dev/null || sudo systemctl enable sddm
     systemctl --user enable pipewire-pulse.socket wireplumber ydotool
@@ -110,7 +110,7 @@ services() {
 }
 
 links() {
-    say "симлинки (старое → $BACKUP)"
+    say "symlinks (old -> $BACKUP)"
     local src dst
     for l in "${LINKS[@]}"; do
         read -r src dst <<<"$l"
@@ -124,26 +124,26 @@ links() {
         ln -s "$src" "$dst"
         echo "  $dst"
     done
-    # rules.json и kitty.conf шелл создаст сам; rice поднимет glyph и соберёт тему папок
+    # rules.json and kitty.conf are created by the shell itself; rice starts glyph and builds the folder theme
     mkdir -p "$HOME/.config/demonshot" "${XDG_STATE_HOME:-$HOME/.local/state}/rice"
     echo glyph > "${XDG_STATE_HOME:-$HOME/.local/state}/rice/shell"
-    mkdir -p "$HOME/Pictures/Wallpapers" # пикер обоев (Super+Shift+W) смотрит сюда
+    mkdir -p "$HOME/Pictures/Wallpapers" # wallpaper picker (Super+Shift+W) looks here
     fc-cache -f >/dev/null
-    command -v gsettings >/dev/null || return 0 # --links на системе без GNOME-схем
-    # тёмный режим для Zen, Electron и libadwaita (через портал) и тёмная gtk3-база под наш gtk.css
+    command -v gsettings >/dev/null || return 0 # --links on a system without GNOME schemas
+    # dark mode for Zen, Electron and libadwaita (through the portal) and a dark gtk3 base for our gtk.css
     gsettings set org.gnome.desktop.interface color-scheme prefer-dark
     gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark
 }
 
-[ "$EUID" -eq 0 ] && { echo "запускай от пользователя, sudo спросит сам"; exit 1; }
+[ "$EUID" -eq 0 ] && { echo "run as your user, sudo will ask by itself"; exit 1; }
 
 case "${1:-}" in
-    --links) links ;; # на любом дистрибутиве (NixOS, Fedora…): пакеты тогда свои, список — в README
-    ""|--with) command -v pacman >/dev/null || { echo "пакеты ставлю только на Arch; на другом дистрибутиве: $0 --links"; exit 1; }
-        [ "${1:-}" = --with ] && WITH="${*:2}" # и через запятую, и через пробел
+    --links) links ;; # on any distribution (NixOS, Fedora...): packages are up to you then, list in README
+    ""|--with) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
+        [ "${1:-}" = --with ] && WITH="${*:2}" # both comma- and space-separated
         extras; packages; services; links
-        # spicetify нужен уже скачанный Spotify с входом в аккаунт, поэтому применять до первого запуска нечего
-        [[ " ${WITH//,/ } " == *" spotify "* ]] && say "spotify: запусти, войди, потом spicetify config custom_apps marketplace && spicetify backup apply"
-        say "готово. перезагрузись и выбери Hyprland в sddm" ;;
+        # spicetify needs Spotify already downloaded and logged in, so there is nothing to apply before the first launch
+        [[ " ${WITH//,/ } " == *" spotify "* ]] && say "spotify: launch it, log in, then spicetify config custom_apps marketplace && spicetify backup apply"
+        say "done. reboot and pick Hyprland in sddm" ;;
     *) echo "usage: $0 [--with telegram,spotify,clash | --links]"; exit 1 ;;
 esac
