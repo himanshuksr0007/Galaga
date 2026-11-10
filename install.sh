@@ -163,7 +163,17 @@ plugins() { # hyprbars -- the window title bars (config/hypr/hyprland/titlebars.
 
 services() {
     say "services"
-    run sudo systemctl enable NetworkManager bluetooth power-profiles-daemon
+    run sudo systemctl enable NetworkManager bluetooth
+    # the shell's power modes (quick, the bar, prefs -> POWER) set power-profiles-daemon's profile.
+    # tuned and tlp manage the same knobs their own way -- two of them at once fight over the cpu,
+    # so if one is already this system's choice, leave it in charge and say what switching takes
+    if systemctl is-enabled -q tuned.service 2>/dev/null || systemctl is-enabled -q tlp.service 2>/dev/null \
+        || systemctl is-active -q tuned.service 2>/dev/null || systemctl is-active -q tlp.service 2>/dev/null; then
+        note "tuned or tlp already manages power here -- power-profiles-daemon is NOT enabled, they would fight"
+        note "for the shell's cpu profiles instead: sudo systemctl disable --now tuned tlp; sudo systemctl enable --now power-profiles-daemon"
+    else
+        run sudo systemctl enable power-profiles-daemon
+    fi
     systemctl is-enabled -q display-manager.service 2>/dev/null || run sudo systemctl enable sddm
     run systemctl --user enable pipewire-pulse.socket wireplumber ydotool
     run sudo usermod -aG input,video "$USER" # ydotool (uinput), brightnessctl
