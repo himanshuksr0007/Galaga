@@ -72,10 +72,11 @@ git clone https://github.com/yasakei/glyph-rice ~/.local/share/glyph
 ~/.local/share/glyph/install.sh --greeter        # optional, Arch: boot login screen (replaces sddm)
 ```
 
-Without `--with` it asks everything up front — file manager (`thunar` or `dolphin`), login screen
-(keep yours, or the glyph face) and which extras to add: `telegram` (`Super` `D`),
-`spotify` with Spicetify (`Super` `M`), `clash` for the VPN panel, `pywalfox` so Firefox follows the
-palette. One password, then it runs unattended. Old configs go to `~/.dots-backup-<date>/`.
+Without `--with` it asks everything up front, in lists you tick and pick with the arrow keys —
+nothing to type: the file manager (`thunar` or `dolphin`), the login screen (keep yours, or the glyph
+face) and which extras to tick: `telegram` (`Super` `D`), `spotify` with
+Spicetify (`Super` `M`), `clash` for the VPN panel, `pywalfox` so Firefox follows the palette.
+One password, then it runs unattended. Old configs go to `~/.dots-backup-<date>/`.
 Wallpapers are read from `~/Pictures/Wallpapers`.
 
 | `config/` | goes to |
