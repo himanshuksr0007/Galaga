@@ -127,8 +127,31 @@ def charge():
     return b, 6000, 0.46
 
 
+def close():
+    # pop's mirror: a lower, duller thock falling away, with the faintest tap
+    # of noise at the head -- a window folding shut, not opening
+    b = render(0.08)
+    noise(b, 0, 0.02, 0.005, 0.22)
+    voice(b, 0, 0.08, 340, 148, 0.015, 1.0, {1: 1.0, 2: 0.10}, attack=0.002)
+    return b, 4500, 0.48
+
+
+def briup():
+    # the volume tick's brighter sibling, gliding a fourth up as the screen does
+    b = render(0.055)
+    voice(b, 0, 0.055, 940, 1318, 0.011, 1.0, {1: 1.0, 2: 0.15}, attack=0.0015)
+    return b, 7500, 0.44
+
+
+def bridown():
+    b = render(0.055)
+    voice(b, 0, 0.055, 1318, 940, 0.011, 1.0, {1: 1.0, 2: 0.15}, attack=0.0015)
+    return b, 7500, 0.44
+
+
 SOUNDS = {"pop": pop, "tick": tick, "lock": lock, "unlock": unlock,
-          "notify": notify, "shot": shot, "charge": charge}
+          "notify": notify, "shot": shot, "charge": charge,
+          "close": close, "briup": briup, "bridown": bridown}
 
 
 def main():

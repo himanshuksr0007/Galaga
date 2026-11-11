@@ -37,6 +37,10 @@ Singleton {
     function step(d) {
         set(Math.pow(Math.max(0, Math.min(steps, Math.round(Math.pow(value, 0.25) * steps) + d)) / steps, 4));
         moved();
+        // a blip per key press, pitched the way the screen goes -- step() is
+        // only called by the two GlobalShortcuts, so external changes (a panel
+        // drag, another tool) stay silent, like the volume keys' tick rule
+        Sounds.play(d > 0 ? "briup" : "bridown");
     }
     Timer { id: sync; interval: 300; onTriggered: root.read() }
     GlobalShortcut { appid: "shell"; name: "briUp"; description: "brightness +"; onPressed: root.step(1) }
