@@ -21,6 +21,8 @@ PanelWindow {
     signal markClicked
     signal trayClicked
     signal soundClicked
+    signal btClicked
+    signal wifiClicked
     signal powerClicked
     signal clockClicked
 
@@ -139,9 +141,9 @@ PanelWindow {
                 }
             }
 
-            // tray -- Theme.state.bar in order (settings, BAR section). Layout, network, bluetooth, sound (wheel -- volume),
-            // notifications, battery: a click opens quick settings -- except sound, whose click opens its own menu
-            // (quick/SoundMenu). Power mode and power -- their own clicks
+            // tray -- Theme.state.bar in order (settings, BAR section). Layout, notifications, battery: a click opens
+            // quick settings -- except sound, bluetooth and wi-fi, whose clicks open their own menus (quick/SoundMenu,
+            // quick/BtMenu, quick/WifiMenu). Power mode and power -- their own clicks
             Pile {
                 x: root.vert ? (parent.width - width) / 2 : parent.width - width - 22
                 y: root.vert ? parent.height - height - 22 : (parent.height - height) / 2
@@ -155,7 +157,7 @@ PanelWindow {
                         readonly property bool quick: modelData !== "mode" && modelData !== "power" && modelData !== "focus"
                         sourceComponent: root.parts[modelData] ?? null
                         visible: !!sourceComponent && (modelData !== "battery" || root.bat.isLaptopBattery) && (modelData !== "focus" || Theme.state.featFocus)
-                        TapHandler { enabled: part.quick; onTapped: modelData === "sound" ? root.soundClicked() : root.trayClicked() }
+                        TapHandler { enabled: part.quick; onTapped: modelData === "sound" ? root.soundClicked() : modelData === "bluetooth" ? root.btClicked() : modelData === "wifi" ? root.wifiClicked() : root.trayClicked() }
                         HoverHandler { enabled: part.quick; cursorShape: Qt.PointingHandCursor }
                     }
                 }

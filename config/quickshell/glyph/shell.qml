@@ -35,6 +35,8 @@ ShellRoot {
     Launcher { id: launcher }
     Quick { id: quick; onPowerRequested: power.open(); onSettingsRequested: prefs.open() }
     SoundMenu { id: soundMenu; onSettingsRequested: prefs.open() }
+    BtMenu { id: btMenu; onSettingsRequested: prefs.open() }
+    WifiMenu { id: wifiMenu; onSettingsRequested: prefs.open() }
     Power { id: power }
     Prefs { id: prefs; onWallRequested: walls.open() }
     Glyph {}
@@ -69,8 +71,10 @@ ShellRoot {
                 screen: s.modelData
                 visible: Theme.scr(s.modelData.name, "bar")
                 onMarkClicked: launcher.toggle()
-                onTrayClicked: { soundMenu.close(); quick.toggle(); }
-                onSoundClicked: { quick.close(); soundMenu.toggle(); }
+                onTrayClicked: { soundMenu.close(); btMenu.close(); wifiMenu.close(); quick.toggle(); }
+                onSoundClicked: { quick.close(); btMenu.close(); wifiMenu.close(); soundMenu.toggle(); }
+                onBtClicked: { quick.close(); soundMenu.close(); wifiMenu.close(); btMenu.toggle(); }
+                onWifiClicked: { quick.close(); soundMenu.close(); btMenu.close(); wifiMenu.toggle(); }
                 onPowerClicked: power.toggle()
                 onClockClicked: cal.toggle()
             }
