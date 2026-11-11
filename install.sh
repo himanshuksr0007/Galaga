@@ -60,6 +60,7 @@ declare -A EXTRA=(
     [spotify]="spotify-launcher spicetify-cli spicetify-marketplace-bin" # Super+M
     [clash]="clash-verge-rev-bin"                                        # VPN panel, Super+P
     [pywalfox]="python-pywalfox"                                         # Firefox follows the palette (with the Pywalfox add-on)
+    [warp]="cloudflare-warp-bin"                                         # Cloudflare WARP: warp-svc daemon, warp-cli, warp-taskbar tray
 )
 
 G=config/quickshell/glyph
@@ -257,7 +258,7 @@ extras() { # --with or a prompt -> into EXT, installs yay (and repo packages) se
     [ "$DRY" = 1 ] && WITH="" # a dry run answers everything with the defaults
     if [ -z "${WITH+x}" ]; then
         if picker_tty; then # ticked, not typed; the default is nothing ticked, as Enter was
-            local items=() order=(telegram spotify clash pywalfox)
+            local items=() order=(telegram spotify clash pywalfox warp)
             for w in "${order[@]}"; do
                 [ -n "${EXTRA[$w]-}" ] && items+=("$w|$w -- ${EXTRA[$w]}")
             done
@@ -345,6 +346,20 @@ services() {
         run sudo systemctl enable power-profiles-daemon
     fi
     systemctl is-enabled -q display-manager.service 2>/dev/null || run sudo systemctl enable sddm
+    # Cloudflare WARP (the warp extra): warp-cli and the tray applet are front-ends for the
+    # warp-svc daemon -- enable and start it, or the client has nothing to talk to
+    [[ " ${WITH//,/ } " == *" warp "* ]] && run sudo systemctl enable --now warp-svc
+    # The tray applet itself is started once by the rice (execs.lua). The package also
+    # ships a systemd user service for it whose Restart brings the window back seconds
+    # after it is closed, and an xdg autostart entry that becomes a second service --
+    # mask and hide both, so a killed client stays dead until the next login
+    if [[ " ${WITH//,/ } " == *" warp "* ]]; then
+        run systemctl --user mask warp-taskbar.service
+        run systemctl --user stop warp-taskbar.service
+        run mkdir -p "$HOME/.config/autostart"
+        if [ "$DRY" = 1 ]; then note "would hide the warp xdg autostart entry"
+        else printf '[Desktop Entry]\nHidden=true\n' > "$HOME/.config/autostart/com.cloudflare.WarpTaskbar.desktop"; fi
+    fi
     run systemctl --user enable pipewire-pulse.socket wireplumber ydotool
     run sudo usermod -aG input,video "$USER" # ydotool (uinput), brightnessctl
     run xdg-user-dirs-update
@@ -786,6 +801,7 @@ install_flow() { # the guided install: questions, one password, then straight th
     esac
     # spicetify needs Spotify already downloaded and logged in, so there is nothing to apply before the first launch
     [[ " ${WITH//,/ } " == *" spotify "* ]] && say "spotify: launch it, log in, then spicetify config custom_apps marketplace && spicetify backup apply"
+    [[ " ${WITH//,/ } " == *" warp "* ]] && say "warp: once -- warp-cli registration new, then warp-cli connect; its icon lives in the tray from the next login"
     kernel_note
     if [ "$DRY" = 1 ]; then say "dry run done -- nothing was changed"; else say "done. reboot and pick Hyprland in sddm"; fi
 }
@@ -891,5 +907,5 @@ case "${1:-}" in
     ""|--with) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
         [ "${1:-}" = --with ] && WITH="${*:2}" # both comma- and space-separated
         install_flow ;;
-    *) echo "usage: $0 [--with telegram,spotify,clash,pywalfox | --links | --greeter | --dry-run | --update | --fix-plasma | --uninstall]"; exit 1 ;;
+    *) echo "usage: $0 [--with telegram,spotify,clash,pywalfox,warp | --links | --greeter | --dry-run | --update | --fix-plasma | --uninstall]"; exit 1 ;;
 esac

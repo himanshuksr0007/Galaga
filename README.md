@@ -75,7 +75,8 @@ git clone https://github.com/yasakei/glyph-rice ~/.local/share/glyph
 Without `--with` it asks everything up front, in lists you tick and pick with the arrow keys —
 nothing to type: the file manager (`thunar` or `dolphin`), the login screen (keep yours, or the glyph
 face) and which extras to tick: `telegram` (`Super` `D`), `spotify` with
-Spicetify (`Super` `M`), `clash` for the VPN panel, `pywalfox` so Firefox follows the palette.
+Spicetify (`Super` `M`), `clash` for the VPN panel, `pywalfox` so Firefox follows the palette,
+`warp` for Cloudflare WARP (the daemon is enabled for you; its icon sits in the tray).
 One password, then it runs unattended. Old configs go to `~/.dots-backup-<date>/`.
 Wallpapers are read from `~/Pictures/Wallpapers`.
 

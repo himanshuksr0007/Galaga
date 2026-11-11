@@ -31,6 +31,18 @@ hl.on("hyprland.start", function()
     -- running -- kill our own first (AMM021's dedupe)
     hl.exec_cmd([[sh -c 'command -v udiskie >/dev/null || exit 0; pkill -x -u "$(id -u)" udiskie; exec udiskie -a -n -T']])
 
+    -- Cloudflare WARP's tray applet, when the warp extra installed the client
+    -- (install.sh; the warp-svc daemon is enabled there). Same guard and dedupe
+    -- as udiskie: no binary -- no-op; a restart must not stack two tray icons.
+    -- This start is the only one: install.sh masks the package's own user
+    -- service (its Restart kept resurrecting the window after it was closed)
+    -- and hides its xdg autostart, so a killed client stays dead for the session.
+    -- It waits for the shell's tray first (up to 10 s): started before a
+    -- StatusNotifier host exists, the applet opens its main window on the
+    -- desktop instead of sitting in the tray (seen at login, 2026-11-11).
+    -- xcb is the platform the user verified this Qt app runs on here
+    hl.exec_cmd([[sh -c 'command -v warp-taskbar >/dev/null || exit 0; pkill -x -u "$(id -u)" warp-taskbar; for i in $(seq 1 50); do busctl --user status org.kde.StatusNotifierWatcher >/dev/null 2>&1 && break; sleep 0.2; done; exec env QT_QPA_PLATFORM=xcb warp-taskbar']])
+
     -- Auto delete trash 30 days old
     hl.exec_cmd("trash-empty 30")
 
