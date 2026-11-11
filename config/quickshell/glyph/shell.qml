@@ -34,9 +34,10 @@ ShellRoot {
 
     Launcher { id: launcher }
     Quick { id: quick; onPowerRequested: power.open(); onSettingsRequested: prefs.open() }
-    SoundMenu { id: soundMenu; onSettingsRequested: prefs.open() }
-    BtMenu { id: btMenu; onSettingsRequested: prefs.open() }
-    WifiMenu { id: wifiMenu; onSettingsRequested: prefs.open() }
+    SoundMenu { id: soundMenu; onSettingsRequested: { prefs.close(); devSettings.open("sound"); } }
+    BtMenu { id: btMenu; onSettingsRequested: { prefs.close(); devSettings.open("bt"); } }
+    WifiMenu { id: wifiMenu; onSettingsRequested: { prefs.close(); devSettings.open("wifi"); } }
+    DeviceSettings { id: devSettings }
     Power { id: power }
     Prefs { id: prefs; onWallRequested: walls.open() }
     Glyph {}

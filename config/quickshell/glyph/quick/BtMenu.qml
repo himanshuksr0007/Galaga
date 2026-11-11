@@ -14,8 +14,8 @@ import qs.services
 // picker's manners in quick settings) and new devices found while the menu
 // is open (tap pairs). Battery is the number bluez itself reports
 // (BluetoothDevice.battery), shown only when the device reports one.
-// The footer opens a real bluetooth manager when one is installed
-// (overskride, then blueman) and prefs otherwise; the (i) beside it opens
+// The footer opens the bluetooth settings page (prefs/DeviceSettings --
+// its own window, not part of prefs, reached only from here); the (i)
 // the info page: adapter name, address and bluez version (bluetoothctl --
 // quickshell does not expose the address), and the heavy actions -- reset
 // the adapter (a power cycle), restart the service (pkexec), remove every
@@ -75,18 +75,6 @@ PanelWindow {
                 if (m) root.adapterAddress = m[1].toUpperCase();
                 const v = text.match(/bluetoothctl:\s*([\d.]+)/);
                 if (v) root.bluezVer = v[1];
-            }
-        }
-    }
-    // a full bluetooth manager if the system has one, prefs if it does not
-    Process {
-        id: btAppProc
-        command: ["sh", "-c", "command -v overskride || command -v blueman-manager"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const p = text.trim().split("\n")[0];
-                if (p) Quickshell.execDetached([p]);
-                else root.settingsRequested();
             }
         }
     }
@@ -225,7 +213,7 @@ PanelWindow {
                                 Lb { text: "bluetooth settings"; anchors.verticalCenter: parent.verticalCenter }
                                 Icon { text: "\u{F0142}"; font.pixelSize: 13; color: Theme.grey; anchors.verticalCenter: parent.verticalCenter }
                                 HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                TapHandler { onTapped: { btAppProc.running = true; root.close(); } }
+                                TapHandler { onTapped: { root.close(); root.settingsRequested(); } }
                             }
                             Rectangle {
                                 anchors { right: parent.right; rightMargin: 2; verticalCenter: parent.verticalCenter }
