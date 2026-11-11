@@ -60,7 +60,11 @@ PanelWindow {
     }
     function tapDev(o) {
         if (o.pairing) return o.cancelPair();
-        if (!o.paired && !o.bonded) { o.trusted = true; return o.pair(); }
+        // a new device goes through connect(), not pair(): bluez bonds as part of
+        // connecting (the bluetoothctl sequence -- connect, bonded, paired,
+        // profiles), while Pair() alone raises a bare ACL link for the bonding
+        // and drops it seconds later when no profile ever connects
+        if (!o.paired && !o.bonded) { o.trusted = true; return o.connect(); }
         return o.connected ? o.disconnect() : o.connect();
     }
 

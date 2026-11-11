@@ -53,7 +53,7 @@ Rectangle {
         err = "";
         if (!isWifi) {
             if (o.pairing) return o.cancelPair();
-            if (!o.paired) { o.trusted = true; return o.pair(); }
+            if (!o.paired) { o.trusted = true; return o.connect(); } // connect bonds too; pair() alone drops the link (see BtMenu)
             return o.connected ? o.disconnect() : o.connect();
         }
         if (o.connected) return portal ? Qt.openUrlExternally("http://neverssl.com") : o.disconnect();

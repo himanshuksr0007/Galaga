@@ -709,7 +709,7 @@ PanelWindow {
                 onHit: {
                     if (brow.on) brow.o.disconnect();
                     else if (brow.o.paired || brow.o.bonded) brow.o.connect();
-                    else { brow.o.trusted = true; brow.o.pair(); }
+                    else { brow.o.trusted = true; brow.o.connect(); } // connect, not pair: bluez bonds inside connect; Pair() alone drops the link (see BtMenu)
                 }
             }
             PillBtn {
