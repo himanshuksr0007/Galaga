@@ -52,7 +52,9 @@ Scope {
     // returns when it fades. The level leans on the low bands, like the matrix does.
     // shell performance lite (Theme.perfLite): the meter stands down -- cava loses this consumer,
     // and with home's matrix gone too the process never starts for eye-candy
-    readonly property bool vuOn: Theme.state.edges && Theme.state.featEdges && Media.playing && !Theme.perfLite
+    // a fullscreen window (a video playing, a game) stands the meter down too: the
+    // strip rides the overlay layer, so without this it dances over the picture
+    readonly property bool vuOn: Theme.state.edges && Theme.state.featEdges && Media.playing && !Theme.perfLite && !Game.fullscreen
     onVuOnChanged: Cava.use("edges", vuOn)
     Component.onCompleted: Cava.use("edges", vuOn)
     Component.onDestruction: Cava.use("edges", false)

@@ -18,6 +18,7 @@ Singleton {
     id: root
 
     property bool playing: false // a game is fullscreen right now
+    property bool fullscreen: false // ANY window is fullscreen right now (a video counts) -- the sound visualiser stands down for it (galaga/Galaga.qml)
     readonly property bool on: Theme.state.gameAuto !== null && Theme.state.gameAuto !== undefined
 
     function isGame(c) {
@@ -32,6 +33,7 @@ Singleton {
                 let list;
                 try { list = JSON.parse(text); } catch (e) { return; }
                 root.playing = list.some(c => root.isGame(c));
+                root.fullscreen = list.some(c => (c.fullscreen ?? 0) > 0);
             }
         }
     }
