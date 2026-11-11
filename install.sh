@@ -62,6 +62,7 @@ declare -A EXTRA=(
     [clash]="clash-verge-rev-bin"                                        # VPN panel, Super+P
     [pywalfox]="python-pywalfox"                                         # Firefox follows the palette (with the Pywalfox add-on)
     [warp]="cloudflare-warp-bin"                                         # Cloudflare WARP: warp-svc daemon, warp-cli, warp-taskbar tray
+    [overskride]="overskride-bin"                                        # a full Bluetooth manager next to the shell's quick panel
 )
 
 G=config/quickshell/glyph
@@ -259,7 +260,7 @@ extras() { # --with or a prompt -> into EXT, installs yay (and repo packages) se
     [ "$DRY" = 1 ] && WITH="" # a dry run answers everything with the defaults
     if [ -z "${WITH+x}" ]; then
         if picker_tty; then # ticked, not typed; the default is nothing ticked, as Enter was
-            local items=() order=(telegram spotify clash pywalfox warp)
+            local items=() order=(telegram spotify clash pywalfox warp overskride)
             for w in "${order[@]}"; do
                 [ -n "${EXTRA[$w]-}" ] && items+=("$w|$w -- ${EXTRA[$w]}")
             done
