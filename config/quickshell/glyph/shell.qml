@@ -34,6 +34,7 @@ ShellRoot {
 
     Launcher { id: launcher }
     Quick { id: quick; onPowerRequested: power.open(); onSettingsRequested: prefs.open() }
+    SoundMenu { id: soundMenu }
     Power { id: power }
     Prefs { id: prefs; onWallRequested: walls.open() }
     Glyph {}
@@ -68,7 +69,8 @@ ShellRoot {
                 screen: s.modelData
                 visible: Theme.scr(s.modelData.name, "bar")
                 onMarkClicked: launcher.toggle()
-                onTrayClicked: quick.toggle()
+                onTrayClicked: { soundMenu.close(); quick.toggle(); }
+                onSoundClicked: { quick.close(); soundMenu.toggle(); }
                 onPowerClicked: power.toggle()
                 onClockClicked: cal.toggle()
             }

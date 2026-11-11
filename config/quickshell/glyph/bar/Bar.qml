@@ -20,6 +20,7 @@ PanelWindow {
 
     signal markClicked
     signal trayClicked
+    signal soundClicked
     signal powerClicked
     signal clockClicked
 
@@ -139,7 +140,8 @@ PanelWindow {
             }
 
             // tray -- Theme.state.bar in order (settings, BAR section). Layout, network, bluetooth, sound (wheel -- volume),
-            // notifications, battery: a click opens quick settings. Power mode and power -- their own clicks
+            // notifications, battery: a click opens quick settings -- except sound, whose click opens its own menu
+            // (quick/SoundMenu). Power mode and power -- their own clicks
             Pile {
                 x: root.vert ? (parent.width - width) / 2 : parent.width - width - 22
                 y: root.vert ? parent.height - height - 22 : (parent.height - height) / 2
@@ -153,7 +155,7 @@ PanelWindow {
                         readonly property bool quick: modelData !== "mode" && modelData !== "power" && modelData !== "focus"
                         sourceComponent: root.parts[modelData] ?? null
                         visible: !!sourceComponent && (modelData !== "battery" || root.bat.isLaptopBattery) && (modelData !== "focus" || Theme.state.featFocus)
-                        TapHandler { enabled: part.quick; onTapped: root.trayClicked() }
+                        TapHandler { enabled: part.quick; onTapped: modelData === "sound" ? root.soundClicked() : root.trayClicked() }
                         HoverHandler { enabled: part.quick; cursorShape: Qt.PointingHandCursor }
                     }
                 }
