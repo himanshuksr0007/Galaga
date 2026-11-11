@@ -533,9 +533,16 @@ ask_setup() { # every question first (AMM021's flow): the file manager and the l
     printf '  file manager [thunar] / dolphin: '
     read -r a </dev/tty || a=""
     case "$a" in dolphin) FILES=dolphin ;; *) FILES=thunar ;; esac
-    printf '  login screen [keep] / glyph: '
-    read -r a </dev/tty || a=""
-    case "$a" in glyph) LOGIN=greeter ;; *) LOGIN="" ;; esac
+    if picker_tty; then # picked from a list; "keep" is the default, as Enter was
+        pick_one "login screen" keep \
+            "keep|keep -- your current login screen" \
+            "greeter|glyph -- the glyph face (greetd)"
+        case "$PICK_OUT" in keep) LOGIN="" ;; *) LOGIN=$PICK_OUT ;; esac
+    else
+        printf '  login screen [keep] / glyph: '
+        read -r a </dev/tty || a=""
+        case "$a" in glyph) LOGIN=greeter ;; *) LOGIN="" ;; esac
+    fi
 }
 
 KEEPER=""
