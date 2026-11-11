@@ -741,18 +741,7 @@ PanelWindow {
 
                 Column {
                     spacing: 14
-                    Toggle { width: 200; text: "light"; on: Theme.light; onFlip: { Theme.state.themeMode = 0; Theme.setLight(!Theme.light); } }
-                    Pick {
-                        label: "theme"
-                        opts: ["light", "dark", "auto"]
-                        cur: Theme.state.themeMode === 1 ? 2 : Theme.light ? 0 : 1
-                        onPicked: i => {
-                            if (i === 2) Theme.state.themeMode = 1;
-                            else { Theme.state.themeMode = 0; Theme.setLight(i === 0); }
-                        }
-                    }
-                    TimeStep { visible: Theme.state.themeMode === 1; label: "light at"; value: Theme.state.lightAt; onMoved: v => Theme.state.lightAt = v }
-                    TimeStep { visible: Theme.state.themeMode === 1; label: "dark at"; value: Theme.state.darkAt; onMoved: v => Theme.state.darkAt = v }
+                    // no theme controls here -- they live on STYLE, with the colours they restyle
                     Toggle { width: 200; text: "dot grid"; on: Theme.state.grid; onFlip: Theme.state.grid = !Theme.state.grid }
                     Toggle { width: 200; text: "orb"; on: Theme.state.orb; onFlip: Theme.state.orb = !Theme.state.orb }
                     Toggle { width: 200; text: "24 hours"; on: Theme.state.clock24; onFlip: Theme.state.clock24 = !Theme.state.clock24 }
@@ -900,7 +889,23 @@ PanelWindow {
                     cur: ["", "wall", "scheme"].indexOf(Theme.state.paint)
                     onPicked: i => Theme.state.paint = ["", "wall", "scheme"][i]
                 }
-                Pick { label: "theme"; opts: ["dark", "light"]; cur: Theme.light ? 1 : 0; onPicked: i => Theme.setLight(i === 1) }
+                Pick {
+                    label: "theme"
+                    opts: ["light", "dark", "auto"]
+                    cur: Theme.state.themeMode === 1 ? 2 : Theme.light ? 0 : 1
+                    onPicked: i => {
+                        if (i === 2) Theme.state.themeMode = 1;
+                        else { Theme.state.themeMode = 0; Theme.setLight(i === 0); }
+                    }
+                }
+            }
+
+            // the auto schedule's hours -- only while theme is auto (Theme.state.themeMode 1)
+            Row {
+                visible: Theme.state.themeMode === 1
+                spacing: 40
+                TimeStep { label: "light at"; value: Theme.state.lightAt; onMoved: v => Theme.state.lightAt = v }
+                TimeStep { label: "dark at"; value: Theme.state.darkAt; onMoved: v => Theme.state.darkAt = v }
             }
 
             // what the source has. One height for all: the Page is centered, and the layout would jump when the source
