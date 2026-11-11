@@ -55,7 +55,8 @@ Item {
     // power from the lock (AMM021's lock power menu): sleep, reboot, power off -- the session
     // lock only (session flag); the greeter face never shows it. Reboot and power off take a
     // second press within 5 s: a locked session can hold unsaved work. systemctl, as in power/
-    readonly property var powerActs: [["sleep", "suspend"], ["reboot", "reboot"], ["power off", "poweroff"]]
+    // name, systemctl verb, icon, key -- the rows below and F10/F11/F12 both read this list
+    readonly property var powerActs: [["sleep", "suspend", "\u{F0594}", "f10"], ["reboot", "reboot", "\u{F0709}", "f11"], ["power off", "poweroff", "\u{F0425}", "f12"]]
     property int armed: -1
     Timer { id: disarm; interval: 5000; onTriggered: root.armed = -1 }
     function powerAct(i) {
@@ -185,24 +186,55 @@ Item {
                     }
                 }
             }
-            // power -- session lock only, like the summary: a click, or F10 F11 F12 (see the keys above)
+            // power -- session lock only, like the summary: a click, or F10 F11 F12
+            // (see the keys above). Three chips in a row: an icon disc, the name,
+            // and the shortcut as a key cap, so the keys are on the face, not
+            // only in the handler. (Built as plain rectangles with explicit
+            // heights -- the earlier rows were Row delegates and rendered
+            // nowhere on the real lock, label only.)
             Column {
                 visible: root.session
-                spacing: 9
+                spacing: 10
+                Lb { text: "power"; color: Theme.grey }
                 Row {
                     spacing: 10
-                    Lb { text: "power"; color: Theme.grey }
-                    Lb { text: "f10 f11 f12"; px: 10; color: Theme.grey }
-                }
-                Repeater {
-                    model: root.powerActs
-                    Row {
-                        required property var modelData
-                        required property int index
-                        spacing: 12
-                        Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 9; height: 9; radius: 4.5; color: root.armed === index ? Theme.red : Theme.s3 }
-                        Lb { text: root.armed === index ? `press again to ${modelData[0]}` : modelData[0]; color: root.armed === index ? Theme.red : Theme.fg }
-                        MouseArea { anchors.fill: parent; enabled: !root.auth.leaving; onClicked: root.powerAct(index) }
+                    Repeater {
+                        model: root.powerActs
+                        Rectangle {
+                            id: chip
+                            required property var modelData
+                            required property int index
+                            readonly property bool arm: root.armed === index
+                            width: crow.width + 26
+                            height: 38
+                            radius: Theme.corner(19)
+                            color: arm ? Theme.red : Theme.s1
+                            border { width: 1; color: arm ? Theme.red : Theme.s2 }
+                            Row {
+                                id: crow
+                                anchors.centerIn: parent
+                                spacing: 9
+                                Rectangle {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 24
+                                    height: 24
+                                    radius: 12
+                                    color: chip.arm ? Theme.fg : Theme.s2
+                                    Icon { anchors.centerIn: parent; text: chip.modelData[2]; font.pixelSize: 14; color: chip.arm ? Theme.red : Theme.fg }
+                                }
+                                Lb { anchors.verticalCenter: parent.verticalCenter; text: chip.arm ? `press again` : chip.modelData[0]; color: chip.arm ? Theme.ink : Theme.fg }
+                                Rectangle {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: kcap.width + 12
+                                    height: 20
+                                    radius: Theme.corner(6)
+                                    color: "transparent"
+                                    border { width: 1; color: chip.arm ? Theme.ink : Theme.s3 }
+                                    Lb { id: kcap; anchors.centerIn: parent; text: chip.modelData[3]; px: 10; color: chip.arm ? Theme.ink : Theme.grey }
+                                }
+                            }
+                            MouseArea { anchors.fill: parent; enabled: !root.auth.leaving; onClicked: root.powerAct(index) }
+                        }
                     }
                 }
             }
