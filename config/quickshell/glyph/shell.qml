@@ -85,6 +85,14 @@ ShellRoot {
         Rules.night();
         Rules.idle();
         autoTheme();
+        // the hotspot has a password from the very first boot: rolled once,
+        // here, and kept until the user changes it -- never re-rolled on use
+        if (!Theme.state.hotspotPass) {
+            const abc = "abcdefghjkmnpqrstuvwxyz23456789";
+            let p = "";
+            for (let i = 0; i < 12; i++) p += abc[Math.floor(Math.random() * abc.length)];
+            Theme.state.hotspotPass = p;
+        }
     }
     // theme auto (prefs LOOK / FEATURES): light between lightAt and darkAt (minutes after
     // midnight; lightAt past darkAt reads as an overnight span, equal -- no switch). It

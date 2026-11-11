@@ -268,6 +268,8 @@ Singleton {
             property bool audioMeter: false // AUDIO page level meter: PwNodePeakMonitor crashes quickshell 0.3.0, so it is opt-in for 0.3.1+
             property bool featEq: true       // system eq (services/Eq): a pipewire filter chain in front of a device, gains per device in eqDev
             property var eqDev: ({})          // sink node name -> { on, lo, mid, hi } (decibels); missing -- off and flat
+            property string hotspotSsid: ""   // personal hotspot name (quick/WifiMenu); empty -- the machine's hostname
+            property string hotspotPass: ""   // personal hotspot password; empty -- one is made when the hotspot first starts
             property var screens: ({})     // per-screen own settings by monitor model (Theme.sid): { bar, home, widgets, wall }
         }
     }
