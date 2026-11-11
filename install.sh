@@ -530,9 +530,14 @@ ask_setup() { # every question first (AMM021's flow): the file manager and the l
     [ -z "${WITH+x}" ] && { : </dev/tty; } 2>/dev/null || return 0
     say "a few choices (Enter keeps the default)"
     local a
-    printf '  file manager [thunar] / dolphin: '
-    read -r a </dev/tty || a=""
-    case "$a" in dolphin) FILES=dolphin ;; *) FILES=thunar ;; esac
+    if picker_tty; then # picked from a list; thunar is the default, as Enter was
+        pick_one "file manager" thunar "thunar|thunar" "dolphin|dolphin"
+        FILES=$PICK_OUT
+    else
+        printf '  file manager [thunar] / dolphin: '
+        read -r a </dev/tty || a=""
+        case "$a" in dolphin) FILES=dolphin ;; *) FILES=thunar ;; esac
+    fi
     if picker_tty; then # picked from a list; "keep" is the default, as Enter was
         pick_one "login screen" keep \
             "keep|keep -- your current login screen" \
