@@ -1339,6 +1339,11 @@ PanelWindow {
                 Dial { id: rate; label: "rate · /s"; from: 10; to: 60; value: root.r.repeatRate; onMoved: v => { root.r.repeatRate = v; Rules.input(); } }
                 Dial { label: "scroll · %"; from: 10; to: 100; step: 5; value: root.r.scroll; onMoved: v => { root.r.scroll = v; Rules.input(); } }
                 Dial { label: "pointer"; from: -100; to: 100; step: 5; value: root.r.sens; onMoved: v => { root.r.sens = v; Rules.input(); } }
+                Dial { label: "mouse · %"; from: 50; to: 200; step: 10; value: root.r.mouseScroll; onMoved: v => { root.r.mouseScroll = v; Rules.input(); } }
+            }
+            Row {
+                spacing: 20
+                Toggle { text: "mouse · natural scroll"; on: root.r.mouseNatural; onFlip: { root.r.mouseNatural = !root.r.mouseNatural; Rules.input(); } }
             }
             Row {
                 spacing: 20

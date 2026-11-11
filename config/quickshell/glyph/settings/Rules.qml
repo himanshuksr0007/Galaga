@@ -86,6 +86,10 @@ Singleton {
             property int scroll: 30       // % — scroll_factor 0.3
             property int sens: 0          // -100…100 → sensitivity -1…1
             property bool flat: false
+            // the mouse's own pair (the ones above under touchpad are the pad's):
+            // top-level input keywords, so the wheel inverts/speeds without touching the pad
+            property bool mouseNatural: false
+            property int mouseScroll: 100 // % — the mouse's scroll_factor 1.0
             // Idle: minutes, 0 -- never
             property int lockAfter: 3
             property int dpmsAfter: 5
@@ -267,8 +271,8 @@ Singleton {
         if (!store.manageInput) return; // prefs -> INPUT -> shell sets input off: keyboard/mouse are the hypr config's
         const s = store;
         hypr(`hl.config({ input = { kb_options = "${switches[s.kbSwitch]?.[1] ?? switches[0][1]}", repeat_delay = ${s.repeatDelay}, repeat_rate = ${s.repeatRate}, `
-           + `sensitivity = ${s.sens / 100}, accel_profile = "${s.flat ? "flat" : "adaptive"}", touchpad = { natural_scroll = ${s.natural}, `
-           + `tap_to_click = ${s.tap}, disable_while_typing = ${s.typingOff}, scroll_factor = ${s.scroll / 100} } } })`);
+           + `sensitivity = ${s.sens / 100}, accel_profile = "${s.flat ? "flat" : "adaptive"}", natural_scroll = ${s.mouseNatural}, scroll_factor = ${s.mouseScroll / 100}, `
+           + `touchpad = { natural_scroll = ${s.natural}, tap_to_click = ${s.tap}, disable_while_typing = ${s.typingOff}, scroll_factor = ${s.scroll / 100} } } })`);
     }
     // hibernation is not available everywhere (needs swap for resume, zram does not count) -- we ask logind. No -- regular sleep, the items
     // of hibernation are hidden. The reply arrived after idle() -- rewrite the config (the lock does not call idle(), so it is unaffected)
