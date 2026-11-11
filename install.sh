@@ -256,9 +256,18 @@ extras() { # --with or a prompt -> into EXT, installs yay (and repo packages) se
     local w; EXT=()
     [ "$DRY" = 1 ] && WITH="" # a dry run answers everything with the defaults
     if [ -z "${WITH+x}" ]; then
-        say "what else to install? space-separated, Enter -- nothing"
-        for w in "${!EXTRA[@]}"; do printf '  %-9s %s\n' "$w" "${EXTRA[$w]}"; done
-        read -rp "  > " WITH || true
+        if picker_tty; then # ticked, not typed; the default is nothing ticked, as Enter was
+            local items=() order=(telegram spotify clash pywalfox)
+            for w in "${order[@]}"; do
+                [ -n "${EXTRA[$w]-}" ] && items+=("$w|$w -- ${EXTRA[$w]}")
+            done
+            pick_multi "what else to install?" "" "${items[@]}"
+            WITH="${PICK_OUT[*]}"
+        else
+            say "what else to install? space-separated, Enter -- nothing"
+            for w in "${!EXTRA[@]}"; do printf '  %-9s %s\n' "$w" "${EXTRA[$w]}"; done
+            read -rp "  > " WITH || true
+        fi
     fi
     for w in ${WITH//,/ }; do
         [ -n "${EXTRA[$w]-}" ] || { echo "no such option: $w (available: ${!EXTRA[*]})"; exit 1; }
