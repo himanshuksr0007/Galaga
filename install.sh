@@ -333,9 +333,45 @@ plugins() { # hyprbars -- the window title bars (config/hypr/hyprland/titlebars.
     say "after every Hyprland upgrade the plugin goes stale: hyprpm update (then hyprpm reload or relog)"
 }
 
+bt_autoenable() { # bluez: the adapter powers itself when the daemon starts
+    # AutoEnable, under [Policy] in /etc/bluetooth/main.conf. Without it the
+    # adapter's power rides on whichever client asks first, and a power
+    # transition under a fresh connection drops paired audio devices --
+    # earbuds that connect, then disconnect a breath later (2026-11-11).
+    # main.conf has no drop-in directory, so the distro file is edited in
+    # place: the key is set inside [Policy] only, and a backup stays beside it
+    local conf=/etc/bluetooth/main.conf
+    [ -f "$conf" ] || { note "no $conf -- bluetooth auto-enable skipped"; return 0; }
+    grep -Eq '^[[:space:]]*AutoEnable[[:space:]]*=[[:space:]]*true' "$conf" && return 0
+    if [ "$DRY" = 1 ]; then note "would set AutoEnable=true in $conf"; return 0; fi
+    sudo cp -n "$conf" "$conf.glyph-backup" || true
+    sudo python3 - "$conf" <<'PYEOF'
+import sys
+path = sys.argv[1]
+lines = open(path).read().splitlines()
+out, section, done = [], None, False
+for line in lines:
+    s = line.strip()
+    if s.startswith("[") and s.endswith("]"):
+        if section == "Policy" and not done:
+            out.append("AutoEnable=true"); done = True
+        section = s[1:-1]
+    if section == "Policy" and not done and (s.startswith("AutoEnable") or s.startswith("#AutoEnable")):
+        out.append("AutoEnable=true"); done = True; continue
+    out.append(line)
+if section == "Policy" and not done:
+    out.append("AutoEnable=true"); done = True
+if not done:  # no [Policy] section at all
+    out += ["", "[Policy]", "AutoEnable=true"]
+open(path, "w").write("\n".join(out) + "\n")
+PYEOF
+    note "bluetooth: AutoEnable=true in $conf (backup: $conf.glyph-backup) -- the adapter powers on with the daemon"
+}
+
 services() {
     say "services"
     run sudo systemctl enable NetworkManager bluetooth
+    bt_autoenable
     # the shell's power modes (quick, the bar, prefs -> POWER) set power-profiles-daemon's profile.
     # tuned and tlp manage the same knobs their own way -- two of them at once fight over the cpu,
     # so if one is already this system's choice, leave it in charge and say what switching takes
