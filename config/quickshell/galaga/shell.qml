@@ -33,13 +33,21 @@ ShellRoot {
     id: shell
 
     Launcher { id: launcher }
-    Quick { id: quick; onPowerRequested: power.open(); onSettingsRequested: prefs.open() }
-    SoundMenu { id: soundMenu; onSettingsRequested: { prefs.close(); devSettings.open("sound"); } }
-    BtMenu { id: btMenu; onSettingsRequested: { prefs.close(); devSettings.open("bt"); } }
-    WifiMenu { id: wifiMenu; onSettingsRequested: { prefs.close(); devSettings.open("wifi"); } }
-    DeviceSettings { id: devSettings }
+    Quick { id: quick; onPowerRequested: power.open(); onSettingsRequested: shell.openPrefs() }
+    SoundMenu { id: soundMenu; onSettingsRequested: shell.openDevSettings("sound") }
+    BtMenu { id: btMenu; onSettingsRequested: shell.openDevSettings("bt") }
+    WifiMenu { id: wifiMenu; onSettingsRequested: shell.openDevSettings("wifi") }
+    // the two settings windows load on first use, not at shell start: together
+    // they are the biggest object trees in the shell and most sessions never
+    // open them. Once loaded they stay loaded -- page memory and open state
+    // behave exactly as when they were instantiated eagerly.
+    LazyLoader { id: devSettingsL; DeviceSettings {} }
     Power { id: power }
-    Prefs { id: prefs; onWallRequested: walls.open() }
+    LazyLoader { id: prefsL; Prefs { onWallRequested: walls.open() } }
+    function openPrefs() { prefsL.active = true; prefsL.item.open(); }
+    function closePrefs() { if (prefsL.item) prefsL.item.close(); }
+    function togglePrefs() { prefsL.active = true; prefsL.item.toggle(); }
+    function openDevSettings(page) { closePrefs(); devSettingsL.active = true; devSettingsL.item.open(page); }
     Galaga {}
     Buds {}
     Cal { id: cal }
@@ -186,7 +194,7 @@ ShellRoot {
     Shortcut { name: "expose"; description: "exposé: windows on this desktop"; onPressed: { if (Theme.state.featExpose) expose.toggle(); } }
     Shortcut { name: "quick"; description: "quick settings"; onPressed: quick.toggle() }
     Shortcut { name: "ward"; description: "quick settings"; onPressed: quick.toggle() } // Super+N in demonshot -- same toggles
-    Shortcut { name: "settings"; description: "settings"; onPressed: prefs.toggle() }
+    Shortcut { name: "settings"; description: "settings"; onPressed: shell.togglePrefs() }
     Shortcut { name: "power"; description: "power menu"; onPressed: power.toggle() }
     Shortcut { name: "shot"; description: "screenshot"; onPressed: shot.open() }
     Shortcut { name: "pact"; description: "vpn: clash verge"; onPressed: vpn.toggle() }
