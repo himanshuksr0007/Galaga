@@ -36,10 +36,9 @@ return {
     -- Touchpad
     touchpadDisableTyping      = false,
     touchpadScrollFactor       = 0.3,
-    gestureFingers             = 3,
+    gestureFingers             = 4,
     overviewFingers            = 4, -- the desktops overview: 4 fingers up, as on Windows (gestures.lua)
-    workspaceSwipeFingers      = 3, -- the Windows-style set: 3 fingers drive the desktops (gestures.lua)
-    gestureFingersMore         = 5,
+    workspaceSwipeFingers      = 4, -- the Windows-style set: 4 fingers drive the desktops (gestures.lua)
 
     -- Blur
     blurEnabled                = true,
@@ -78,7 +77,7 @@ return {
     cursorTheme                = "Bibata-Modern-Classic",
     cursorSize                 = 23,
     sleepGestureCmd            = "systemctl suspend-then-hibernate || systemctl suspend", -- no hibernation -- regular sleep
-    showDesktopCmd             = "bash $HOME/.config/hypr/scripts/show-desktop.sh", -- 3-finger swipe down: park this workspace's windows
+    showDesktopCmd             = "bash $HOME/.config/hypr/scripts/show-desktop.sh", -- 4-finger swipe down: park this workspace's windows
     minimiseCmd                = "bash $HOME/.config/hypr/scripts/minimise.sh", -- THE minimise entry point: every park path runs this (scripts/minimise.sh)
 
     ------------------
