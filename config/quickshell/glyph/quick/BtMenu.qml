@@ -214,30 +214,29 @@ PanelWindow {
                             }
                         }
 
-                        // footer -- a real manager if there is one, and the (i) for the info page
+                        // footer -- a real manager if there is one, centred; the (i) for the
+                        // info page sits at the panel's right border, centred on the same line
                         Item {
                             width: parent.width
                             height: 26
                             Row {
                                 anchors.centerIn: parent
-                                spacing: 12
-                                Row {
-                                    spacing: 8
-                                    Lb { text: "bluetooth settings"; anchors.verticalCenter: parent.verticalCenter }
-                                    Icon { text: "\u{F0142}"; font.pixelSize: 13; color: Theme.grey; anchors.verticalCenter: parent.verticalCenter }
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    TapHandler { onTapped: { btAppProc.running = true; root.close(); } }
-                                }
-                                Rectangle {
-                                    width: 26
-                                    height: 26
-                                    radius: 13
-                                    color: "transparent"
-                                    border { width: 1; color: Theme.s3 }
-                                    Icon { anchors.centerIn: parent; text: "\u{F02FC}"; font.pixelSize: 14; color: Theme.grey }
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    TapHandler { onTapped: root.view = "info" }
-                                }
+                                spacing: 8
+                                Lb { text: "bluetooth settings"; anchors.verticalCenter: parent.verticalCenter }
+                                Icon { text: "\u{F0142}"; font.pixelSize: 13; color: Theme.grey; anchors.verticalCenter: parent.verticalCenter }
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                TapHandler { onTapped: { btAppProc.running = true; root.close(); } }
+                            }
+                            Rectangle {
+                                anchors { right: parent.right; rightMargin: 2; verticalCenter: parent.verticalCenter }
+                                width: 26
+                                height: 26
+                                radius: 13
+                                color: "transparent"
+                                border { width: 1; color: Theme.s3 }
+                                Icon { anchors.centerIn: parent; text: "\u{F02FC}"; font.pixelSize: 14; color: Theme.grey }
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                TapHandler { onTapped: root.view = "info" }
                             }
                         }
                     }

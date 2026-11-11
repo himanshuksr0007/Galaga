@@ -166,7 +166,10 @@ PanelWindow {
     }
 
     readonly property var parts: ({ layout: layoutC, wifi: wifiC, bluetooth: btC, sound: soundC, notes: notesC, focus: focusC, battery: batC, mode: modeC, power: powerC, cat: catC })
-    Component { id: layoutC; Lb { text: Sys.layout; px: 10 } }
+    // the layout letters and the wi-fi fan sit low next to the icons: the fan's mass is its dot at the
+    // bottom, and the label's caps ride low in their line box where Icon crops its own with lead.
+    // A render-only nudge up, the layout does not move
+    Component { id: layoutC; Lb { text: Sys.layout; px: 10; transform: Translate { y: -2 } } }
     // RunCat: the busier the cpu, the faster it runs (250 ms a frame idle, 50 at full load). cpu is polled
     // while it is in the tray; the Binding is not in a delegate -- a destroyed value is not given back.
     // Grey as-is; in the light theme it would vanish on white, so it inverts to black, like the buds.
@@ -192,6 +195,7 @@ PanelWindow {
             id: wf
             width: 20
             height: 18
+            transform: Translate { y: -2 } // the fan's optical centre is its dot, low in the box (see layoutC)
             preferredRendererType: Shape.CurveRenderer
             readonly property color ink: root.wifi?.connected ? Theme.fg : Theme.grey
             ShapePath {
