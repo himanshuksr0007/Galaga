@@ -993,11 +993,15 @@ PanelWindow {
             k: 5
             caption: `windows · hyprland · gaps ${gIn.v} / ${gOut.v} · border ${bord.v} · rounding ${rnd.v} · panels ${pan.v} %`
 
+            // narrower than the other pages on purpose: this row carries TWO toggle
+            // columns beside the desktop, and at the Mini's full 760 the second one
+            // ran off the window's right edge (the Page starts at x 800)
             Row {
-                spacing: 40
+                spacing: 24
 
                 Mini {
                     id: desk
+                    width: 620
                     Repeater {
                         model: 2
                         Rectangle {
