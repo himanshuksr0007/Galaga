@@ -20,7 +20,7 @@ Column {
     // hardware only (no app streams), grouped by card: "SSL 2+" + "Line Outputs 1/L + 2/R".
     // A duplex node (a virtual mic-and-speaker) is a sink and a source at once — it goes in both lists
     function devs(out) {
-        return Pipewire.nodes.values.filter(n => n.audio && !n.isStream && (out ? n.isSink : n.type & PwNodeType.Source))
+        return Pipewire.nodes.values.filter(n => n.audio && !n.isStream && n.name !== "glyph-eq" && (out ? n.isSink : n.type & PwNodeType.Source))
             .map(n => Object.assign({ node: n }, split(n)))
             .sort((a, b) => a.card.localeCompare(b.card) || a.port.localeCompare(b.port));
     }
@@ -65,6 +65,18 @@ Column {
                 Toggle { width: 220; text: "system"; on: Theme.state.soundSys; onFlip: Theme.state.soundSys = !Theme.state.soundSys }
             }
             Lb { text: "interface -- panels and the volume tick · alerts -- a notification · system -- lock, screenshot, charger"; px: 10; color: Theme.mute }
+        }
+    }
+
+    // system eq (services/Eq): a pipewire filter chain the shell drops in front of an output, gains per
+    // device, set from the bar's sound menu on the device's own page. Off here -- the chain parks,
+    // every device is picked plain, and the eq sections hide themselves
+    Row {
+        spacing: 26
+        Column {
+            spacing: 12
+            Toggle { width: 220; text: "system eq"; on: Theme.state.featEq; onFlip: Theme.state.featEq = !Theme.state.featEq }
+            Lb { text: "bass / mid / treble per output, applied by the pc before the sound leaves · needs one pipewire restart after install"; px: 10; color: Theme.mute }
         }
     }
 
