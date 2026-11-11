@@ -34,7 +34,7 @@ ShellRoot {
 
     Launcher { id: launcher }
     Quick { id: quick; onPowerRequested: power.open(); onSettingsRequested: prefs.open() }
-    SoundMenu { id: soundMenu }
+    SoundMenu { id: soundMenu; onSettingsRequested: prefs.open() }
     Power { id: power }
     Prefs { id: prefs; onWallRequested: walls.open() }
     Glyph {}
