@@ -334,45 +334,74 @@ plugins() { # hyprbars -- the window title bars (config/hypr/hyprland/titlebars.
     say "after every Hyprland upgrade the plugin goes stale: hyprpm update (then hyprpm reload or relog)"
 }
 
-bt_autoenable() { # bluez: the adapter powers itself when the daemon starts
-    # AutoEnable, under [Policy] in /etc/bluetooth/main.conf. Without it the
-    # adapter's power rides on whichever client asks first, and a power
-    # transition under a fresh connection drops paired audio devices --
-    # earbuds that connect, then disconnect a breath later (2026-11-11).
+bt_policy() { # bluez: the policy set this hardware's audio devices need
+    # Four keys in /etc/bluetooth/main.conf, each earned the hard way
+    # (earbuds and a speaker that connected, then dropped a breath later,
+    # 2026-11-11; the set below is what ended it):
+    #   [Policy]  AutoEnable=true      -- the adapter powers on with the daemon,
+    #                                     not at the mercy of whichever client asks first
+    #   [General] ControllerMode=bredr -- BR/EDR only: the Intel adapter's dual-mode
+    #                                     LE path is what these audio devices died on.
+    #                                     COST: BLE-only peripherals stop working;
+    #                                     set this back to "dual" if you ever get one
+    #   [General] Privacy=off          -- LE privacy (rotating addresses) broke
+    #                                     reconnections; moot under bredr, set anyway
+    #   [General] FastConnectable=false -- the fast page mode's short timeout lost
+    #                                     reconnections the normal timing holds
     # main.conf has no drop-in directory, so the distro file is edited in
-    # place: the key is set inside [Policy] only, and a backup stays beside it
+    # place: each key is set inside its own section only, backup beside it
     local conf=/etc/bluetooth/main.conf
-    [ -f "$conf" ] || { note "no $conf -- bluetooth auto-enable skipped"; return 0; }
-    grep -Eq '^[[:space:]]*AutoEnable[[:space:]]*=[[:space:]]*true' "$conf" && return 0
-    if [ "$DRY" = 1 ]; then note "would set AutoEnable=true in $conf"; return 0; fi
+    [ -f "$conf" ] || { note "no $conf -- bluetooth policy skipped"; return 0; }
+    if grep -Eq '^[[:space:]]*AutoEnable[[:space:]]*=[[:space:]]*true' "$conf" \
+        && grep -Eq '^[[:space:]]*ControllerMode[[:space:]]*=[[:space:]]*bredr' "$conf" \
+        && grep -Eq '^[[:space:]]*Privacy[[:space:]]*=[[:space:]]*off' "$conf" \
+        && grep -Eq '^[[:space:]]*FastConnectable[[:space:]]*=[[:space:]]*false' "$conf"; then return 0; fi
+    if [ "$DRY" = 1 ]; then note "would set the bluetooth policy (AutoEnable, bredr, Privacy off, FastConnectable false) in $conf"; return 0; fi
     sudo cp -n "$conf" "$conf.glyph-backup" || true
     sudo python3 - "$conf" <<'PYEOF'
 import sys
 path = sys.argv[1]
+want = {("Policy", "AutoEnable"): "true",
+        ("General", "FastConnectable"): "false",
+        ("General", "ControllerMode"): "bredr",
+        ("General", "Privacy"): "off"}
 lines = open(path).read().splitlines()
-out, section, done = [], None, False
+out, section, done = [], None, set()
+def flush(sec):
+    for (s, k), v in want.items():
+        if s == sec and (s, k) not in done:
+            out.append(k + "=" + v); done.add((s, k))
 for line in lines:
     s = line.strip()
     if s.startswith("[") and s.endswith("]"):
-        if section == "Policy" and not done:
-            out.append("AutoEnable=true"); done = True
+        if section is not None: flush(section)
         section = s[1:-1]
-    if section == "Policy" and not done and (s.startswith("AutoEnable") or s.startswith("#AutoEnable")):
-        out.append("AutoEnable=true"); done = True; continue
-    out.append(line)
-if section == "Policy" and not done:
-    out.append("AutoEnable=true"); done = True
-if not done:  # no [Policy] section at all
-    out += ["", "[Policy]", "AutoEnable=true"]
+        out.append(line)
+        continue
+    bare = s[1:] if s.startswith("#") else s
+    matched = False
+    if section is not None and "=" in bare:
+        k = bare.split("=", 1)[0].strip()
+        if (section, k) in want:
+            out.append(k + "=" + want[(section, k)])
+            done.add((section, k))
+            matched = True
+    if not matched: out.append(line)
+if section is not None: flush(section)
+for sec in ("General", "Policy"):
+    if not any((sec, k) in done for (s, k) in want if s == sec):
+        out += ["", "[" + sec + "]"]
+        flush(sec)
 open(path, "w").write("\n".join(out) + "\n")
 PYEOF
-    note "bluetooth: AutoEnable=true in $conf (backup: $conf.glyph-backup) -- the adapter powers on with the daemon"
+    run sudo systemctl restart bluetooth
+    note "bluetooth: policy set in $conf (backup: $conf.glyph-backup) -- AutoEnable, BR/EDR only, Privacy off, FastConnectable off"
 }
 
 services() {
     say "services"
     run sudo systemctl enable NetworkManager bluetooth
-    bt_autoenable
+    bt_policy
     # the shell's power modes (quick, the bar, prefs -> POWER) set power-profiles-daemon's profile.
     # tuned and tlp manage the same knobs their own way -- two of them at once fight over the cpu,
     # so if one is already this system's choice, leave it in charge and say what switching takes

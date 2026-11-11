@@ -79,8 +79,11 @@ the same settings as Prefs → INPUT) and which extras to tick: `telegram` (`Sup
 Spicetify (`Super` `M`), `clash` for the VPN panel, `pywalfox` so Firefox follows the palette,
 `warp` for Cloudflare WARP (the daemon is enabled for you; its icon sits in the tray) and
 `overskride`, a full Bluetooth manager next to the shell's quick panel. The installer also sets
-BlueZ's `AutoEnable`, so the Bluetooth adapter powers on with its daemon instead of riding on
-whichever app asks first (a power transition mid-connection drops freshly paired earbuds).
+the BlueZ policy this hardware's audio devices need — the adapter powers on with its daemon
+(`AutoEnable`) and runs BR/EDR-only (`ControllerMode=bredr`, with LE privacy and fast-connectable
+off): the Intel adapter's dual-mode LE path drops budget earbuds and speakers a breath after
+they connect. The cost of `bredr` is BLE-only peripherals; the line in `/etc/bluetooth/main.conf`
+says how to switch it back.
 One password, then it runs unattended. Old configs go to `~/.dots-backup-<date>/`.
 Wallpapers are read from `~/Pictures/Wallpapers`.
 
