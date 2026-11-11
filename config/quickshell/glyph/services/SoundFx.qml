@@ -25,8 +25,11 @@ Item {
     SoundEffect { id: closeFx; source: Qt.resolvedUrl("../assets/sounds/close.wav"); volume: fx.vol }
     SoundEffect { id: briupFx; source: Qt.resolvedUrl("../assets/sounds/briup.wav"); volume: fx.vol }
     SoundEffect { id: bridownFx; source: Qt.resolvedUrl("../assets/sounds/bridown.wav"); volume: fx.vol }
+    // the one sampled sound in the set: a swoosh the user picked himself
+    // (Pixabay, "Copyright Free Swoosh" by DRAGON-STUDIO) for workspace switches
+    SoundEffect { id: swooshFx; source: Qt.resolvedUrl("../assets/sounds/swoosh.wav"); volume: fx.vol }
 
     readonly property var byName: ({ pop: popFx, tick: tickFx, lock: lockFx, unlock: unlockFx,
                                      notify: notifyFx, shot: shotFx, charge: chargeFx,
-                                     close: closeFx, briup: briupFx, bridown: bridownFx })
+                                     close: closeFx, briup: briupFx, bridown: bridownFx, swoosh: swooshFx })
 }

@@ -11,6 +11,12 @@ reproduces the committed WAVs byte for byte.
 writes config/quickshell/glyph/assets/sounds/*.wav (44.1 kHz mono 16-bit)
 and verifies each one on the way out: format, duration, peak level, and
 that no sample ever hits the rail (no clipping plateau).
+
+One file in that directory is NOT made here: swoosh.wav, the workspace-
+switch sound, is a sample the user picked himself -- "Copyright Free
+Swoosh" by DRAGON-STUDIO on Pixabay (pixabay.com/sound-effects/
+film-special-effects-copyright-free-swoosh-487669/), trimmed to its body
+and normalised into the set's format by hand. Don't regenerate it.
 """
 
 import math

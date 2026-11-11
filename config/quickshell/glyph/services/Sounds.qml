@@ -28,9 +28,9 @@ Singleton {
 
     readonly property var cats: ({ pop: "soundUi", tick: "soundUi", notify: "soundAlerts",
                                    lock: "soundSys", unlock: "soundSys", shot: "soundSys", charge: "soundSys",
-                                   close: "soundUi", briup: "soundUi", bridown: "soundUi" })
+                                   close: "soundUi", briup: "soundUi", bridown: "soundUi", swoosh: "soundUi" })
     readonly property var gaps: ({ pop: 150, tick: 90, notify: 400, lock: 250, unlock: 250, shot: 250, charge: 500,
-                                   close: 300, briup: 90, bridown: 90 })
+                                   close: 300, briup: 90, bridown: 90, swoosh: 250 })
     property var last: ({})
 
     function play(name) {
@@ -60,5 +60,17 @@ Singleton {
             if (!(a in cur) && tlPrev[a] && tlPrev[a] !== "org.quickshell") gone = true;
         tlPrev = cur;
         if (gone) play("close");
+    }
+
+    // the workspace-switch edge: the focused monitor's active workspace
+    // actually changing -- keys, the three-finger gesture and deck clicks all
+    // land here, so one watcher covers every way of switching. The first
+    // value only arms it, and a null monitor (or re-reporting the same id on
+    // a window move) never sounds.
+    readonly property int wsNow: Hyprland.focusedMonitor?.activeWorkspace?.id ?? -1
+    property int wsPrev: -1
+    onWsNowChanged: {
+        if (wsPrev !== -1 && wsNow !== -1 && wsNow !== wsPrev) play("swoosh");
+        if (wsNow !== -1) wsPrev = wsNow;
     }
 }
