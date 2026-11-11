@@ -1,4 +1,4 @@
--- the greeter's compositor: a stripped Hyprland whose only job is the glyph face.
+-- the greeter's compositor: a stripped Hyprland whose only job is the galaga face.
 -- Deployed to /etc/greetd/hyprland.lua by ./install.sh --greeter; greetd starts it
 -- as the "greeter" user. Deliberately NOT the session config: no plugins, no
 -- keybinds, no daemons -- but the input section mirrors the session's, so the
@@ -28,6 +28,6 @@ hl.config({
 
 hl.on("hyprland.start", function()
     -- the face, then the compositor exits: greetd starts the user session only
-    -- once this greeter session has ended (see glyph-greeter)
-    hl.exec_cmd("/etc/greetd/glyph-greeter")
+    -- once this greeter session has ended (see galaga-greeter)
+    hl.exec_cmd("/etc/greetd/galaga-greeter")
 end)

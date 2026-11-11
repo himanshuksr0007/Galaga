@@ -74,9 +74,9 @@ local so = hyprbars_so()
 if so then pcall(hl.plugin.load, so) end -- already loaded (a re-parse) or stale: either way, not fatal here
 
 local loaded = is_plugin_loaded("hyprbars")
-_G.GLYPH_HYPRBARS = loaded -- rules.lua gates its hyprbars:no_bar props on this, the same check
+_G.GALAGA_HYPRBARS = loaded -- rules.lua gates its hyprbars:no_bar props on this, the same check
 if not loaded then
-    print("glyph: hyprbars is not loaded at config time -- its keys and buttons wait for the hyprpm reload pass")
+    print("galaga: hyprbars is not loaded at config time -- its keys and buttons wait for the hyprpm reload pass")
 end
 
 local scheme = require("scheme.demonshot")
@@ -118,7 +118,7 @@ end
 -- Minimise does not exist in Hyprland: the window is parked on special:minimized.
 -- The white button runs scripts/minimise.sh -- the one entry point every park
 -- path uses (Super+Alt+M runs it too, via functions.minimise_active): it offers
--- the window to the glyph shell for the genie warp into the deck's minimised
+-- the window to the galaga shell for the genie warp into the deck's minimised
 -- section, and parks directly if the shell does not take it. A click focuses
 -- the window first (barDeco), so the script's active window is this one.
 -- Restore: Super+Alt+Shift+M, see functions.lua.

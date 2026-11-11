@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Glyph: installs everything on a clean Arch and links the configs from this repo.
+# Galaga: installs everything on a clean Arch and links the configs from this repo.
 #   ./install.sh                   guided: every question first (extras, file manager, login
 #                                  screen, mouse), one password, then it runs to the end by itself
 #   ./install.sh --dry-run         the guided flow, printing what it would do; changes nothing
@@ -11,7 +11,7 @@
 #   ./install.sh --uninstall       take the links away, put the old files and login screen back
 #   ./install.sh --fix-plasma      from KDE Plasma: Wi-Fi passwords out of KDE Wallet, autostart guards
 #   ./install.sh --links           symlinks only (on an already configured system)
-#   ./install.sh --greeter         boot login: greetd with the glyph face -- REPLACES the current
+#   ./install.sh --greeter         boot login: greetd with the galaga face -- REPLACES the current
 #                                  display manager (sddm/...); separate on purpose, prints its rollback
 set -euo pipefail
 
@@ -78,12 +78,12 @@ declare -A EXTRA=(
     [overskride]="overskride-bin"                                        # a full Bluetooth manager next to the shell's quick panel
 )
 
-G=config/quickshell/glyph
+G=config/quickshell/galaga
 # repo path -> path in $HOME
 LINKS=(
     "config/hypr                                .config/hypr"
     "config/nautilus-python/localsend.py        .local/share/nautilus-python/extensions/localsend.py"
-    "$G                                         .config/quickshell/glyph"
+    "$G                                         .config/quickshell/galaga"
     "config/quickshell/rice                     .config/quickshell/rice"
     "config/quickshell/rice/rice                .local/bin/rice"
     "config/kitty                               .config/kitty"
@@ -99,10 +99,10 @@ LINKS=(
     "$G/term/gtk-4.0/settings.ini               .config/gtk-4.0/settings.ini"
     "$G/term/window-buttons                     .config/gtk-3.0/window-buttons"
     "$G/term/window-buttons                     .config/gtk-4.0/window-buttons"
-    "config/pipewire/pipewire.conf.d/52-glyph-eq.conf .config/pipewire/pipewire.conf.d/52-glyph-eq.conf"
+    "config/pipewire/pipewire.conf.d/52-galaga-eq.conf .config/pipewire/pipewire.conf.d/52-galaga-eq.conf"
     "config/fish/config.fish                    .config/fish/config.fish"
     "config/fish/functions/fish_greeting.fish   .config/fish/functions/fish_greeting.fish"
-    "config/fonts                               .local/share/fonts/glyph"
+    "config/fonts                               .local/share/fonts/galaga"
 )
 
 say() { printf '\e[38;2;215;25;33m●\e[0m %s\n' "$*"; }
@@ -331,7 +331,7 @@ browser_bind() { # the Super+W browser follows the first browser picked: one mar
     BPICK="$BPICK" python3 - "$f" <<'PY'
 import os, sys
 path, pick = sys.argv[1], os.environ.get("BPICK", "")
-MARK = "-- glyph: browser (install.sh)"
+MARK = "-- galaga: browser (install.sh)"
 lines = []
 if os.path.exists(path):
     lines = open(path).read().splitlines()
@@ -429,7 +429,7 @@ bt_policy() { # bluez: the policy set this hardware's audio devices need
         && grep -Eq '^[[:space:]]*Privacy[[:space:]]*=[[:space:]]*off' "$conf" \
         && grep -Eq '^[[:space:]]*FastConnectable[[:space:]]*=[[:space:]]*false' "$conf"; then return 0; fi
     if [ "$DRY" = 1 ]; then note "would set the bluetooth policy (AutoEnable, bredr, Privacy off, FastConnectable false) in $conf"; return 0; fi
-    sudo cp -n "$conf" "$conf.glyph-backup" || true
+    sudo cp -n "$conf" "$conf.galaga-backup" || true
     sudo python3 - "$conf" <<'PYEOF'
 import sys
 path = sys.argv[1]
@@ -467,7 +467,7 @@ for sec in ("General", "Policy"):
 open(path, "w").write("\n".join(out) + "\n")
 PYEOF
     run sudo systemctl restart bluetooth
-    note "bluetooth: policy set in $conf (backup: $conf.glyph-backup) -- AutoEnable, BR/EDR only, Privacy off, FastConnectable off"
+    note "bluetooth: policy set in $conf (backup: $conf.galaga-backup) -- AutoEnable, BR/EDR only, Privacy off, FastConnectable off"
 }
 
 services() {
@@ -524,12 +524,12 @@ links() {
         ln -s "$src" "$dst"
         echo "  $dst"
     done
-    # rules.json and kitty.conf are created by the shell itself; rice starts glyph and builds the folder theme
+    # rules.json and kitty.conf are created by the shell itself; rice starts galaga and builds the folder theme
     if [ "$DRY" = 1 ]; then
-        note "would write glyph to ${XDG_STATE_HOME:-$HOME/.local/state}/rice/shell, seed the starter wallpapers and LocalSend's dark start"
+        note "would write galaga to ${XDG_STATE_HOME:-$HOME/.local/state}/rice/shell, seed the starter wallpapers and LocalSend's dark start"
     else
         mkdir -p "$HOME/.config/demonshot" "${XDG_STATE_HOME:-$HOME/.local/state}/rice"
-        echo glyph > "${XDG_STATE_HOME:-$HOME/.local/state}/rice/shell"
+        echo galaga > "${XDG_STATE_HOME:-$HOME/.local/state}/rice/shell"
         mkdir -p "$HOME/Pictures/Wallpapers" # wallpaper picker (Super+Shift+W) looks here
         # the five starter wallpapers (assets/wallpapers, CC0 -- generated for the rice): copied, never
         # overwriting -- once they're yours they're yours (AMM021's installer does the same)
@@ -561,7 +561,7 @@ browser_cleanup() { # firefox/zen: take OUT the inTitlebar user.js snippet older
     # a profile without the snippet is left untouched.
     say "browser cleanup (firefox/zen user.js)"
     if [ "$DRY" = 1 ]; then note "would remove the old inTitlebar snippet from firefox/zen profiles, if it's there"; return 0; fi
-    local marker='// glyph -- window buttons (see README: "Window buttons")'
+    local marker='// galaga -- window buttons (see README: "Window buttons")'
     local pref='user_pref("browser.tabs.inTitlebar", 0);'
     # everywhere firefox/zen keep profiles: the native homes, and the flatpak homes --
     # a flatpak's profile store sits under ~/.var/app/<app id>/, invisible to a plain
@@ -649,7 +649,7 @@ tmux_theme() { # tmux follows the palette: Theme.apps() writes ~/.config/tmux/th
     for conf in "$HOME/.config/tmux/tmux.conf" "$HOME/.tmux.conf"; do
         [ -f "$conf" ] || continue
         grep -qs 'tmux/theme.conf' "$conf" && return 0
-        echo 'source-file -q ~/.config/tmux/theme.conf # glyph: colors written by the shell' >> "$conf"
+        echo 'source-file -q ~/.config/tmux/theme.conf # galaga: colors written by the shell' >> "$conf"
         echo "  $conf (+ theme.conf source)"
         return 0
     done
@@ -695,12 +695,12 @@ ask_setup() { # every question first (AMM021's flow): the file manager and the l
     if picker_tty; then # picked from a list; "keep" is the default, as Enter was
         pick_one "login screen" keep \
             "keep|keep -- your current login screen" \
-            "greeter|glyph -- the glyph face (greetd)"
+            "greeter|galaga -- the galaga face (greetd)"
         case "$PICK_OUT" in keep) LOGIN="" ;; *) LOGIN=$PICK_OUT ;; esac
     else
-        printf '  login screen [keep] / glyph: '
+        printf '  login screen [keep] / galaga: '
         read -r a </dev/tty || a=""
-        case "$a" in glyph) LOGIN=greeter ;; *) LOGIN="" ;; esac
+        case "$a" in galaga) LOGIN=greeter ;; *) LOGIN="" ;; esac
     fi
     # the mouse: scroll direction, wheel speed, pointer speed. mouse_seed() writes the
     # answers into rules.json (the shell's settings -- Prefs -> INPUT edits the same
@@ -814,11 +814,11 @@ set_file_manager() { # the guided choice, applied (AMM021's set_file_manager): t
 
 pacman_hook() { # after a system update, pacman says if the rice has news. It runs as you, never
     # as root: the script lives in your home, and root shouldn't execute that (AMM021's hook)
-    [ -e /etc/pacman.d/hooks/glyph-rice.hook ] && return 0
+    [ -e /etc/pacman.d/hooks/galaga.hook ] && return 0
     run sudo mkdir -p /etc/pacman.d/hooks
     if [ "$DRY" = 1 ]; then note "would add the pacman hook"; return 0; fi
     printf '[Trigger]\nOperation = Upgrade\nType = Package\nTarget = *\n\n[Action]\nDescription = Checking for rice updates...\nWhen = PostTransaction\nExec = /usr/bin/runuser -u %s -- /usr/bin/env HOME=%s /usr/bin/bash %s/config/pacman/rice-notify.sh\n' "$USER" "$HOME" "$DOTS" \
-        | sudo tee /etc/pacman.d/hooks/glyph-rice.hook >/dev/null || say "could not add the pacman hook -- ./install.sh --update still works"
+        | sudo tee /etc/pacman.d/hooks/galaga.hook >/dev/null || say "could not add the pacman hook -- ./install.sh --update still works"
 }
 
 kernel_note() { # the update replaced the running kernel: its modules are gone, so anything
@@ -845,12 +845,12 @@ update_rest() { # step 2: whatever the new version needs. Asks for a password on
     missing=$(pacman -T "${PACMAN[@]}" || true)
     aur_missing=$(pacman -T "${AUR[@]}" || true)
     # the greeters run from copies, which only change when their own inputs do
-    local greeter_changed="" watch='^config/greetd/|^config/quickshell/glyph/(greet\.qml|lock/|Theme\.qml|components/)'
+    local greeter_changed="" watch='^config/greetd/|^config/quickshell/galaga/(greet\.qml|lock/|Theme\.qml|components/)'
     local dm=""
     if [ -L /etc/systemd/system/display-manager.service ]; then dm="$(basename "$(readlink -f /etc/systemd/system/display-manager.service)" .service)"; fi
     if [ "$dm" = greetd ] && git -C "$DOTS" diff --name-only "$old" HEAD | grep -qE "$watch"; then greeter_changed=1; fi
     local hook_missing=""
-    [ -e /etc/pacman.d/hooks/glyph-rice.hook ] || hook_missing=1
+    [ -e /etc/pacman.d/hooks/galaga.hook ] || hook_missing=1
     if [ -n "$missing$aur_missing$greeter_changed$hook_missing" ]; then sudo_once; fi
     [ -n "$hook_missing" ] && pacman_hook
     # shellcheck disable=SC2086 # one package per word
@@ -973,7 +973,7 @@ uninstall() { # take the links away, put the old files and the old login screen 
         src="$DOTS/$src" dst="$HOME/$dst"
         # gtk and qt files may point at the shell's recoloured copies instead of the repo
         case "$(readlink "$dst" 2>/dev/null)" in
-            "$src" | "$state"/glyph/*) rm "$dst" ;;
+            "$src" | "$state"/galaga/*) rm "$dst" ;;
             *) continue ;;
         esac
         if [ -n "$first" ] && { [ -e "$first/${dst#"$HOME"/}" ] || [ -L "$first/${dst#"$HOME"/}" ]; }; then
@@ -996,7 +996,7 @@ uninstall() { # take the links away, put the old files and the old login screen 
     elif [ "$dm" = greetd ] || [ "$dm" = sddm ]; then
         note "$dm stays enabled: no earlier login screen is on record"
     fi
-    if [ -e /etc/pacman.d/hooks/glyph-rice.hook ]; then sudo_once; sudo rm /etc/pacman.d/hooks/glyph-rice.hook; fi
+    if [ -e /etc/pacman.d/hooks/galaga.hook ]; then sudo_once; sudo rm /etc/pacman.d/hooks/galaga.hook; fi
     say "done. Packages, your settings in $state and the backups stay in place."
 }
 
@@ -1027,21 +1027,21 @@ greeter() { # boot login: greetd + the lock's face as the greeter (./install.sh 
 
     # the shell config at a system path: the greeter runs as the "greeter" user and cannot
     # read ~/.config. A copy, not a symlink -- re-run --greeter after a pull to refresh it
-    if ! sudo diff -qr "$DOTS/$G" /etc/greetd/glyph >/dev/null 2>&1; then
-        sudo rm -rf /etc/greetd/glyph
+    if ! sudo diff -qr "$DOTS/$G" /etc/greetd/galaga >/dev/null 2>&1; then
+        sudo rm -rf /etc/greetd/galaga
         sudo mkdir -p /etc/greetd
-        sudo cp -r "$DOTS/$G" /etc/greetd/glyph
-        echo "  /etc/greetd/glyph"
+        sudo cp -r "$DOTS/$G" /etc/greetd/galaga
+        echo "  /etc/greetd/galaga"
     fi
-    sudo chmod -R go+rX /etc/greetd/glyph # root-owned repo files are group-only: the greeter user needs read+traverse
+    sudo chmod -R go+rX /etc/greetd/galaga # root-owned repo files are group-only: the greeter user needs read+traverse
 
     # the fonts, system-wide: the greeter user cannot see ~/.local/share/fonts either --
     # without this the Doto clock falls back to a default font and the face is not the face
-    if ! diff -qr "$DOTS/config/fonts" /usr/share/fonts/glyph >/dev/null 2>&1; then
-        sudo mkdir -p /usr/share/fonts/glyph
-        sudo cp "$DOTS/config/fonts"/*.ttf "$DOTS/config/fonts"/*.otf "$DOTS/config/fonts"/OFL.txt /usr/share/fonts/glyph/
+    if ! diff -qr "$DOTS/config/fonts" /usr/share/fonts/galaga >/dev/null 2>&1; then
+        sudo mkdir -p /usr/share/fonts/galaga
+        sudo cp "$DOTS/config/fonts"/*.ttf "$DOTS/config/fonts"/*.otf "$DOTS/config/fonts"/OFL.txt /usr/share/fonts/galaga/
         sudo fc-cache -f >/dev/null
-        echo "  /usr/share/fonts/glyph"
+        echo "  /usr/share/fonts/galaga"
     fi
 
     # profile photos for the greeter face: the greeter user cannot read a ~/.face inside a
@@ -1060,7 +1060,7 @@ greeter() { # boot login: greetd + the lock's face as the greeter (./install.sh 
     # greetd's own files (config, the stripped compositor config, the launcher script):
     # a changed one that already exists goes to the backup first -- once, only on change
     local f
-    for f in config.toml hyprland.lua glyph-greeter; do
+    for f in config.toml hyprland.lua galaga-greeter; do
         sudo cmp -s "$DOTS/config/greetd/$f" "/etc/greetd/$f" && continue
         if [ -e "/etc/greetd/$f" ]; then
             mkdir -p "$BACKUP/etc/greetd"
@@ -1072,7 +1072,7 @@ greeter() { # boot login: greetd + the lock's face as the greeter (./install.sh 
         sudo cp "$DOTS/config/greetd/$f" "/etc/greetd/$f"
         echo "  /etc/greetd/$f"
     done
-    sudo chmod 755 /etc/greetd/glyph-greeter
+    sudo chmod 755 /etc/greetd/galaga-greeter
 
     # the swap -- only now, with greetd installed and configured. Which DM is on today:
     local old=""

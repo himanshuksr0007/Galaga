@@ -1,18 +1,18 @@
 <div align="center">
 
-<img src="assets/title.svg" width="760" alt="Glyph: a Nothing OS rice for Hyprland + Quickshell">
+<img src="assets/title.svg" width="760" alt="Galaga: a Nothing OS rice for Hyprland + Quickshell">
 
 Fork of [glyph-rice](https://github.com/Nebelung-cloud/glyph-rice) (check [Credits](#credits))
 
 <br>
 
-![Glyph desktop](screenshots/desktop.jpg)
+![Galaga desktop](screenshots/desktop.jpg)
 
 **Home.** The dot clock, the greeting, and a bento of live widgets — weather, CPU, RAM,
 the player, system stats — all drawn in dots. The bar rides the top edge (left works too):
 workspaces, clock, tray, battery.
 
-![Glyph desktop, light](screenshots/home-light.jpg)
+![Galaga desktop, light](screenshots/home-light.jpg)
 
 **Home, in light.** The same dots, inverted — by hand, or on a schedule (Prefs → LOOK).
 
@@ -68,7 +68,7 @@ title, cover, play / skip — your photo in the dot ring if you set one, the pas
 pill, and power at the corner: sleep, reboot, power off on F10 / F11 / F12 (the
 destructive two arm on the first press). The boot greeter wears the same face.
 
-<div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
+<div align="center"><img src="assets/divider.svg" width="720" alt=""></div>
 
 <h2 align="center">Bar menus</h2>
 
@@ -79,7 +79,7 @@ The tray icons open their own menus — no external applets, everything is the s
 | ![Wi-Fi menu](screenshots/menu-wifi.jpg) **Wi-Fi** — networks, personal hotspot, join hidden | ![Bluetooth menu](screenshots/menu-bluetooth.jpg) **Bluetooth** — paired and new devices, battery where reported |
 | ![Sound menu](screenshots/menu-sound.jpg) **Sound** — the dotted volume slider, every output | ![Sound device page](screenshots/sound-device.jpg) **A device's page** — its own volume, codec, battery; the system EQ rides along |
 
-<div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
+<div align="center"><img src="assets/divider.svg" width="720" alt=""></div>
 
 <h2 align="center">Device settings</h2>
 
@@ -100,7 +100,7 @@ the adapter, restart the service, remove all devices.
 
 **Sound.** Master volume and mute, every output with its own page a click away.
 
-<div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
+<div align="center"><img src="assets/divider.svg" width="720" alt=""></div>
 
 <h2 align="center">Settings</h2>
 
@@ -127,7 +127,7 @@ sits centred in Doto. Apps that draw their own buttons (GTK, Firefox, Zen) keep 
 |---|---|:---:|
 | **Bar** | launcher, workspaces, clock, tray | |
 | **Home** | clock, greeting, widgets (cava as a round Glyph Matrix), dot grid | |
-| **Glyph** | screen edges as OSD: volume, brightness, mic mute, notifications, progress | |
+| **Galaga** | screen edges as OSD: volume, brightness, mic mute, notifications, progress | |
 | **Launcher** | apps, commands, windows, calculator, conversions, files, tray apps | `Super` |
 | **Quick** | quick settings, game mode, media, notifications | `Super` `A` |
 | **Deck** | dashboard from the bottom edge | `Super` `Space` |
@@ -148,23 +148,23 @@ sits centred in Doto. Apps that draw their own buttons (GTK, Firefox, Zen) keep 
 | **Rice** | shell switcher, if Demon's Shot is installed too | `rice switch <name>` |
 
 
-<div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
+<div align="center"><img src="assets/divider.svg" width="720" alt=""></div>
 
 <h2 align="center">Install</h2>
 
 ```sh
-git clone https://github.com/himanshuksr0007/glyph-rice ~/.local/share/glyph
-~/.local/share/glyph/install.sh
+git clone https://github.com/himanshuksr0007/Galaga ~/.local/share/galaga
+~/.local/share/galaga/install.sh
 ```
 
-<div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
+<div align="center"><img src="assets/divider.svg" width="720" alt=""></div>
 
 <h2 align="center">Features, briefly</h2>
 
 Every feature has its own switch in **Prefs → FEATURES**. Off means off — the surface
 does not render and the behaviour does not run.
 
-- **Reactive glyph edges** — while music plays the right edge strip is a VU meter (the
+- **Reactive galaga edges** — while music plays the right edge strip is a VU meter (the
   home matrix's cava, shared); the bottom strip fills with the battery while charging.
 - **Exposé** — `Super` + `` ` `` tiles this desktop's windows as cards; click focuses,
   right-click closes.
@@ -208,7 +208,7 @@ names, device names, notification titles, track names — renders as plain text
 everywhere: Qt would otherwise treat it as HTML, and a neighbour's network name
 could make your shell fetch a URL of their choosing.
 
-<div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
+<div align="center"><img src="assets/divider.svg" width="720" alt=""></div>
 
 <h2 align="center">Gestures</h2>
 
@@ -221,7 +221,7 @@ Windows-style, on the compositor's own engine — left/right tracks your fingers
 | **4 fingers up** | the desktops overview — one card per occupied desktop, its windows mapped in their real layout; pick a card to go there. Also `Super` `Tab` |
 
 
-<div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
+<div align="center"><img src="assets/divider.svg" width="720" alt=""></div>
 
 <h2 align="center">Dependencies</h2>
 
@@ -246,13 +246,13 @@ Windows-style, on the compositor's own engine — left/right tracks your fingers
 Dark and light. Red marks the one live thing on screen.
 Fonts: Doto, Space Grotesk, Space Mono, JetBrains Mono Nerd Font.
 
-<div align="center"><img src="assets/divider-glyph.svg" width="720" alt=""></div>
+<div align="center"><img src="assets/divider.svg" width="720" alt=""></div>
 
 <h2 align="center">Inspiration</h2>
 
 - [**Nothing OS**](https://nothing.tech): the look and the Glyph lights.
 - [**Doto**](https://github.com/oliverlalan/Doto): the dot matrix font.
-- [**Gadgetbridge**](https://codeberg.org/Freeyourgadget/Gadgetbridge): the earbuds protocol in `glyph/ear`.
+- [**Gadgetbridge**](https://codeberg.org/Freeyourgadget/Gadgetbridge): the earbuds protocol in `galaga/ear`.
 - [**Caelestia**](https://github.com/caelestia-dots/shell): the shell I used before; the deck and hardware detection follow it.
 
 <div align="center"><img src="assets/divider-matrix.svg" width="720" alt=""></div>

@@ -4,7 +4,7 @@ local home   = os.getenv("HOME")
 -- DEMONSHOT_NESTED=1 Hyprland -c .../rice/config/hypr/hyprland.lua -- nested session for debugging:
 -- the system daemons are already running outside
 local nested = os.getenv("DEMONSHOT_NESTED") ~= nil
--- which shell is alive (demonshot, glyph...), decided by rice: `rice switch <name>` or the Rice app.
+-- which shell is alive (demonshot, galaga...), decided by rice: `rice switch <name>` or the Rice app.
 -- Full path: hypr does not have ~/.local/bin in PATH
 local rice   = home .. "/.config/quickshell/rice/rice"
 

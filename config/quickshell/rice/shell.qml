@@ -2,7 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Rice -- shell switcher (qs -c rice, "switch shell" in Prefs glyph -- when there is more than one shell).
+// Rice -- shell switcher (qs -c rice, "switch shell" in Prefs galaga -- when there is more than one shell).
 // A card for each shell -- a folder in ~/.config/quickshell with rice.json, drawn in its colors and font.
 // left/right select, Enter or click -- `rice switch`: the current one stops, hypr returns to the config, the selected one starts
 ShellRoot {

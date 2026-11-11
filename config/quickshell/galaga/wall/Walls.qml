@@ -1,0 +1,310 @@
+import QtQuick
+import Quickshell
+import Quickshell.Hyprland
+import Quickshell.Io
+import Quickshell.Wayland
+import qs
+import qs.components
+import "../prefs"
+
+// wallpapers: Super+Shift+W or settings -> look. Not a grid of images -- the whole screen is the preview: the selected one is assembled as dots
+// in a wave from the ribbon at the bottom. The ribbon -- thumbnail circles as dots, the selected one in the center in a ring (it burns with the fraction of the path through the collection),
+// a red dot under the one that is live now. The first circle -- NOTHING: no image, only the grid and orb.
+// left/right / wheel -- scroll, tab -- view (dots / grey photo / color), up/down -- dot pitch, shift up/down -- brightness, Enter or click on
+// the selected one -- apply, esc -- as it was. Images -- from Theme.state.wallDir, copies for the screen -- in Theme.wallCache (once)
+PanelWindow {
+    id: root
+
+    readonly property string dir: Theme.state.wallDir || Quickshell.env("HOME") + "/Pictures/Wallpapers"
+    readonly property var looks: ["dots", "vivid", "mono", "color"]
+    readonly property var order: [0, 3, 1, 2] // wallLook by pill place: vivid came later, the saved numbers in galaga.json stay the same
+    // copies -- in physical screen pixels, with headroom for cropping
+    readonly property string res: {
+        const s = Quickshell.screens[0];
+        return s ? `${Math.round(s.width * s.devicePixelRatio)}x${Math.round(s.height * s.devicePixelRatio)}^` : "2880x1800^";
+    }
+
+    property var files: [] // originals that already have a copy, by name
+    property var fresh: [] // what the current pass found
+    readonly property var list: [""].concat(files)
+    // selected -- by path, number -- from it: while the cache is being written, new ones land in the middle and the ribbon does not shift
+    property string pick: ""
+    readonly property int sel: Math.max(0, list.indexOf(pick))
+    property int look: 0
+    property int pitch: 10
+    property int bright: 85
+
+    function name(p) { return p ? p.slice(p.lastIndexOf("/") + 1).replace(/\.[^.]+$/, "") : "nothing"; }
+    function go(d) { pick = list[Math.max(0, Math.min(list.length - 1, sel + d))]; }
+
+    // preview -- when scrolling stops: each image is a decode and 20 MB into video memory, on fast scrolling that is stutter.
+    // The ribbon moves immediately
+    property string view: ""
+    onPickChanged: settle.restart()
+    Timer { id: settle; interval: 160; onTriggered: root.view = root.pick }
+
+    // the ribbon moves with one animation: pos catches up with sel, circles compute their place from the fractional distance to it
+    property real pos: sel
+    Behavior on pos { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+    // circle at distance d: selected 190, neighbors 128, then 12 less, not less than 64; between integers -- linear
+    function size(d) { d = Math.abs(d); return d < 1 ? 190 - 62 * d : Math.max(64, 128 - (d - 1) * 12); }
+    // circle centers at integer d, beyond 9 is not needed -- it is not visible there
+    readonly property var at: {
+        const a = [0];
+        for (let k = 1; k <= 10; k++) a.push(a[k - 1] + (size(k - 1) + size(k)) / 2 + (k === 1 ? 44 : 22));
+        return a;
+    }
+    function off(d) {
+        const a = Math.min(Math.abs(d), 9), k = Math.floor(a), x = at[k] + (at[k + 1] - at[k]) * (a - k);
+        return d < 0 ? -x : x;
+    }
+
+    property bool shown: false
+    property real t: shown ? 1 : 0
+    Behavior on t { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+    Binding { target: Sys; property: "wallOpen"; value: root.visible }
+
+    // several screens -- the wallpaper goes to all (the shared one; the screens' own are dropped) or only to
+    // this one, where the picker is open
+    property string mon: ""
+    property bool own: false
+    function open() {
+        const s = Theme.state;
+        mon = Hyprland.focusedMonitor?.name ?? "";
+        // "" -- its own "no wallpaper". One screen (the second was unplugged) -- no switch, the wallpaper is
+        // shared, and its own "all" is dropped
+        own = Quickshell.screens.length > 1 && Theme.own(mon)?.wall !== undefined;
+        pick = Theme.scr(mon, "wall");
+        view = pick;
+        look = s.wallLook;
+        pitch = s.wallPitch;
+        bright = s.wallBright;
+        if (!scan.running) {
+            fresh = [];
+            scan.running = true;
+        }
+        shown = true;
+        stage.forceActiveFocus();
+    }
+    function close() { shown = false; }
+    function toggle() { shown ? close() : open(); }
+    function apply() {
+        const s = Theme.state;
+        if (own) Theme.setScr(mon, "wall", pick);
+        else {
+            s.wall = pick;
+            for (const n in s.screens) if (s.screens[n].wall !== undefined) Theme.setScr(n, "wall", undefined);
+        }
+        s.wallLook = look;
+        s.wallPitch = pitch;
+        s.wallBright = bright;
+        close();
+    }
+
+    // copies for the screen. Fresh ones are checked by one bash without a process per file; missing or older than the original -- magick, three at
+    // once (an 8k png eats hundreds of MB). Done -- a line to stdout. We write to a temp file and move it: an interrupted magick
+    // will not leave a broken copy newer than the original
+    Process {
+        id: scan
+        command: ["bash", "-c", `shopt -s nullglob nocaseglob; mkdir -p "$2"; todo=()
+for f in "$1"/*.{jpg,jpeg,png,webp}; do
+    if [ "$2/\${f##*/}.jpg" -nt "$f" ]; then printf '%s\\n' "$f"; else todo+=("$f"); fi
+done
+[ \${#todo[@]} -eq 0 ] || printf '%s\\0' "\${todo[@]}" | xargs -0 -P 3 -I{} sh -c 'b=$(basename "$1")
+magick "$1[0]" -resize "$3" -quality 90 "$2/.$b.jpg" 2>/dev/null && mv "$2/.$b.jpg" "$2/$b.jpg" && printf "%s\\n" "$1"' _ {} "$2" "$3"`,
+            "bash", root.dir, Theme.wallCache, root.res]
+        stdout: SplitParser {
+            onRead: f => {
+                root.fresh.push(f);
+                if (!root.files.includes(f)) root.files = root.files.concat([f]).sort();
+            }
+        }
+        // deleted from the folder -- out; unchanged -- leave alone: a new array would recreate the whole ribbon
+        onExited: {
+            const f = root.fresh.slice().sort();
+            if (f.join("\n") !== root.files.join("\n")) root.files = f;
+        }
+    }
+
+    visible: t > 0
+    anchors { left: true; right: true; top: true; bottom: true }
+    exclusionMode: ExclusionMode.Ignore
+    color: "transparent"
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: shown ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.namespace: "galaga-wall"
+
+    Stage {
+        id: stage
+        opacity: root.t
+        focus: true
+        Keys.onPressed: e => {
+            const up = e.key === Qt.Key_Up, down = e.key === Qt.Key_Down;
+            if (e.key === Qt.Key_Left || e.key === Qt.Key_H) root.go(-1);
+            else if (e.key === Qt.Key_Right || e.key === Qt.Key_L) root.go(1);
+            else if (e.key === Qt.Key_Home) root.pick = "";
+            else if (e.key === Qt.Key_Tab) root.look = root.order[(root.order.indexOf(root.look) + 1) % 4];
+            else if (e.key === Qt.Key_Backtab) root.look = root.order[(root.order.indexOf(root.look) + 3) % 4];
+            else if ((up || down) && e.modifiers & Qt.ShiftModifier) root.bright = Math.max(10, Math.min(100, root.bright + (up ? 5 : -5)));
+            else if (up || down) root.pitch = Math.max(4, Math.min(32, root.pitch + (up ? 1 : -1)));
+            else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) root.apply();
+            else if (e.key === Qt.Key_Escape) root.close();
+            else return;
+            e.accepted = true;
+        }
+
+        // same as under the home wallpaper: grid and orb -- they are visible at NOTHING and in the wave to it; the image covers -- do not draw
+        Rectangle { anchors.fill: parent; color: Theme.bg }
+        Image {
+            visible: Theme.state.grid && !prev.item?.opaque
+            anchors.fill: parent
+            fillMode: Image.Tile
+            source: "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="16" r="1.5" fill="#${Theme.hex(Theme.s2)}"/></svg>`)
+        }
+        Orb { visible: Theme.state.orb && !prev.item?.opaque; x: stage.width - 720; y: stage.height - 580 }
+        // the preview lives while the picker is visible: closed -- two images for the screen are unloaded
+        Loader {
+            id: prev
+            anchors.fill: parent
+            active: root.visible
+            sourceComponent: Wall {
+                path: root.files.includes(root.view) ? Theme.wallSrc(root.view) : ""
+                look: root.look
+                pitch: root.pitch
+                bright: root.bright / 100
+                origin: Qt.point(width / 2, 850)
+            }
+        }
+
+        // wheel -- scroll; click outside -- drop focus from the handles
+        MouseArea {
+            anchors.fill: parent
+            property real acc: 0
+            onClicked: stage.forceActiveFocus()
+            onWheel: w => {
+                acc += w.angleDelta.y || w.angleDelta.x;
+                while (Math.abs(acc) >= 120) {
+                    root.go(acc > 0 ? -1 : 1);
+                    acc -= Math.sign(acc) * 120;
+                }
+            }
+        }
+
+        // labels must be readable over the image: background fades out at the top and bottom
+        Rectangle {
+            width: parent.width
+            height: 380
+            gradient: Gradient {
+                GradientStop { position: 0; color: Theme.fade(Theme.bg, 0.85) }
+                GradientStop { position: 1; color: Theme.fade(Theme.bg, 0) }
+            }
+        }
+        Rectangle {
+            y: parent.height - height
+            width: parent.width
+            height: 460
+            gradient: Gradient {
+                GradientStop { position: 0; color: Theme.fade(Theme.bg, 0) }
+                GradientStop { position: 1; color: Theme.fade(Theme.bg, 0.9) }
+            }
+        }
+
+        // Doto number and name
+        Column {
+            x: 150 - 30 * (1 - root.t)
+            y: 110
+            Lb { text: `wallpaper · ${root.files.length} in ${root.dir.replace(Quickshell.env("HOME"), "~")}` }
+            Row {
+                topPadding: 18
+                spacing: 10
+                Num { id: idx; text: String(root.sel).padStart(2, "0"); font.pixelSize: 150 }
+                Num { anchors.baseline: idx.baseline; text: "/" + String(root.list.length - 1).padStart(2, "0"); font.pixelSize: 54; color: Theme.mute }
+            }
+            Lb { topPadding: 22; width: 700; elide: Text.ElideRight; text: root.name(root.pick); px: 14; color: Theme.fg }
+        }
+
+        // view and handles
+        Column {
+            anchors { right: parent.right; rightMargin: 150 - 30 * (1 - root.t) }
+            y: 110
+            spacing: 30
+            Pick { visible: Quickshell.screens.length > 1; anchors.right: parent.right; label: "for"; opts: ["all", root.mon.toLowerCase()]; cur: root.own ? 1 : 0; onPicked: i => root.own = i === 1 }
+            Pick { label: "look"; opts: root.looks; cur: root.order.indexOf(root.look); onPicked: i => root.look = root.order[i] }
+            Row {
+                anchors.right: parent.right
+                spacing: 36
+                Dial { size: 120; label: "dot · px"; from: 4; to: 32; live: true; value: root.pitch; onMoved: v => root.pitch = v }
+                Dial { size: 120; label: "light · %"; from: 10; to: 100; step: 5; live: true; value: root.bright; onMoved: v => root.bright = v }
+            }
+        }
+
+        // ribbon. The selected one is always in the center -- the ring stands, the circles move under it. Circles of one size 190 and scaled:
+        // the layer with dots (Art) is drawn once, and changing width would redraw it on every frame for all fifteen
+        Ring {
+            x: stage.width / 2 - width / 2
+            y: 850 - height / 2
+            width: root.size(0) + 36
+            height: width
+            n: 60
+            dot: 4
+            f: root.list.length > 1 ? root.sel / (root.list.length - 1) : 0
+        }
+        Repeater {
+            model: root.list
+            Item {
+                id: th
+                required property string modelData
+                required property int index
+                readonly property real d: index - root.pos
+                visible: Math.abs(d) < 7.5
+                x: stage.width / 2 + root.off(d) - 95
+                y: 850 - 95
+                width: 190
+                height: 190
+                scale: root.size(d) / 190
+                opacity: 1 - Math.abs(d) * 0.12
+
+                Loader {
+                    anchors.fill: parent
+                    active: th.visible && !!th.modelData
+                    sourceComponent: Art { url: "file://" + Theme.wallSrc(th.modelData).split("/").map(encodeURIComponent).join("/"); step: 6 }
+                }
+                Rectangle {
+                    visible: !th.modelData
+                    anchors.fill: parent
+                    radius: width / 2
+                    color: Theme.bg
+                    border { width: 1; color: Theme.s3 }
+                    Lb { anchors.centerIn: parent; text: "nothing" }
+                }
+                // live now
+                Rectangle {
+                    visible: th.modelData === Theme.scr(root.mon, "wall")
+                    anchors { horizontalCenter: parent.horizontalCenter; top: parent.bottom; topMargin: th.index === root.sel ? 36 : 22 }
+                    width: 10
+                    height: 10
+                    radius: 5
+                    color: Theme.red
+                }
+                TapHandler {
+                    onTapped: {
+                        if (th.index === root.sel) root.apply();
+                        else root.pick = th.modelData;
+                    }
+                }
+                HoverHandler { cursorShape: Qt.PointingHandCursor }
+            }
+        }
+
+        Row {
+            anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 56 }
+            spacing: 34
+            Lb { text: "←→ browse" }
+            Lb { text: "tab look" }
+            Lb { text: "↑↓ dot size" }
+            Lb { text: "shift ↑↓ light" }
+            Lb { text: "↵ set" }
+            Lb { text: "esc back"; TapHandler { onTapped: root.close() } }
+        }
+    }
+}

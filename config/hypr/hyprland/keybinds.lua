@@ -1,7 +1,7 @@
 local vars = require("variables")
 local fn   = require("hyprland.functions")
 
--- shell globals -- shell:<name>: registered by whichever shell is alive (demonshot, glyph); if it lacks one, it stays silent
+-- shell globals -- shell:<name>: registered by whichever shell is alive (demonshot, galaga); if it lacks one, it stays silent
 -- Launcher: tap Super. Since 0.57 binds on the modifier itself do not fire on press or release
 -- (hyprwm/Hyprland#15952, #15050), so we catch the Super release by polling the key state instead of bindr.
 -- Without swallowing Super+1 it would open the launcher too -- every Super+<key> that is not consumed cancels the tap.
@@ -44,10 +44,10 @@ hl.bind(vars.kbAltar, hl.dsp.global("shell:altar"))
 hl.bind("SUPER + I", hl.dsp.global("shell:settings"))
 hl.bind("SUPER + N", hl.dsp.global("shell:ward"))
 hl.bind("SUPER + P", hl.dsp.global("shell:pact"))
-hl.bind("SUPER + A", hl.dsp.global("shell:quick")) -- glyph quick settings
+hl.bind("SUPER + A", hl.dsp.global("shell:quick")) -- galaga quick settings
 hl.bind("SUPER + Tab", hl.dsp.global("shell:desktops")) -- desktops overview (also 3-finger swipe up)
-hl.bind("SUPER + grave", hl.dsp.global("shell:expose")) -- exposé: every window on this desktop (glyph only)
-hl.bind("SUPER + SHIFT + W", hl.dsp.global("shell:wall")) -- glyph wallpapers
+hl.bind("SUPER + grave", hl.dsp.global("shell:expose")) -- exposé: every window on this desktop (galaga only)
+hl.bind("SUPER + SHIFT + W", hl.dsp.global("shell:wall")) -- galaga wallpapers
 hl.bind(vars.kbSession, hl.dsp.global("shell:power"))
 hl.bind(vars.kbPower, hl.dsp.global("shell:power"))
 hl.bind(vars.kbLock, hl.dsp.exec_cmd(vars.lockCmd))

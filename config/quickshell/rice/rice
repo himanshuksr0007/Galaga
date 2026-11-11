@@ -1,5 +1,5 @@
 #!/bin/sh
-# rice -- which quickshell shell is alive right now (demonshot, glyph...) and switching between them.
+# rice -- which quickshell shell is alive right now (demonshot, galaga...) and switching between them.
 #   rice                current
 #   rice list           all shells: folders in ~/.config/quickshell with rice.json
 #   rice start          start the current one (hypr at startup)
@@ -9,7 +9,7 @@
 q=$HOME/.config/quickshell
 state=${XDG_STATE_HOME:-$HOME/.local/state}/rice
 cur=$(cat "$state/shell" 2>/dev/null)
-[ -f "$q/$cur/rice.json" ] || cur=glyph
+[ -f "$q/$cur/rice.json" ] || cur=galaga
 
 # terminal and apps in the shell's spirit: ~/.config/<f> points to the shell's term/<f>. starship and fastfetch read the config on every
 # launch, running cava (USR1) and btop (USR2) reload on signal, gtk -- on theme change (we toggle it back and forth),

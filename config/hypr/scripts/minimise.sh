@@ -4,12 +4,12 @@
 # Super+Alt+M (functions.minimise_active runs this), and show-desktop.sh, once
 # per window. Minimise in Hyprland = park on special:minimized.
 #
-# Before parking, the window is offered to the glyph shell (genie/Genie.qml):
+# Before parking, the window is offered to the galaga shell (genie/Genie.qml):
 # it snapshots the window's pixels and warps them down into the deck's
 # minimised section -- the genie effect. The shell takes ownership of the park
 # by answering "go" to the IPC call; it then captures, shows the ghost, and
 # dispatches the park itself (with its own fallback timer, so the park lands
-# even if the snapshot fails). ANY other outcome -- glyph not the running
+# even if the snapshot fails). ANY other outcome -- galaga not the running
 # shell, the effect off in settings (Prefs -> DECK -> genie), a shell too old
 # to have the handler, qs missing -- and this script parks the window directly,
 # exactly as the rice always did. Minimising never depends on the effect.
@@ -35,7 +35,7 @@ monid=$(printf '%s' "$win" | jq -r '.monitor // -1')
 mon=$(hyprctl monitors -j 2>/dev/null | jq -r --argjson id "$monid" 'map(select(.id == $id)) | .[0].name // empty')
 req=$(printf '%s' "$win" | jq -c --arg m "$mon" '{ address: .address, at: .at, size: .size, monitor: $m }')
 
-ans=$(timeout 2 qs -p "$HOME/.config/quickshell/glyph" ipc call genie minimise "$req" 2>/dev/null | tr -d '[:space:]')
+ans=$(timeout 2 qs -p "$HOME/.config/quickshell/galaga" ipc call genie minimise "$req" 2>/dev/null | tr -d '[:space:]')
 [ "$ans" = "go" ] && exit 0
 
 addr=$(printf '%s' "$win" | jq -r '.address')

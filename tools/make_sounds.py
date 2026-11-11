@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""glyph's interface sounds -- synthesized, not sampled.
+"""galaga's interface sounds -- synthesized, not sampled.
 
 Original soft blips in the spirit of a certain fruit company's restraint:
 short, lowpassed, fast decays, nothing above a whisper. Pure stdlib
@@ -8,7 +8,7 @@ reproduces the committed WAVs byte for byte.
 
     python3 tools/make_sounds.py
 
-writes config/quickshell/glyph/assets/sounds/*.wav (44.1 kHz mono 16-bit)
+writes config/quickshell/galaga/assets/sounds/*.wav (44.1 kHz mono 16-bit)
 and verifies each one on the way out: format, duration, peak level, and
 that no sample ever hits the rail (no clipping plateau).
 
@@ -28,7 +28,7 @@ import wave
 
 FS = 44100
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                   "..", "config", "quickshell", "glyph", "assets", "sounds")
+                   "..", "config", "quickshell", "galaga", "assets", "sounds")
 
 
 def env(t, attack, tau):
