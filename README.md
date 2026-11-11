@@ -166,6 +166,7 @@ does not render and the behaviour does not run.
 
 - **Reactive galaga edges** — while music plays the right edge strip is a VU meter (the
   home matrix's cava, shared); the bottom strip fills with the battery while charging.
+  The meter stands down while any window is fullscreen, so it never dances over a video.
 - **Exposé** — `Super` + `` ` `` tiles this desktop's windows as cards; click focuses,
   right-click closes.
 - **Lock media + summary** — the session lock carries the player and the newest two
