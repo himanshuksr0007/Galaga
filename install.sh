@@ -4,6 +4,9 @@
 #                                  screen, mouse), one password, then it runs to the end by itself
 #   ./install.sh --dry-run         the guided flow, printing what it would do; changes nothing
 #   ./install.sh --with telegram   same without the questions (--with "" -- just the rice itself)
+#   ./install.sh --browsers zen,firefox
+#                                  which browsers to install (a question in the guided flow;
+#                                  firefox pre-ticked, untick all -- none; --browsers "" -- none)
 #   ./install.sh --update          get the newest version of the rice, then refresh what changed
 #   ./install.sh --uninstall       take the links away, put the old files and login screen back
 #   ./install.sh --fix-plasma      from KDE Plasma: Wi-Fi passwords out of KDE Wallet, autostart guards
@@ -46,7 +49,6 @@ PACMAN=(
 
 AUR=(
     qtengine darkly-bin bibata-cursor-theme-bin
-    zen-browser-bin
     localsend-bin # LocalSend -- Super+Ctrl+S sends the clipboard, Nautilus right-click (with nautilus-python)
     libinput-gestures # the 4-finger tap only -- the swipes are Hyprland-native (config/libinput-gestures.conf)
 )
@@ -54,6 +56,18 @@ AUR=(
 # greeter only (./install.sh --greeter). The compositor is the session's own Hyprland
 # (stripped config in config/greetd/), already installed above -- greetd is the only addition
 GREETER_PACMAN=(greetd)
+
+# browsers are a choice of their own (browsers() below asks, --browsers answers): key -> packages.
+# Nothing is forced -- until this was asked, zen-browser-bin sat in the AUR list for everyone.
+# The first one picked also becomes the Super+W browser (browser_bind() writes it to user.lua).
+declare -A BROWSER=(
+    [firefox]="firefox"        # pacman
+    [zen]="zen-browser-bin"    # AUR
+    [chromium]="chromium"      # pacman
+    [brave]="brave-bin"        # AUR
+    [vivaldi]="vivaldi"        # pacman
+)
+declare -A BROWSER_CMD=( [firefox]=firefox [zen]=zen-browser [chromium]=chromium [brave]=brave [vivaldi]=vivaldi )
 
 # optional, like caelestia's optional components. What the special-workspace keybinds open -- apps in hypr/variables.lua
 declare -A EXTRA=(
@@ -277,6 +291,65 @@ extras() { # --with or a prompt -> into EXT, installs yay (and repo packages) se
         [ -n "${EXTRA[$w]-}" ] || { echo "no such option: $w (available: ${!EXTRA[*]})"; exit 1; }
         EXT+=(${EXTRA[$w]})
     done
+}
+
+browsers() { # a prompt or --browsers -> browser packages into EXT, the first pick into BPICK
+    local w; BPICK=""
+    [ "$DRY" = 1 ] && BWITH="firefox" # a dry run answers with the default, like extras
+    if [ -z "${BWITH+x}" ]; then
+        if [ -n "${WITH+x}" ] || ! { : </dev/tty; } 2>/dev/null; then
+            BWITH="firefox" # a scripted run (--with, a pipe): the default, as ask_setup does
+        elif picker_tty; then # ticked; firefox is pre-ticked -- untick everything for no browser
+            local items=() order=(firefox zen chromium brave vivaldi)
+            for w in "${order[@]}"; do items+=("$w|$w -- ${BROWSER[$w]}"); done
+            pick_multi "which browsers to install?" "firefox" "${items[@]}"
+            BWITH="${PICK_OUT[*]}"
+        else
+            say "which browsers to install? space-separated, Enter -- firefox (none -- no browser)"
+            for w in "${!BROWSER[@]}"; do printf '  %-9s %s\n' "$w" "${BROWSER[$w]}"; done
+            read -rp "  > " BWITH || true
+            case "$BWITH" in "") BWITH="firefox" ;; none) BWITH="" ;; esac
+        fi
+    fi
+    for w in ${BWITH//,/ }; do
+        [ -n "${BROWSER[$w]-}" ] || { echo "no such browser: $w (available: ${!BROWSER[*]})"; exit 1; }
+        EXT+=(${BROWSER[$w]})
+        if [ -z "$BPICK" ]; then BPICK=${BROWSER_CMD[$w]}; fi # an if, not &&: the loop is the
+        # function's last word, and a short-circuited && would hand set -e a 1 to kill the flow with
+    done
+}
+
+browser_bind() { # the Super+W browser follows the first browser picked: one marked line in
+    # ~/.config/hypr/user.lua (the override file variables.lua itself points at; keybinds read
+    # vars on press, so no relog of the config tree is needed). A browser line of the user's
+    # own (no marker) is respected and left alone; no pick -- our line comes back out.
+    local f="$HOME/.config/hypr/user.lua"
+    say "browser keybind (Super+W)"
+    if [ "$DRY" = 1 ]; then
+        if [ -n "$BPICK" ]; then note "would set the Super+W browser to $BPICK in user.lua"
+        else note "would drop the installer's browser line from user.lua, if it's there"; fi
+        return 0
+    fi
+    BPICK="$BPICK" python3 - "$f" <<'PY'
+import os, sys
+path, pick = sys.argv[1], os.environ.get("BPICK", "")
+MARK = "-- glyph: browser (install.sh)"
+lines = []
+if os.path.exists(path):
+    lines = open(path).read().splitlines()
+own = [l for l in lines if 'require("variables").browser' in l and MARK not in l]
+if own:
+    print("  user.lua sets its own browser -- leaving it")
+    sys.exit(0)
+lines = [l for l in lines if MARK not in l]
+if pick:
+    lines.append(f'require("variables").browser = "{pick}" {MARK}')
+    print(f"  Super+W opens {pick}")
+elif os.path.exists(path):
+    print("  no browser picked -- the keybind falls back to variables.lua")
+os.makedirs(os.path.dirname(path), exist_ok=True)
+open(path, "w").write("\n".join(lines) + ("\n" if lines else ""))
+PY
 }
 
 packages() {
@@ -932,9 +1005,10 @@ uninstall() { # take the links away, put the old files and the old login screen 
 install_flow() { # the guided install: questions, one password, then straight through
     ask_setup
     extras
+    browsers
     [ "$FILES" = dolphin ] && EXT+=(dolphin kio-extras ffmpegthumbs kdegraphics-thumbnailers archlinux-xdg-menu kde-cli-tools)
     sudo_once
-    packages; plugins; services; links; mouse_seed; browser_cleanup; flatpak_gtk; tmux_theme; pacman_hook
+    packages; plugins; services; links; mouse_seed; browser_cleanup; browser_bind; flatpak_gtk; tmux_theme; pacman_hook
     [ -n "$FILES" ] && set_file_manager
     case "$LOGIN" in
         greeter) if [ "$DRY" = 1 ]; then note "would run the greeter step (./install.sh --greeter)"; else greeter; fi ;;
@@ -1034,6 +1108,18 @@ greeter() { # boot login: greetd + the lock's face as the greeter (./install.sh 
 
 [ "$EUID" -eq 0 ] && { echo "run as your user, sudo will ask by itself"; exit 1; }
 
+# --browsers <list> rides along with the guided flow or --with: lift it out first,
+# the case below keeps its one-mode shape. No --browsers -- the question is asked
+# (or the default answers, on a scripted run)
+_args=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --browsers) BWITH="${2:-}"; shift; [ $# -gt 0 ] && shift ;;
+        *) _args+=("$1"); shift ;;
+    esac
+done
+set -- "${_args[@]}"
+
 case "${1:-}" in
     --links) links; browser_cleanup; flatpak_gtk; tmux_theme ;; # on any distribution (NixOS, Fedora...): packages are up to you then, list in README
     --greeter) command -v pacman >/dev/null || { echo "the greeter step installs greetd with pacman (Arch only)"; exit 1; }
@@ -1047,5 +1133,5 @@ case "${1:-}" in
     ""|--with) command -v pacman >/dev/null || { echo "I only install packages on Arch; on another distribution: $0 --links"; exit 1; }
         [ "${1:-}" = --with ] && WITH="${*:2}" # both comma- and space-separated
         install_flow ;;
-    *) echo "usage: $0 [--with telegram,spotify,clash,pywalfox,warp | --links | --greeter | --dry-run | --update | --fix-plasma | --uninstall]"; exit 1 ;;
+    *) echo "usage: $0 [--with telegram,spotify,clash,pywalfox,warp,overskride] [--browsers firefox,zen,chromium,brave,vivaldi] | --links | --greeter | --dry-run | --update | --fix-plasma | --uninstall]"; exit 1 ;;
 esac
