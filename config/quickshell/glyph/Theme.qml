@@ -266,6 +266,8 @@ Singleton {
             property bool recCursor: true
             property bool vpnPortal: false // tunnel taken down for a captive portal, restore it in the open (vpn/Vpn)
             property bool audioMeter: false // AUDIO page level meter: PwNodePeakMonitor crashes quickshell 0.3.0, so it is opt-in for 0.3.1+
+            property bool featEq: true       // system eq (services/Eq): a pipewire filter chain in front of a device, gains per device in eqDev
+            property var eqDev: ({})          // sink node name -> { on, lo, mid, hi } (decibels); missing -- off and flat
             property var screens: ({})     // per-screen own settings by monitor model (Theme.sid): { bar, home, widgets, wall }
         }
     }
