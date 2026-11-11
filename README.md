@@ -592,7 +592,8 @@ instead of a generic "denied".
 | **Look** | `papirus-icon-theme` · `adw-gtk-theme` · JetBrains Mono Nerd Font · `noto-fonts-emoji` (Emoji 17) · `noto-fonts-cjk` · Bibata · `qtengine` · `darkly` |
 | **Optional** | `clash-verge-rev` · `nvidia-utils` · `ydotool` · `hyprpicker` · `swappy` · `trash-cli` |
 
-From the AUR only `qtengine`, `darkly`, Bibata and Zen, plus Spicetify and Clash Verge if picked; all optional. The VPN panel expects Clash Verge in English.
+From the AUR only `qtengine`, `darkly` and Bibata, plus Spicetify and Clash Verge if picked; all optional. The VPN panel expects Clash Verge in English.
+Browsers are your pick, asked in the guided flow (or `--browsers firefox,zen,chromium,brave,vivaldi`): Firefox is pre-ticked, untick everything for none. The first one picked becomes the Super+W browser (written to `~/.config/hypr/user.lua`).
 NixOS: change the `/usr/lib` agent paths in `hypr/hyprland/execs.lua` and the Papirus path in `quickshell/rice/rice`.
 
 <div align="center"><img src="assets/divider-dots.svg" width="720" alt=""></div>
