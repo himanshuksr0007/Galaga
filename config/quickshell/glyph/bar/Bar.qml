@@ -261,9 +261,10 @@ PanelWindow {
                     opacity: batc.pulse
                 }
             }
-            // width sized for "100": on top the tray is right-aligned, 99 -> 100 would push everything left
-            Lb { width: full.implicitWidth; horizontalAlignment: Text.AlignHCenter; text: Math.round(root.bat.percentage * 100); px: 10 }
-            Lb { id: full; visible: false; text: "100"; px: 10 }
+            // width sized for "100": on top the tray is right-aligned, 99 -> 100 would push everything left.
+            // 12px and bold (was 10): the one number on the bar read at a glance, it has to land at a glance
+            Lb { width: full.implicitWidth; horizontalAlignment: Text.AlignHCenter; text: Math.round(root.bat.percentage * 100); px: 12; font.bold: true }
+            Lb { id: full; visible: false; text: "100"; px: 12; font.bold: true }
         }
     }
     // power mode as ticks (Rules.modes): ultra -- one, performance -- all; click -- next,
