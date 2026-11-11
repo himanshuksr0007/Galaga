@@ -14,10 +14,11 @@ import qs.components
 // (the shot module's capture: a frozen file; a live ScreencopyView of a
 // toplevel that is about to unmap cannot promise to hold its last frame),
 // show the snapshot as a ghost over the still-live window, park the real
-// window, and warp the ghost down into the deck's minimised section: 30
-// horizontal slices follow the lamp curve -- the far edge narrows first, the
-// edge nearest the deck stays widest longest, everything funnels into one
-// point on the bottom edge, at the section's centre.
+// window, and warp the ghost down into the deck's minimised section: thin
+// horizontal slices (~6 px each) follow the lamp curve -- the edge nearest
+// the deck narrows first and most (the neck forms at the target, as on
+// macOS), the far edge follows last, everything funnels into one point on
+// the bottom edge, at the section's centre.
 // The target is computed from the CURRENT section order (Theme.state.deck)
 // on every park -- move the minimised section in Prefs and the windows
 // follow it. The deck itself is always bottom-centre in this shell.
@@ -243,41 +244,70 @@ Scope {
             property bool parked: false
             property bool gone: false
 
-            // the lamp curve. Vertically the ghost is a homothety about the
-            // target point: every row's distance to the bottom edge scales by
-            // (1 - p), so rows compress toward the deck in order -- they can
-            // bunch but never pass each other, for any window geometry.
-            // Horizontally each row follows q(v): v = 0 at the far (top) edge,
-            // 1 at the deck edge, and a row starts narrowing at p = v * spread
-            // -- the far edge funnels first, the deck edge stays widest
-            // longest, and every row's centre drifts to the target x.
+            // the lamp curve. The shape is macOS's: the window is sucked
+            // INTO the deck, so the neck forms at the target -- the rows
+            // nearest the deck narrow first and most, and the narrowing
+            // travels up the window as it drains. (The first build had the
+            // phase the other way round -- the deck edge stayed widest
+            // longest -- which read as the window stretching like taffy
+            // with a blob at the bottom, not a lamp. The user's verdict,
+            // 2026-11-11.)
+            // -- slices are ~6 px tall (48..140 of them), so the funnel's
+            // silhouette is a curve, not a staircase;
+            // -- horizontally each row follows q(v): v = 0 at the far (top)
+            // edge, 1 at the deck edge. The phase runs on w = 1 - v, the
+            // row's distance from the deck: a row starts narrowing at
+            // p = w * spread and is SMOOTHSTEPPED through it, so the deck
+            // row is fully narrow almost at once and the far row last;
+            // the squeeze itself is pow(q, 2.2) -- gentle while a row is
+            // still travelling, near-total as it reaches the point -- and
+            // every row's centre drifts to the target x on a lagging
+            // power, which is the lamp's bend;
+            // -- vertically a row's distance to the bottom edge scales by
+            // (1 - p) ^ (1 + 0.5 * p * u): a homothety with a taffy stretch --
+            // the rows nearer the deck give way a touch faster, the far rows
+            // linger, and because both factors shrink monotonically with u
+            // the rows can bunch but never pass each other, for any geometry;
+            // -- the texture is mapped exactly: the whole snapshot is scaled
+            // to the ghost's current total height and shifted by the rows
+            // above, never derived from a slice's own height, so bands cannot
+            // drift against each other mid-warp.
             readonly property real spread: 0.45
-            function q(v) { return Math.max(0, Math.min(1, (p - v * spread) / (1 - spread))); }
-            function edgeY(u) { return parent.height - (parent.height - (gy + u * gh)) * (1 - p); }
+            readonly property int slices: Math.max(48, Math.min(140, Math.round(gh / 6)))
+            readonly property real spanY: edgeY(1) - edgeY(0) // the ghost's current total height
+            function q(v) {
+                const w = 1 - v; // distance from the deck edge: the neck starts there
+                const t = Math.max(0, Math.min(1, (p - w * spread) / (1 - spread)));
+                return t * t * (3 - 2 * t);
+            }
+            function edgeY(u) {
+                const d = parent.height - (gy + u * gh);
+                return parent.height - d * Math.pow(1 - p, 1 + 0.5 * p * u);
+            }
 
             Repeater {
-                model: 30
+                model: ghost.slices
                 Item {
                     id: slice
                     required property int index
-                    readonly property real u0: index / 30
-                    readonly property real u1: (index + 1) / 30
-                    readonly property real v: (index + 0.5) / 30
+                    readonly property real u0: index / ghost.slices
+                    readonly property real u1: (index + 1) / ghost.slices
+                    readonly property real v: (index + 0.5) / ghost.slices
                     readonly property real qv: ghost.q(v)
                     readonly property real cx: ghost.gx + ghost.gw / 2 + (ghost.tx - ghost.gx - ghost.gw / 2) * Math.pow(qv, 1.7)
-                    readonly property real hw: ghost.gw / 2 * (1 - 0.97 * Math.pow(qv, 1.35))
+                    readonly property real hw: ghost.gw / 2 * (1 - 0.985 * Math.pow(qv, 2.2))
                     x: cx - hw
                     y: ghost.edgeY(u0)
                     width: Math.max(0.75, hw * 2)
                     height: Math.max(1, ghost.edgeY(u1) - ghost.edgeY(u0)) + 0.8 // a hair of overlap: no seams mid-warp
                     clip: true
                     Image {
-                        // the slice's band of the snapshot, squashed with it:
-                        // the full frame scaled to 30 slice-heights, shifted so
-                        // this band fills the slice
+                        // this slice's band of the snapshot, squashed with it:
+                        // the full frame at the ghost's current total height,
+                        // shifted up by the rendered height of the rows above
                         width: slice.width
-                        height: slice.height * 30
-                        y: -slice.index * slice.height
+                        height: ghost.spanY
+                        y: -(ghost.edgeY(slice.u0) - ghost.edgeY(0))
                         source: ghost.ready ? "file://" + ghost.file : ""
                     }
                 }
@@ -307,10 +337,11 @@ Scope {
             onReadyChanged: if (ready && !back) parkDelay.start()
 
             // whatever happened above -- a hung grim, a lost process -- the
-            // park lands. Minimising never depends on the effect.
+            // park lands. Minimising never depends on the effect. The interval
+            // stays clear of the warp itself (560 ms + the park beat)
             Timer {
                 running: true
-                interval: ghost.stagger + 650
+                interval: ghost.stagger + 950
                 onTriggered: {
                     if (ghost.back) { ghost.finish(); return; } // the window is already back; only a stuck ghost can be lost
                     ghost.doPark();
@@ -318,15 +349,17 @@ Scope {
                 }
             }
 
+            // the lamp's own timing, not the house glide: a held breath, an
+            // accelerating suck, a soft landing -- easeInOut over 560 ms
             NumberAnimation {
                 id: anim
                 target: ghost
                 property: "p"
                 from: 0
                 to: 1
-                duration: 350
+                duration: 560
                 easing.type: Easing.BezierSpline
-                easing.bezierCurve: Theme.glide
+                easing.bezierCurve: [0.42, 0.0, 0.58, 1.0]
                 onFinished: ghost.finish()
             }
             NumberAnimation {
@@ -335,9 +368,9 @@ Scope {
                 property: "p"
                 from: 1
                 to: 0
-                duration: 380
+                duration: 520
                 easing.type: Easing.BezierSpline
-                easing.bezierCurve: Theme.glide
+                easing.bezierCurve: [0.42, 0.0, 0.58, 1.0]
                 onFinished: ghost.finish()
             }
 
