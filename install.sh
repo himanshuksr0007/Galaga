@@ -91,6 +91,167 @@ LINKS=(
 
 say() { printf '\e[38;2;215;25;33m●\e[0m %s\n' "$*"; }
 
+# ---- pickers ------------------------------------------------------------------
+# Pure-bash lists for the guided questions -- no gum/whiptail/fzf to depend on.
+# Up/down (or j/k) move, Space ticks (pick_multi) or selects (pick_one), Enter
+# confirms. Keys come from /dev/tty, where the typed prompts read too; without a
+# usable terminal (a pipe, CI, TERM=dumb) picker_tty says no and the callers keep
+# their typed prompts, unchanged. The choice lands in PICK_OUT (an array for
+# pick_multi, one value for pick_one); the terminal is left as it was found, and
+# Ctrl-C restores it and stops the run before anything has been installed.
+
+picker_tty() { # a terminal we can draw a list on and read single keys from
+    [ -n "${TERM:-}" ] && [ "$TERM" != dumb ] || return 1
+    (: </dev/tty) 2>/dev/null && (: >/dev/tty) 2>/dev/null && stty -g </dev/tty >/dev/null 2>&1
+}
+
+_pick_stty="" _pick_cols=80 _pick_lines=0 _pick_cur=0 _pick_multi=0 _pick_title=""
+_pick_vals=() _pick_labs=()
+declare -A _pick_on=()
+
+_pick_open() {
+    exec 3<>/dev/tty
+    _pick_stty=$(stty -g <&3)
+    _pick_cols=$(stty size <&3 2>/dev/null | cut -d' ' -f2)
+    case "$_pick_cols" in '' | *[!0-9]*) _pick_cols=80 ;; esac # a terminal that claims
+    [ "$_pick_cols" -ge 20 ] || _pick_cols=80 # no width gets the benefit of the doubt
+    printf '\e[?25l' >&3 # the cursor would only wander through the list
+    stty -echo -icanon min 1 time 0 <&3
+    trap '_pick_abort 130' INT
+    trap '_pick_abort 143' TERM
+}
+
+_pick_close() {
+    trap - INT TERM
+    [ -n "$_pick_stty" ] && stty "$_pick_stty" <&3 2>/dev/null
+    printf '\e[?25h' >&3
+    exec 3>&- 3<&-
+    _pick_stty=""
+}
+
+_pick_abort() { # Ctrl-C: the terminal back first, then stop -- nothing has run yet
+    [ -n "$_pick_stty" ] && stty "$_pick_stty" <&3 2>/dev/null
+    printf '\e[?25h\n' >&3
+    exec 3>&- 3<&-
+    exit "$1"
+}
+
+_pick_key() { # one keypress -> up/down/space/enter/abort in KEY (anything else: none)
+    KEY=none
+    local k b
+    IFS= read -rn1 k <&3 || { KEY=abort; return; }
+    case "$k" in
+        $'\e')
+            IFS= read -rn1 -t 0.1 b <&3 || { KEY=abort; return; }
+            case "$b" in
+                '[' | 'O')
+                    IFS= read -rn1 -t 0.1 b <&3 || { KEY=abort; return; }
+                    case "$b" in A) KEY=up ;; B) KEY=down ;; esac ;;
+                *) KEY=abort ;; # a bare Esc cancels, like Ctrl-C
+            esac ;;
+        ' ') KEY=space ;;
+        k) KEY=up ;;
+        j) KEY=down ;;
+        $'\r' | $'\n' | '') KEY=enter ;;
+        $'\003') KEY=abort ;;
+    esac
+}
+
+_pick_row() { # one frame line: cleared, cut to the terminal's width, counted
+    local t=$1
+    [ "${#t}" -gt $((_pick_cols - 1)) ] && t="${t:0:$((_pick_cols - 4))}..."
+    case "${2:-}" in
+        bold) printf '\r\e[K\e[1m%s\e[0m\n' "$t" >&3 ;;
+        dim) printf '\r\e[K\e[2m%s\e[0m\n' "$t" >&3 ;;
+        *) printf '\r\e[K%s\n' "$t" >&3 ;;
+    esac
+    _pick_lines=$((_pick_lines + 1))
+}
+
+_pick_draw() { # the whole frame, in place: title, one line per option, the keys
+    local i mark box
+    [ "$_pick_lines" -gt 0 ] && printf '\e[%dA' "$_pick_lines" >&3
+    _pick_lines=0
+    _pick_row "  $_pick_title"
+    for ((i = 0; i < ${#_pick_vals[@]}; i++)); do
+        mark='  '; [ "$i" -eq "$_pick_cur" ] && mark='● '
+        box=''
+        if [ "$_pick_multi" = 1 ]; then
+            box='[ ] '; [ -n "${_pick_on[${_pick_vals[$i]}]+x}" ] && box='[✓] '
+        fi
+        if [ "$i" -eq "$_pick_cur" ]; then _pick_row "$mark$box${_pick_labs[$i]}" bold
+        else _pick_row "$mark$box${_pick_labs[$i]}"; fi
+    done
+    if [ "$_pick_multi" = 1 ]; then _pick_row '  ↑↓ move · space tick · enter done' dim
+    else _pick_row '  ↑↓ move · enter picks' dim; fi
+}
+
+_pick_finish() { # wipe the frame, leave one summary line where it stood
+    local total=$_pick_lines left=$_pick_lines
+    printf '\e[%dA' "$total" >&3
+    _pick_row "  $1"
+    while [ "$left" -gt 1 ]; do printf '\r\e[K\n' >&3; left=$((left - 1)); done
+    printf '\e[%dA' "$((total - 1))" >&3
+    _pick_lines=0
+}
+
+pick_multi() { # $1 title, $2 pre-ticked values (space-separated, "" -- none), rest: value|label
+    local title=$1 pre=$2 item v i s=""
+    shift 2
+    _pick_vals=(); _pick_labs=(); _pick_on=()
+    for item in "$@"; do _pick_vals+=("${item%%|*}"); _pick_labs+=("${item#*|}"); done
+    for v in $pre; do _pick_on[$v]=1; done
+    _pick_title=$title _pick_multi=1 _pick_cur=0 _pick_lines=0
+    _pick_open
+    while :; do
+        _pick_draw
+        _pick_key
+        case "$KEY" in
+            up) _pick_cur=$(((_pick_cur + ${#_pick_vals[@]} - 1) % ${#_pick_vals[@]})) ;;
+            down) _pick_cur=$(((_pick_cur + 1) % ${#_pick_vals[@]})) ;;
+            space)
+                v=${_pick_vals[$_pick_cur]}
+                if [ -n "${_pick_on[$v]+x}" ]; then unset '_pick_on[$v]'; else _pick_on[$v]=1; fi ;;
+            enter) break ;;
+            abort) _pick_abort 130 ;;
+        esac
+    done
+    PICK_OUT=()
+    for ((i = 0; i < ${#_pick_vals[@]}; i++)); do
+        v=${_pick_vals[$i]}
+        [ -n "${_pick_on[$v]+x}" ] || continue
+        PICK_OUT+=("$v"); s+="${s:+, }$v"
+    done
+    [ -n "$s" ] || s=nothing
+    _pick_finish "$title: $s"
+    _pick_close
+}
+
+pick_one() { # $1 title, $2 the value highlighted first, rest: value|label -> PICK_OUT
+    local title=$1 start=$2 item i
+    shift 2
+    _pick_vals=(); _pick_labs=()
+    for item in "$@"; do _pick_vals+=("${item%%|*}"); _pick_labs+=("${item#*|}"); done
+    _pick_title=$title _pick_multi=0 _pick_cur=0 _pick_lines=0
+    for ((i = 0; i < ${#_pick_vals[@]}; i++)); do
+        [ "${_pick_vals[$i]}" = "$start" ] && _pick_cur=$i
+    done
+    _pick_open
+    while :; do
+        _pick_draw
+        _pick_key
+        case "$KEY" in
+            up) _pick_cur=$(((_pick_cur + ${#_pick_vals[@]} - 1) % ${#_pick_vals[@]})) ;;
+            down) _pick_cur=$(((_pick_cur + 1) % ${#_pick_vals[@]})) ;;
+            space | enter) break ;;
+            abort) _pick_abort 130 ;;
+        esac
+    done
+    PICK_OUT=${_pick_vals[$_pick_cur]}
+    _pick_finish "$title: ${_pick_labs[$_pick_cur]}"
+    _pick_close
+}
+
 extras() { # --with or a prompt -> into EXT, installs yay (and repo packages) separately from AUR
     local w; EXT=()
     [ "$DRY" = 1 ] && WITH="" # a dry run answers everything with the defaults
