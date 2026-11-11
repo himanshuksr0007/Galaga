@@ -4,13 +4,19 @@ import Quickshell
 import Quickshell.Services.Mpris
 import QtQuick
 
-// active player (playing or first). No lyrics lookup: nothing showed the text,
-// but every track title was being sent to lrclib.net
+// the player to show: a playing one, else a paused one that has a track,
+// else the first. The middle step matters -- mpris-proxy (execs.lua) parks
+// an always-empty player for the bluetooth speaker in the list, and plain
+// "first" landed on it the moment playback paused: every surface went to
+// "Nothing on" and the controls talked to the empty player. A paused
+// player keeps its title, art and length, so it stays the shown one.
+// No lyrics lookup: nothing showed the text, but every track title was
+// being sent to lrclib.net
 Singleton {
     id: root
 
     readonly property var players: Mpris.players.values
-    readonly property MprisPlayer player: players.find(p => p.isPlaying) ?? players[0] ?? null
+    readonly property MprisPlayer player: players.find(p => p.isPlaying) ?? players.find(p => p.trackTitle) ?? players[0] ?? null
     readonly property bool playing: player?.isPlaying ?? false
     property real position: 0
 
