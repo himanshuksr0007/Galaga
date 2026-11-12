@@ -1450,8 +1450,10 @@ PanelWindow {
         }
 
         // ---- FEATURES: one persisted switch per feature of the programme; off -- the feature is fully inert.
-        // The detailed controls live with their feature: theme times in LOOK, desktop names/walls in DESKTOPS,
-        // the profile photo in LOOK. The essential app picker is below the switches, on this page ----
+        // Grouped by what the feature touches. The detailed controls live with their feature: theme and
+        // its times on STYLE (the theme switch used to sit here too -- one home per setting, so it went),
+        // desktop names/walls in DESKTOPS, the profile photo in LOOK. Essential notifications is a
+        // section of its own below the groups ----
         Page {
             id: feats
             k: 12
@@ -1472,43 +1474,106 @@ PanelWindow {
                 target: DesktopEntries.applications
                 function onValuesChanged() { fAppsT.restart(); }
             }
+            property string essQuery: ""
+            readonly property var essList: apps.filter(a => !essQuery || a.name.toLowerCase().includes(essQuery))
             function flipApp(id) {
                 const a = Theme.state.essentialApps.slice(), i = a.indexOf(id);
                 if (i >= 0) a.splice(i, 1); else a.push(id);
                 Theme.state.essentialApps = a;
             }
 
-            Grid {
-                columns: 2
-                spacing: 14
-                Toggle { width: 250; text: "genie · minimise"; on: Theme.state.genie; onFlip: Theme.state.genie = !Theme.state.genie }
-                Toggle { width: 250; text: "genie · restore"; on: Theme.state.featGenieBack; onFlip: Theme.state.featGenieBack = !Theme.state.featGenieBack }
-                Toggle { width: 250; text: "reactive edges"; on: Theme.state.featEdges; onFlip: Theme.state.featEdges = !Theme.state.featEdges }
-                Toggle { width: 250; text: "exposé"; on: Theme.state.featExpose; onFlip: Theme.state.featExpose = !Theme.state.featExpose }
-                Toggle { width: 250; text: "lock media"; on: Theme.state.featLockMedia; onFlip: Theme.state.featLockMedia = !Theme.state.featLockMedia }
-                Toggle { width: 250; text: "launcher smarts"; on: Theme.state.featLauncher; onFlip: Theme.state.featLauncher = !Theme.state.featLauncher }
-                Toggle { width: 250; text: "focus in bar"; on: Theme.state.featFocus; onFlip: Theme.state.featFocus = !Theme.state.featFocus }
-                Toggle { width: 250; text: "named desktops"; on: Theme.state.featDesktops; onFlip: Theme.state.featDesktops = !Theme.state.featDesktops }
-                Toggle { width: 250; text: "shot text + qr"; on: Theme.state.featShot; onFlip: Theme.state.featShot = !Theme.state.featShot }
-                Toggle { width: 250; text: "theme · auto"; on: Theme.state.themeMode === 1; onFlip: Theme.state.themeMode = Theme.state.themeMode === 1 ? 0 : 1 }
-                Toggle { width: 250; text: "auto game mode"; on: Theme.state.featGameAuto; onFlip: Theme.state.featGameAuto = !Theme.state.featGameAuto }
-                Toggle { width: 250; text: "essential only"; on: Theme.state.featEssential; onFlip: Theme.state.featEssential = !Theme.state.featEssential }
-                Toggle { width: 250; text: "sounds"; on: Theme.state.sounds; onFlip: { Theme.state.sounds = !Theme.state.sounds; if (Theme.state.sounds) Sounds.play("pop"); } }
+            Column {
+                spacing: 10
+                FeatHead { text: "genie" }
+                Grid {
+                    columns: 2
+                    spacing: 14
+                    Toggle { width: 250; text: "genie · minimise"; on: Theme.state.genie; onFlip: Theme.state.genie = !Theme.state.genie }
+                    Toggle { width: 250; text: "genie · restore"; on: Theme.state.featGenieBack; onFlip: Theme.state.featGenieBack = !Theme.state.featGenieBack }
+                }
             }
-            Lb { text: "theme times -- LOOK · desktops -- DESKTOPS · photo -- LOOK · sound -- AUDIO · essential apps -- below"; px: 10; color: Theme.mute }
+            Column {
+                spacing: 10
+                FeatHead { text: "interface" }
+                Grid {
+                    columns: 2
+                    spacing: 14
+                    Toggle { width: 250; text: "reactive edges"; on: Theme.state.featEdges; onFlip: Theme.state.featEdges = !Theme.state.featEdges }
+                    Toggle { width: 250; text: "exposé"; on: Theme.state.featExpose; onFlip: Theme.state.featExpose = !Theme.state.featExpose }
+                    Toggle { width: 250; text: "lock media"; on: Theme.state.featLockMedia; onFlip: Theme.state.featLockMedia = !Theme.state.featLockMedia }
+                    Toggle { width: 250; text: "launcher smarts"; on: Theme.state.featLauncher; onFlip: Theme.state.featLauncher = !Theme.state.featLauncher }
+                    Toggle { width: 250; text: "focus in bar"; on: Theme.state.featFocus; onFlip: Theme.state.featFocus = !Theme.state.featFocus }
+                    Toggle { width: 250; text: "named desktops"; on: Theme.state.featDesktops; onFlip: Theme.state.featDesktops = !Theme.state.featDesktops }
+                }
+            }
+            Column {
+                spacing: 10
+                FeatHead { text: "system" }
+                Grid {
+                    columns: 2
+                    spacing: 14
+                    Toggle { width: 250; text: "shot text + qr"; on: Theme.state.featShot; onFlip: Theme.state.featShot = !Theme.state.featShot }
+                    Toggle { width: 250; text: "auto game mode"; on: Theme.state.featGameAuto; onFlip: Theme.state.featGameAuto = !Theme.state.featGameAuto }
+                    Toggle { width: 250; text: "sounds"; on: Theme.state.sounds; onFlip: { Theme.state.sounds = !Theme.state.sounds; if (Theme.state.sounds) Sounds.play("pop"); } }
+                }
+            }
 
-            // essential apps: only these light the edges while "essential only" is on; the rest
-            // still land in quick settings, muted. The list is kept even with the mode off.
+            // ---- ESSENTIAL NOTIFICATIONS, its own section: while the mode is on, only the
+            // picked apps arrive out loud (island, edge flash, sound); the rest still land in
+            // quick settings, muted, and critical notifications always come through (Notes.qml).
+            // The list is kept with the mode off. Widths stay inside the 514 column the picker
+            // sets, and the header word is width-capped + elided: at 23 characters it is the
+            // longest word on the page and must never push it wide ----
             Column {
                 spacing: 12
                 Row {
+                    spacing: 12
+                    Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 10; height: 10; radius: 5; color: Theme.red }
+                    Num { width: 492; elide: Text.ElideRight; text: "ESSENTIAL NOTIFICATIONS"; font.pixelSize: 28 }
+                }
+                Rectangle { width: 514; height: 1; color: Theme.s2 }
+                Row {
                     spacing: 14
-                    Lb { text: `essential apps · ${Theme.state.essentialApps.length} picked` }
-                    Lb { visible: !Theme.state.featEssential; text: "mode off -- the list waits"; px: 10; color: Theme.mute }
+                    Toggle { width: 250; text: "essential only"; on: Theme.state.featEssential; onFlip: Theme.state.featEssential = !Theme.state.featEssential }
+                    Lb { anchors.verticalCenter: parent.verticalCenter; visible: Theme.state.featEssential; text: `${Theme.state.essentialApps.length} picked`; px: 11; color: Theme.mute }
+                    Lb { anchors.verticalCenter: parent.verticalCenter; visible: !Theme.state.featEssential; text: "mode off -- the list waits"; px: 10; color: Theme.mute }
+                }
+                Lb {
+                    width: 514
+                    wrapMode: Text.WordWrap
+                    text: "picked apps light the island, flash the edges and make the sound. everything else still arrives -- muted, in quick settings. critical notifications always come through."
+                    px: 10
+                    color: Theme.mute
+                }
+                Lb {
+                    visible: Theme.state.featEssential && Theme.state.essentialApps.length === 0
+                    width: 514
+                    wrapMode: Text.WordWrap
+                    text: "nothing picked yet -- with the mode on, everything but critical arrives muted"
+                    px: 10
+                    color: Theme.red
+                }
+                Rectangle {
+                    width: 514
+                    height: 44
+                    radius: 22
+                    color: Theme.s2
+                    TextInput {
+                        id: essIn
+                        anchors { fill: parent; leftMargin: 16; rightMargin: 16 }
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: Theme.fg
+                        selectionColor: Theme.s3
+                        selectedTextColor: Theme.fg
+                        font { family: Theme.ui; pixelSize: 14 }
+                        clip: true
+                        onTextChanged: feats.essQuery = text.trim().toLowerCase()
+                    }
+                    Lb { visible: !essIn.text && !essIn.activeFocus; x: 16; anchors.verticalCenter: parent.verticalCenter; text: "search apps"; px: 11 }
                 }
                 Flickable {
                     width: 514
-                    height: 296
+                    height: 272
                     clip: true
                     contentHeight: pickCol.height
                     boundsBehavior: Flickable.StopAtBounds
@@ -1517,7 +1582,7 @@ PanelWindow {
                         width: parent.width
                         spacing: 4
                         Repeater {
-                            model: feats.apps
+                            model: feats.essList
                             Rectangle {
                                 id: prow
                                 required property var modelData
@@ -1561,6 +1626,7 @@ PanelWindow {
                         }
                     }
                 }
+                Lb { visible: feats.essList.length === 0; text: "no app matches the search"; px: 10; color: Theme.mute }
             }
 
             // the first-login card (welcome/Welcome.qml): bring it back
@@ -1667,6 +1733,15 @@ PanelWindow {
     }
 
     // section on the right: only the selected one is visible (Tab walks only visible ones), appears bottom-up
+    // a group head (FEATURES): red dot + caps label
+    component FeatHead: Row {
+        id: fh
+        property string text
+        spacing: 10
+        Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 8; height: 8; radius: 4; color: Theme.red }
+        Lb { text: fh.text; px: 12; color: Theme.grey }
+    }
+
     component Page: Column {
         required property int k
         property string caption
