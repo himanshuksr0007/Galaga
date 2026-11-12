@@ -159,6 +159,7 @@ hl.bind(vars.kbWindowFullscreen, hl.dsp.window.fullscreen({ mode = "fullscreen" 
 hl.bind(vars.kbWindowBorderedFullscreen, hl.dsp.window.fullscreen({ mode = "maximized" }))
 hl.bind(vars.kbToggleWindowFloating, hl.dsp.window.float())
 hl.bind(vars.kbCloseWindow, hl.dsp.window.close())
+hl.bind("ALT + F4", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/altf4.sh")) -- windows-style: close the window; on the desktop -- the power menu
 hl.bind(vars.kbMinimiseWindow, fn.minimise_active) -- the white title-bar button does the same
 hl.bind(vars.kbMinimisedWs, fn.toggle_minimised)
 

@@ -1,12 +1,13 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 import Quickshell.Wayland
 import qs
 import qs.components
 import qs.services
 
-// power menu: Super+Esc. Screen almost black, on the left a column of Doto words: selected large with a red dot, the rest Mute.
+// power menu: Super+Esc, the bar's power button, and alt+f4 on the desktop (scripts/altf4.sh, over ipc below). Screen almost black, on the left a column of Doto words: selected large with a red dot, the rest Mute.
 // up/down -- the word smoothly grows and shrinks. On the right a ring of 60 dots: uptime (fraction of a six-hour shift)
 PanelWindow {
     id: root
@@ -33,6 +34,14 @@ PanelWindow {
     }
     function close() { shown = false; }
     function toggle() { shown ? close() : open(); }
+
+    // scripts/altf4.sh: shown -- so the script can close the menu instead of the
+    // window under it; toggle -- the desktop branch, the same as Super+Esc
+    IpcHandler {
+        target: "power"
+        function toggle(): string { root.toggle(); return root.shown ? "open" : "shut"; }
+        function shown(): bool { return root.shown; }
+    }
     function accept() {
         close();
         items[sel][1]();
