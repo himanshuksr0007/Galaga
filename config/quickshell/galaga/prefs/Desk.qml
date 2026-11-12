@@ -5,11 +5,14 @@ import qs.components
 
 // the mock-up for STYLE in settings: a desktop in palette p (Theme.make) -- bar, quick settings, kitty, player, the
 // Galaga strip -- with the roles called out on the right, like a drawing: a dot on the object, a line to the role, a
-// sample, the hex and what it is. A new palette flows across
+// sample, the hex and what it is. A new palette flows across.
+// The callouts are live: a click on a role (or on one of the terminal dots) fires pickColour
+// with that colour's key, and prefs opens the hex picker for it
 Item {
     id: root
 
     property var p: Theme.pal
+    signal pickColour(string key)
     readonly property var c: p.c
     readonly property color ink: p.light ? c[1] : c[0] // text on white
     // callouts: y -- the row, x -- where on the mock-up it meets the object. Colours separately, by number: inside
@@ -248,10 +251,29 @@ Item {
                 spacing: 3
                 Repeater {
                     model: rl.c ? 0 : 16 // the grid is only for ansi
-                    Fill { required property int index; width: 7; height: 7; radius: 3.5; color: root.p.ansi[index] }
+                    Fill {
+                        required property int index
+                        width: 7
+                        height: 7
+                        radius: 3.5
+                        color: root.p.ansi[index]
+                        TapHandler { onTapped: root.pickColour("a" + index) }
+                        HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    }
                 }
             }
             Lb { x: 866; y: -height / 2; px: 10; text: rl.modelData.what; color: Theme.mute }
+            // the whole callout row is the button for a single colour (the terminal row
+            // picks per dot instead, above)
+            Item {
+                visible: !!rl.c
+                x: 650
+                y: -15
+                width: 390
+                height: 30
+                TapHandler { onTapped: root.pickColour(rl.modelData.k) }
+                HoverHandler { cursorShape: Qt.PointingHandCursor }
+            }
         }
     }
 

@@ -16,8 +16,29 @@ Singleton {
     // and red; wall -- from the wallpaper's tone by variant, like dynamic in caelestia (tonal spot, fruit salad... --
     // schemes.js); scheme -- a ready palette, the theme is its own. A palette is { light, c: the greys by the roles
     // below, accent, red, ansi: kitty's 16 colours }
-    readonly property var pal: make({})
+    readonly property var palBase: make({})
+    // your own colours (prefs STYLE -- click a colour well): st.custom sits on top of whatever
+    // palette is live. Keys: bg s1 s2 s3 mute grey fg accent red, and a0..a15 for the terminal
+    // colours. Everything reads pal -- the shell, kitty (apply), gtk/qt/tmux/firefox (apps) --
+    // so a custom colour follows the whole system until it is reset
+    readonly property var pal: {
+        const cu = st.custom, b = palBase;
+        if (!cu || !Object.keys(cu).length) return b;
+        const cc = b.c.slice(), an = b.ansi.slice();
+        ["bg", "s1", "s2", "s3", "mute", "grey", "fg"].forEach((r, i) => { if (cu[r]) cc[i] = cu[r]; });
+        for (let i = 0; i < 16; i++) if (cu["a" + i]) an[i] = cu["a" + i];
+        const o = Object.assign({}, b, { c: cc, ansi: an });
+        if (cu.accent) o.accent = cu.accent;
+        if (cu.red) o.red = cu.red;
+        return o;
+    }
     readonly property bool light: pal.light
+    // set (a "#hex" string) or clear (null) one custom colour
+    function setCustom(key, hex) {
+        const cu = Object.assign({}, st.custom);
+        if (hex) cu[key] = hex; else delete cu[key];
+        st.custom = cu;
+    }
 
     // light theme -- same layout, greys inverted; red does not change
     readonly property var galagaDark: ["#000000", "#0E0E0E", "#1A1A1A", "#2A2A2A", "#4A4A4A", "#8C8C8C", "#F2F2F2"]
@@ -197,6 +218,7 @@ Singleton {
             property int paintAt: 0       // which of the wallpaper tones
             property var tones: []        // the wallpaper tones, written by the quantizer; empty -- grey wallpaper or no picture
             property string variant: "tonalspot" // how a wallpaper tone becomes a palette, an id from schemes.js (VARIANTS)
+            property var custom: ({})      // your own colours over the palette (prefs STYLE): role -> "#hex"; empty -- the palette as designed
             property bool dnd: false  // new ones are not shown, critical ones always
             property int unread: 0    // for the lock
             property bool welcomed: false // the first-login card was dismissed (welcome/Welcome.qml)
