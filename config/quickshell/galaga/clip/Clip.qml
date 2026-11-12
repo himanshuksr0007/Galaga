@@ -7,7 +7,10 @@ import qs.components
 
 // clipboard: a panel from the launcher family, only wider -- cliphist history as rows on the left, the selected entry in full on the right.
 // Search pill with a red caret, filters as chips (Tab): all / text / links / images. Type -- a glyph in a circle, an image --
-// a thumbnail as dots, color -- the color itself. Selected row -- white pill. Enter -- to clipboard, you paste with Ctrl+V
+// a thumbnail as dots, color -- the color itself. Selected row -- white pill. Enter (or the copy button) -- to clipboard, you
+// paste with Ctrl+V yourself; the paste button (Ctrl+Enter) copies AND sends the paste keys to the app underneath (Ctrl+Shift+V
+// in terminals). History is capped at 100 by the watchers (execs.lua). Pins are real copies in the shell's state dir, outside
+// cliphist entirely: rotation can never evict them, and they survive reboots like the history does
 PanelWindow {
     id: root
 
@@ -19,16 +22,50 @@ PanelWindow {
     readonly property string cache: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/demonshot-clip-"
 
     property var entries: [] // { id, text, type }
-    property var held: []
+    property var held: [] // legacy pin ids (a file of cliphist ids) -- migrated into real pins on first open, then retired
+    property var pins: [] // { key, text, type, mime, source } -- content at pinDir/<key>
+    readonly property string pinDir: Quickshell.statePath("clip-pins")
+    property var pinQueue: [] // history ids waiting for their pin copy (pinning is one decode at a time)
+    property bool migrated: false
+    function pinPath(key) { return pinDir + "/" + key; }
+    function pinned(e) { return !!e?.pin || pins.some(p => p.source === e?.id); }
+    function savePins() { pinsFile.setText(JSON.stringify(pins)); }
+    function migrate() {
+        if (migrated || !held.length || !entries.length) return;
+        migrated = true;
+        const ids = held.filter(id => entries.some(e => e.id === id) && !pins.some(p => p.source === id));
+        held = [];
+        heldFile.setText("");
+        if (ids.length) { pinQueue = pinQueue.concat(ids); pumpPins(); }
+    }
+    function pumpPins() {
+        if (pinProc.running || !pinQueue.length) return;
+        const e = entries.find(x => x.id === pinQueue[0]);
+        if (!e) { pinQueue = pinQueue.slice(1); return pumpPins(); }
+        pinProc.pinFor = e;
+        pinProc.key = String(Date.now());
+        pinProc.exec(["sh", "-c", 'd="$1"; mkdir -p "$d"; cliphist decode "$3" > "$d/$2.tmp" && mv "$d/$2.tmp" "$d/$2"', "sh", pinDir, pinProc.key, e.id]);
+    }
+    function unpin(key) {
+        pins = pins.filter(p => p.key !== key);
+        savePins();
+        Quickshell.execDetached(["rm", "-f", pinPath(key)]);
+    }
     property int filter: 0
     property int sel: 0
     property var cached: ({}) // ids of images already in the cache
     readonly property string query: input.text.toLowerCase()
 
-    readonly property var view: entries.filter(e =>
+    // pins ride on top of the history, same filters and search; a pin is its own entry
+    // ({ pin: key }) whose content lives in pinDir, not in cliphist
+    readonly property var pinView: pins.map(p => ({ id: "pin-" + p.key, text: p.text, type: p.type, pin: p.key })).filter(e =>
         (filter === 0 || filter === 2 && e.type === "link" || filter === 3 && e.type === "image"
             || filter === 1 && e.type !== "link" && e.type !== "image")
         && e.text.toLowerCase().includes(query))
+    readonly property var view: pinView.concat(entries.filter(e =>
+        (filter === 0 || filter === 2 && e.type === "link" || filter === 3 && e.type === "image"
+            || filter === 1 && e.type !== "link" && e.type !== "image")
+        && e.text.toLowerCase().includes(query)))
     readonly property var cur: view[sel] ?? null
     // full content of the selected entry; until it arrives -- the preview from the list
     property string full: ""
@@ -66,21 +103,48 @@ PanelWindow {
     function toggle() { shown ? close() : open(); }
     function move(d) { if (view.length) sel = Math.max(0, Math.min(sel + d, view.length - 1)); }
 
+    // an entry onto the clipboard proper: history decodes out of cliphist; a pin copies
+    // its own file (with its image type, so apps see a picture, not bytes)
+    function toBoard(e) {
+        if (!e) return;
+        if (e.pin) {
+            const p = pins.find(x => x.key === e.pin);
+            if (p?.type === "image") Quickshell.execDetached(["sh", "-c", 'wl-copy -t "$2" < "$1"', "sh", pinPath(e.pin), p.mime]);
+            else Quickshell.execDetached(["sh", "-c", 'wl-copy < "$1"', "sh", pinPath(e.pin)]);
+        } else Quickshell.execDetached(["sh", "-c", 'cliphist decode "$1" | wl-copy', "sh", e.id]);
+    }
     function fire() {
         if (!cur) return;
-        Quickshell.execDetached(["sh", "-c", 'cliphist decode "$1" | wl-copy', "sh", cur.id]);
+        toBoard(cur);
         close();
     }
-    // ponytail: pinning only protects from deletion; cliphist's max-items will still evict old entries
+    // paste = copy, close, then the paste keys into the app that had focus (ydotool;
+    // terminals paste with Ctrl+Shift+V, everything else with Ctrl+V -- the focused
+    // window's app id decides). The sleep lets the panel close and focus settle first
+    function paste() {
+        if (!cur) return;
+        const term = /kitty|alacritty|foot|wezterm|terminal|konsole/i.test(ToplevelManager.activeToplevel?.appId ?? "");
+        toBoard(cur);
+        close();
+        Quickshell.execDetached(["sh", "-c", term
+            ? "sleep 0.25; ydotool key 29:1 42:1 47:1 47:0 42:0 29:0"
+            : "sleep 0.25; ydotool key 29:1 47:1 47:0 29:0"]);
+    }
+    // pin: the entry's content is copied into the pin store (pumpPins); unpin: the copy goes.
+    // A pinned history entry can still be deleted from history -- the pin keeps its own copy
     function hold() {
-        const id = cur?.id;
-        if (!id) return;
-        held = held.includes(id) ? held.filter(h => h !== id) : [...held, id];
-        heldFile.setText(held.join("\n"));
+        const e = cur;
+        if (!e) return;
+        if (e.pin) return unpin(e.pin);
+        const ex = pins.find(p => p.source === e.id);
+        if (ex) return unpin(ex.key);
+        pinQueue = pinQueue.concat([e.id]);
+        pumpPins();
     }
     function burn() {
         const it = cur;
-        if (!it || held.includes(it.id)) return;
+        if (!it) return;
+        if (it.pin) return unpin(it.pin);
         del.exec(["sh", "-c", 'printf "%s\\t\\n" "$1" | cliphist delete', "sh", it.id]);
     }
 
@@ -100,6 +164,7 @@ PanelWindow {
                     const t = l.slice(l.indexOf("\t") + 1);
                     return { id: l.slice(0, l.indexOf("\t")), text: t, type: root.kind(t) };
                 });
+                root.migrate();
             }
         }
     }
@@ -115,14 +180,36 @@ PanelWindow {
         onTriggered: {
             if (!root.cur || root.cur.text.startsWith("[[ binary data")) return;
             root.decId = root.cur.id;
-            dec.exec(["sh", "-c", 'cliphist decode "$1" | head -c 4000', "sh", root.cur.id]);
+            if (root.cur.pin) dec.exec(["sh", "-c", 'head -c 4000 -- "$1"', "sh", root.pinPath(root.cur.pin)]);
+            else dec.exec(["sh", "-c", 'cliphist decode "$1" | head -c 4000', "sh", root.cur.id]);
         }
     }
     FileView {
         id: heldFile
         path: Quickshell.statePath("clip-held")
         printErrors: false
-        onLoaded: root.held = text().split("\n").filter(l => l)
+        onLoaded: { root.held = text().split("\n").filter(l => l); root.migrate(); }
+    }
+    FileView {
+        id: pinsFile
+        path: Quickshell.statePath("clip-pins.json")
+        printErrors: false
+        onLoaded: { try { root.pins = JSON.parse(text()); } catch (e) { root.pins = []; } }
+    }
+    // one pin copy at a time; a failed decode makes no pin (the queue just moves on)
+    Process {
+        id: pinProc
+        property var pinFor: null
+        property string key: ""
+        onExited: code => {
+            if (!code && pinFor) {
+                const m = pinFor.type === "image" ? root.img(pinFor) : null;
+                root.pins = root.pins.concat([{ key: key, text: pinFor.text, type: pinFor.type, mime: m ? "image/" + (m[1] === "jpg" ? "jpeg" : m[1]) : "", source: pinFor.id }]);
+                root.savePins();
+            }
+            root.pinQueue = root.pinQueue.slice(1);
+            root.pumpPins();
+        }
     }
 
     visible: t > 0
@@ -189,7 +276,7 @@ PanelWindow {
                     Keys.onPressed: e => {
                         const ctrl = e.modifiers & Qt.ControlModifier;
                         if (e.key === Qt.Key_Escape) root.close();
-                        else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) root.fire();
+                        else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { if (ctrl) root.paste(); else root.fire(); }
                         else if (e.key === Qt.Key_Tab) root.filter = (root.filter + 1) % 4;
                         else if (e.key === Qt.Key_Backtab) root.filter = (root.filter + 3) % 4;
                         else if (e.key === Qt.Key_Down || ctrl && e.key === Qt.Key_J) root.move(1);
@@ -250,15 +337,43 @@ PanelWindow {
                 Lb { id: kindLb; x: 30; y: 30; text: root.cur ? `${root.cur.type} · ${root.sel + 1} of ${root.view.length}` : "" }
                 Row {
                     anchors { right: parent.right; rightMargin: 30; verticalCenter: kindLb.verticalCenter }
-                    visible: !!root.cur && root.held.includes(root.cur.id)
+                    visible: !!root.cur && root.pinned(root.cur)
                     spacing: 8
                     Icon { anchors.verticalCenter: parent.verticalCenter; text: "\u{F0403}"; font.pixelSize: 15 }
                     Lb { text: "pinned"; color: Theme.fg }
                 }
                 Loader {
-                    anchors { left: parent.left; right: parent.right; top: kindLb.bottom; bottom: parent.bottom; margins: 30; topMargin: 26 }
+                    anchors { left: parent.left; right: parent.right; top: kindLb.bottom; bottom: acts.top; leftMargin: 30; rightMargin: 30; topMargin: 26; bottomMargin: 16 }
                     clip: true
                     sourceComponent: root.cur ? ({ text: textPv, code: codePv, link: linkPv, color: colorPv, image: imagePv, file: filePv })[root.cur.type] : emptyPv
+                }
+
+                // the two ways out: copy (you paste it yourself) and paste (the keys are
+                // sent to the app underneath -- see root.paste)
+                Row {
+                    id: acts
+                    visible: !!root.cur
+                    anchors { left: parent.left; leftMargin: 30; bottom: parent.bottom; bottomMargin: 24 }
+                    spacing: 10
+                    Rectangle {
+                        width: pasteL.implicitWidth + 36
+                        height: 40
+                        radius: 20
+                        color: Theme.fg
+                        Lb { id: pasteL; anchors.centerIn: parent; text: "paste"; px: 12; color: Theme.ink }
+                        TapHandler { onTapped: root.paste() }
+                        HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    }
+                    Rectangle {
+                        width: copyL.implicitWidth + 36
+                        height: 40
+                        radius: 20
+                        color: Theme.s3
+                        Lb { id: copyL; anchors.centerIn: parent; text: "copy"; px: 12; color: Theme.fg }
+                        TapHandler { onTapped: root.fire() }
+                        HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    }
+                    Lb { anchors.verticalCenter: parent.verticalCenter; width: 190; elide: Text.ElideRight; text: "paste sends the keys to the app underneath"; px: 10; color: Theme.mute }
                 }
             }
 
@@ -266,7 +381,7 @@ PanelWindow {
                 anchors { horizontalCenter: parent.horizontalCenter; top: parent.bottom; topMargin: 28 }
                 spacing: 34
                 Repeater {
-                    model: ["↑↓ select", "↵ copy", "tab filter", "^p pin", "del delete", "esc close"]
+                    model: ["↑↓ select", "↵ copy", "^↵ paste", "tab filter", "^p pin", "del delete", "esc close"]
                     Lb { required property string modelData; text: modelData }
                 }
             }
@@ -313,7 +428,9 @@ PanelWindow {
         // Through a temp file, so the preview does not catch a half-written one
         Process {
             running: row.type === "image" && !root.cached[row.modelData.id]
-            command: ["sh", "-c", 'f="$1$2"; [ -s "$f" ] || { cliphist decode "$2" > "$f.$$" && mv "$f.$$" "$f"; }', "sh", root.cache, row.modelData.id]
+            command: row.modelData.pin
+                ? ["sh", "-c", 'f="$1$2"; [ -s "$f" ] || { cp "$3" "$f.$$" && mv "$f.$$" "$f"; }', "sh", root.cache, row.modelData.id, root.pinPath(row.modelData.pin)]
+                : ["sh", "-c", 'f="$1$2"; [ -s "$f" ] || { cliphist decode "$2" > "$f.$$" && mv "$f.$$" "$f"; }', "sh", root.cache, row.modelData.id]
             onExited: code => { if (!code) root.cached = Object.assign({}, root.cached, { [row.modelData.id]: true }); }
         }
         Column {
@@ -338,7 +455,7 @@ PanelWindow {
             id: tail
             anchors { right: parent.right; rightMargin: 20; verticalCenter: parent.verticalCenter }
             spacing: 12
-            Icon { anchors.verticalCenter: parent.verticalCenter; visible: root.held.includes(row.modelData.id); text: "\u{F0403}"; font.pixelSize: 16; color: row.on ? Theme.ink : Theme.fg }
+            Icon { anchors.verticalCenter: parent.verticalCenter; visible: root.pinned(row.modelData); text: "\u{F0403}"; font.pixelSize: 16; color: row.on ? Theme.ink : Theme.fg }
             Num { anchors.verticalCenter: parent.verticalCenter; text: String(row.index + 1).padStart(2, "0"); font.pixelSize: 26; color: row.on ? Theme.ink : Theme.mute }
         }
         // click -- select, on the selected one -- copy
