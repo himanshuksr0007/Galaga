@@ -20,10 +20,13 @@ Singleton {
     // the island, the edge flash. Everything is still tracked below, so quick settings keeps
     // the full history; the unpicked ones just arrive muted. Matching: the notification's
     // desktop-entry hint against the picked ids; senders that omit it fall back to the
-    // entry whose name or icon the notification carries.
+    // entry whose name or icon the notification carries. Critical notifications always
+    // arrive out loud, picked or not: the mode filters noise, not alarms -- without this,
+    // turning the mode on with an empty list would mute the world, alarms included.
     readonly property bool essMode: Theme.state.featEssential
     function essential(n) {
         if (!root.essMode) return true;
+        if (n.urgency === NotificationUrgency.Critical) return true;
         const ids = Theme.state.essentialApps;
         if (!ids.length) return false;
         if (n.desktopEntry && ids.includes(n.desktopEntry)) return true;
