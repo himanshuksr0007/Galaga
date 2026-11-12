@@ -209,7 +209,7 @@ PanelWindow {
                     Out { width: parent.width; open: root.pick === "out"; onTouched: root.pin() } // right-click the volume slider: the outputs
 
                     // power mode, like caelestia: four cells, white fill slides to the selected one; ticks -- strength.
-                    // ultra -- also 60 Hz and no animations, blur or shadows (Rules.modes)
+                    // battery saver -- also 60 Hz and no animations, blur or shadows (Rules.modes)
                     // on the right -- game mode, like caelestia (Rules.store.game): no animations, blur, shadows or gaps, tearing
                     Row {
                         width: parent.width

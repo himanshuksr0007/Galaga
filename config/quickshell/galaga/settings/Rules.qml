@@ -59,7 +59,7 @@ Singleton {
             property bool blur: true
             property bool shadow: true
             property bool motion: true
-            property bool ultra: false   // ultra mode (setMode 0): 60 Hz and no decorations on top of the settings
+            property bool ultra: false   // battery saver mode (setMode 0; the key keeps its old name): 60 Hz and no decorations on top of the settings
             property bool game: false    // game mode, like caelestia: no animations, blur, shadows, gaps or rounding, tearing (Theme.apply)
             // what game mode keeps (prefs -> WINDOWS -> in a game); tearing is always on in it (Isaqdn03's choices)
             property bool gameGaps: false   // gaps, border and rounding as set
@@ -67,7 +67,7 @@ Singleton {
             property bool gameBlur: false
             property bool gameShadow: false
             property bool gameDnd: true     // auto game mode (services/Game) turns on do not disturb
-            property bool powerAuto: false  // ultra on battery, by itself (services/PowerAuto): unplug -- ultra; plug in -- the mode you had comes back
+            property bool powerAuto: false  // battery saver on battery, by itself (services/PowerAuto): unplug -- saver; plug in -- the mode you had comes back
             // Colors
             property int palette: 0
             property bool paintHypr: true
@@ -341,11 +341,11 @@ Singleton {
     }
     function checkPower() { powerProbe.running = true; }
 
-    // power modes, like caelestia: power-profiles-daemon profile. ultra on top -- 60 Hz, no animations, blur or shadows,
-    // on top of your settings without touching them: exit -- they return. 0 ultra . 1 saver . 2 balanced . 3 performance.
+    // power modes, like caelestia: power-profiles-daemon profile. battery saver on top -- 60 Hz, no animations, blur or shadows,
+    // on top of your settings without touching them: exit -- they return. 0 battery saver . 1 saver . 2 balanced . 3 performance.
     // Windows (blur, shadows) are applied by the caller: demonshot -- windows(), galaga -- Theme.apply() (windows() would remove its rounding)
     readonly property var modes: [
-        { name: "ultra", short: "ULT", what: `power saver · ${rates[0]} hz · still` },
+        { name: "battery saver", short: "BAT", what: `power saver · ${rates[0]} hz · still` },
         { name: "saver", short: "ECO", what: "power saver" },
         { name: "balanced", short: "BAL", what: "balanced" },
         { name: "performance", short: "MAX", what: "performance" }
@@ -365,7 +365,7 @@ Singleton {
         }
         if (moving !== moving0) motion();
     }
-    // what is actually set: ultra overrides the settings -- the lowest screen refresh rate, otherwise the closest to the selected
+    // what is actually set: battery saver overrides the settings -- the lowest screen refresh rate, otherwise the closest to the selected
     readonly property int hz: store.ultra ? rates[0] : refreshHz
     readonly property bool moving: store.motion && !store.ultra && (!store.game || store.gameMotion)
     readonly property bool blurOn: store.blur && !store.ultra && (!store.game || store.gameBlur)

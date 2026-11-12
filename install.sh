@@ -470,6 +470,21 @@ PYEOF
     note "bluetooth: policy set in $conf (backup: $conf.galaga-backup) -- AutoEnable, BR/EDR only, Privacy off, FastConnectable off"
 }
 
+warp_quiet() { # the tray applet is started once by the rice (execs.lua). The package also
+    # ships a systemd user service for it whose Restart brings the window back seconds
+    # after it is closed, and an xdg autostart entry that becomes a second service --
+    # mask and hide both, so a killed client stays dead until the next login.
+    # Runs whenever warp-taskbar exists on the machine, not only when warp was ticked
+    # in this run's extras picker (the picker defaults to nothing ticked, so a re-run
+    # without re-ticking it used to silently skip this).
+    command -v warp-taskbar >/dev/null 2>&1 || return 0
+    run systemctl --user mask warp-taskbar.service
+    run systemctl --user stop warp-taskbar.service
+    run mkdir -p "$HOME/.config/autostart"
+    if [ "$DRY" = 1 ]; then note "would hide the warp xdg autostart entry"
+    else printf '[Desktop Entry]\nHidden=true\n' > "$HOME/.config/autostart/com.cloudflare.WarpTaskbar.desktop"; fi
+}
+
 services() {
     say "services"
     run sudo systemctl enable NetworkManager bluetooth
@@ -488,17 +503,7 @@ services() {
     # Cloudflare WARP (the warp extra): warp-cli and the tray applet are front-ends for the
     # warp-svc daemon -- enable and start it, or the client has nothing to talk to
     [[ " ${WITH//,/ } " == *" warp "* ]] && run sudo systemctl enable --now warp-svc
-    # The tray applet itself is started once by the rice (execs.lua). The package also
-    # ships a systemd user service for it whose Restart brings the window back seconds
-    # after it is closed, and an xdg autostart entry that becomes a second service --
-    # mask and hide both, so a killed client stays dead until the next login
-    if [[ " ${WITH//,/ } " == *" warp "* ]]; then
-        run systemctl --user mask warp-taskbar.service
-        run systemctl --user stop warp-taskbar.service
-        run mkdir -p "$HOME/.config/autostart"
-        if [ "$DRY" = 1 ]; then note "would hide the warp xdg autostart entry"
-        else printf '[Desktop Entry]\nHidden=true\n' > "$HOME/.config/autostart/com.cloudflare.WarpTaskbar.desktop"; fi
-    fi
+    warp_quiet # unconditionally: gated on warp-taskbar existing, not on this run's picks
     run systemctl --user enable pipewire-pulse.socket wireplumber ydotool
     run sudo usermod -aG input,video "$USER" # ydotool (uinput), brightnessctl
     run xdg-user-dirs-update
@@ -858,6 +863,7 @@ update_rest() { # step 2: whatever the new version needs. Asks for a password on
     # shellcheck disable=SC2086
     [ -z "$aur_missing" ] || run yay -S --needed --noconfirm $aur_missing || say "aur: not everything installed, see above"
     links
+    warp_quiet # --update never ran services(), so the mask was never re-applied either
     [ -z "$greeter_changed" ] || greeter
     if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then run "$DOTS/config/quickshell/rice/rice" restart; fi
     kernel_note

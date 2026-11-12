@@ -6,14 +6,14 @@ import QtQuick
 import qs
 import qs.settings
 
-// ultra on battery, by itself (prefs -> POWER -> ultra on battery; Rules.store.powerAuto). Unplug --
-// the mode you had is kept in Theme.state.powerHold and ultra (Rules.setMode 0) takes over; plug back
+// battery saver on battery, by itself (prefs -> POWER -> auto saver on battery; Rules.store.powerAuto). Unplug --
+// the mode you had is kept in Theme.state.powerHold and battery saver (Rules.setMode 0) takes over; plug back
 // in -- the kept mode returns. Same discipline as services/Game: the hold lives in Theme.state, so a
 // shell restart mid-hold still puts the mode back (the settle below), and taking a mode by hand while
 // on battery clears the hold -- you took over, nothing overrides you at plug-in. Switching the pref
 // off while it holds restores your mode at once; switching it on while already unplugged engages now.
 // No laptop battery (a desktop, a UPS) -- never engages. The mode itself is all Rules: the daemon's
-// profile persists in the daemon, ultra in rules.json, so what this adds is only the edges.
+// profile persists in the daemon, the saver flag in rules.json, so what this adds is only the edges.
 Singleton {
     id: root
 

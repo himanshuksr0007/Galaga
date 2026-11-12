@@ -273,7 +273,7 @@ PanelWindow {
             Lb { id: full; visible: false; text: "100"; px: 12; font.bold: true }
         }
     }
-    // power mode as ticks (Rules.modes): ultra -- one, performance -- all; click -- next,
+    // power mode as ticks (Rules.modes): battery saver -- one, performance -- all; click -- next,
     // hover (and on the battery) -- a card with a choice
     Component {
         id: modeC

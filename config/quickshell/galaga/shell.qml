@@ -61,7 +61,7 @@ ShellRoot {
     Vpn { id: vpn }
     LazyLoader { active: !Theme.state.welcomed; Welcome {} } // the first-login card; FEATURES brings it back
     readonly property bool autoGame: Game.on // starts services/Game: a fullscreen game turns on game mode and dnd
-    readonly property bool autoPower: PowerAuto.on // starts services/PowerAuto: ultra on battery, by itself (prefs -> POWER)
+    readonly property bool autoPower: PowerAuto.on // starts services/PowerAuto: battery saver on battery, by itself (prefs -> POWER)
     // starts services/Sounds (its players preload) and keeps it quiet while a game is fullscreen
     Binding { target: Sounds; property: "gameQuiet"; value: Game.playing }
     Walls { id: walls }

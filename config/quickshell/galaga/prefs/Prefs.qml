@@ -1230,7 +1230,7 @@ PanelWindow {
         }
 
         // ---- POWER: power modes (Rules.modes) -- four circles, the ring glows with strength, the selected one white.
-        // ultra -- power saver plus 60 Hz, no animations, blur or shadows on top of the settings ----
+        // battery saver -- power saver plus 60 Hz, no animations, blur or shadows on top of the settings ----
         Page {
             k: 8
             caption: `power · ${Rules.modes[Rules.mode].what} · ${Rules.hz} hz`
@@ -1269,14 +1269,14 @@ PanelWindow {
                     }
                 }
             }
-            Lb { text: Rules.store.ultra ? `ultra · ${Rules.rates[0]} hz, no motion, no blur, no shadows — your settings come back when you leave` : "cpu profile only · hz, motion and looks stay yours" }
+            Lb { text: Rules.store.ultra ? `battery saver · ${Rules.rates[0]} hz, no motion, no blur, no shadows — your settings come back when you leave` : "cpu profile only · hz, motion and looks stay yours" }
             Lb { visible: Rules.powerOk && !PowerProfiles.hasPerformanceProfile; text: "no performance profile on this machine" }
-            Lb { visible: !Rules.powerOk; px: 10; color: Theme.red; text: "power-profiles-daemon isn't answering — the cpu profile can't change (ultra's screen and looks still apply). fix: sudo systemctl enable --now power-profiles-daemon" }
+            Lb { visible: !Rules.powerOk; px: 10; color: Theme.red; text: "power-profiles-daemon isn't answering — the cpu profile can't change (battery saver's screen and looks still apply). fix: sudo systemctl enable --now power-profiles-daemon" }
             Row {
                 visible: UPower.displayDevice?.isLaptopBattery ?? false
                 spacing: 20
-                Toggle { text: "ultra on battery"; on: root.r.powerAuto; onFlip: root.r.powerAuto = !root.r.powerAuto }
-                Lb { anchors.verticalCenter: parent.verticalCenter; px: 10; text: "unplug — ultra takes over by itself · plug in — the mode you had comes back · a mode picked by hand on battery cancels the return" }
+                Toggle { text: "auto saver on battery"; on: root.r.powerAuto; onFlip: root.r.powerAuto = !root.r.powerAuto }
+                Lb { anchors.verticalCenter: parent.verticalCenter; px: 10; text: "unplug — battery saver takes over by itself · plug in — the mode you had comes back · a mode picked by hand on battery cancels the return" }
             }
             // shell performance (Theme.perf): a different thing from the modes above -- those set the
             // cpu through the daemon; this sets what the galaga shell itself spends on polling and
@@ -1626,7 +1626,7 @@ PanelWindow {
                         }
                     }
                 }
-                Lb { visible: feats.essList.length === 0; text: "no app matches the search"; px: 10; color: Theme.mute }
+                Lb { visible: feats.essList.length === 0 && feats.essQuery !== ""; text: "no app matches the search"; px: 10; color: Theme.mute }
             }
 
             // the first-login card (welcome/Welcome.qml): bring it back
