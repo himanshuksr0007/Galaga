@@ -24,8 +24,8 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
 
     -- Clipboard history
-    hl.exec_cmd("wl-paste --type text --watch cliphist store")
-    hl.exec_cmd("wl-paste --type image --watch cliphist store")
+    hl.exec_cmd("wl-paste --type text --watch cliphist -max-items 100 store")
+    hl.exec_cmd("wl-paste --type image --watch cliphist -max-items 100 store")
 
     -- Drives mount by themselves (udiskie on udisks2). A shell restart can leave the last one
     -- running -- kill our own first (AMM021's dedupe)
