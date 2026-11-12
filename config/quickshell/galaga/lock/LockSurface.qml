@@ -27,6 +27,7 @@ WlSessionLockSurface {
         session: true // the session lock: media controls + notification summary (the greeter leaves this off)
         photo: Theme.state.avatar ? "file://" + Theme.state.avatar : ""
         wallPath: Theme.scr(root.screen?.name, "wall") // each screen locks over its own wallpaper
+        lockWallUrl: Theme.state.lockWall ? "file://" + Theme.state.lockWall : "" // the lock's own wallpaper, if one is set
     }
 
     Rectangle { anchors.fill: parent; color: Theme.bg; visible: !root.primary }

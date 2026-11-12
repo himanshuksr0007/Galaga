@@ -32,6 +32,14 @@ Item {
     // the wallpaper behind the face: the session lock passes its own screen's (LockSurface);
     // empty -- the shared one, which is also all the greeter knows
     property string wallPath: ""
+    // a wallpaper of the lock's own (prefs LOCK): the session lock passes the state copy,
+    // the greeter its synced one. Set and loadable -- it covers the desktop wallpaper
+    property string lockWallUrl: ""
+    // the clock's shape (prefs LOCK): 0 matrix -- the dotted time as it always was,
+    // 1 stacked -- hours over minutes, 2 analogue -- a ring of minute dots and two hands.
+    // Stacked runs taller, so the lines under the clock shift down with it
+    readonly property int clockStyle: Theme.state.lockClock
+    readonly property real clockShift: clockStyle === 1 ? 56 : 0
     property bool switcher: false
     property var users: []
     property bool usersOpen: false
@@ -49,7 +57,7 @@ Item {
     Behavior on t { NumberAnimation { duration: root.auth.leaving ? 450 : 1100 } }
     Component.onCompleted: t = Qt.binding(() => root.auth.leaving ? 0 : 1)
     function ph(a, b) { const x = Math.max(0, Math.min(1, (t - a) / (b - a))); return 1 - Math.pow(1 - x, 4); }
-    // hide the password's length (prefs LOOK, off by default): three fixed dots that pulse
+    // hide the password's length (prefs LOCK, off by default): three fixed dots that pulse
     // on each key instead of one dot per character. Off -- the dot count is the length, exactly
     readonly property bool hideLen: Theme.state.lockHideLen
     // power from the lock (AMM021's lock power menu): sleep, reboot, power off -- the session
@@ -96,6 +104,16 @@ Item {
             opacity: root.ph(0, 0.6)
             Orb { visible: Theme.state.orb; x: stage.width - 720; y: stage.height - 580 }
             Wall { width: stage.width; height: stage.height; path: Theme.wallSrc(root.wallPath || Theme.state.wall) }
+            // the lock's own wallpaper, plain and full-bleed over the desktop one;
+            // not loadable -- invisible, and the desktop wallpaper shows as before
+            Image {
+                anchors.fill: parent
+                visible: status === Image.Ready
+                source: root.lockWallUrl
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                sourceSize: Qt.size(1920, 1200)
+            }
         }
 
         Lb {
@@ -107,6 +125,7 @@ Item {
             transform: Translate { y: 16 * (1 - root.ph(0.15, 0.55)) }
         }
         Row {
+            visible: root.clockStyle === 0
             anchors.horizontalCenter: parent.horizontalCenter
             y: 230
             opacity: root.ph(0, 0.5)
@@ -115,9 +134,70 @@ Item {
             Num { text: ":"; font.pixelSize: 400; opacity: root.blink || !Theme.state.blink ? 1 : 0.2 }
             Num { text: Qt.formatTime(clock.date, "mm"); font.pixelSize: 400 }
         }
+        // stacked: hours over minutes, nothing-style -- the widget clocks on nothing phones
+        Column {
+            visible: root.clockStyle === 1
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: 196
+            spacing: -36
+            opacity: root.ph(0, 0.5)
+            transform: Translate { y: -40 * (1 - root.ph(0, 0.5)) }
+            Num { anchors.horizontalCenter: parent.horizontalCenter; text: Theme.hh(clock.date); font.pixelSize: 300 }
+            Num { anchors.horizontalCenter: parent.horizontalCenter; text: Qt.formatTime(clock.date, "mm"); font.pixelSize: 300 }
+        }
+        // analogue: sixty minute dots, twelve hour dots, two hands from the centre
+        Item {
+            visible: root.clockStyle === 2
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: 208
+            width: 352
+            height: 352
+            opacity: root.ph(0, 0.5)
+            Ring { anchors.fill: parent; n: 60; dot: 3; f: 1; on: Theme.s3 }
+            Repeater {
+                model: 12
+                Rectangle {
+                    required property int index
+                    readonly property real a: index * Math.PI / 6
+                    x: parent.width / 2 + Math.sin(a) * 158 - 4.5
+                    y: parent.height / 2 - Math.cos(a) * 158 - 4.5
+                    width: 9
+                    height: 9
+                    radius: 4.5
+                    color: Theme.fg
+                }
+            }
+            Rectangle {
+                x: parent.width / 2 - 3.5
+                y: parent.height / 2 - 100
+                width: 7
+                height: 100
+                radius: 3.5
+                color: Theme.fg
+                transformOrigin: Item.Bottom
+                rotation: ((clock.date.getHours() % 12) + clock.date.getMinutes() / 60) * 30
+            }
+            Rectangle {
+                x: parent.width / 2 - 2.5
+                y: parent.height / 2 - 148
+                width: 5
+                height: 148
+                radius: 2.5
+                color: Theme.fg
+                transformOrigin: Item.Bottom
+                rotation: clock.date.getMinutes() * 6
+            }
+            Rectangle {
+                anchors.centerIn: parent
+                width: 13
+                height: 13
+                radius: 6.5
+                color: Theme.red
+            }
+        }
         Lb {
             anchors.horizontalCenter: parent.horizontalCenter
-            y: 600
+            y: 600 + root.clockShift
             opacity: root.ph(0.25, 0.65)
             transform: Translate { y: 16 * (1 - root.ph(0.25, 0.65)) }
             text: [Weather.ok ? `${Math.round(Weather.now.temp)}° ${Weather.name(Weather.now.code)}` : "",
@@ -129,7 +209,7 @@ Item {
         Row {
             visible: root.session && Theme.state.featLockMedia && !!Media.player
             anchors.horizontalCenter: parent.horizontalCenter
-            y: 646
+            y: 646 + root.clockShift
             spacing: 18
             opacity: root.ph(0.35, 0.75)
             transform: Translate { y: 16 * (1 - root.ph(0.35, 0.75)) }

@@ -21,10 +21,10 @@ PanelWindow {
 
     property int sel: 0
     signal wallRequested // wallpapers -- their own screen (wall/Walls), opened by shell.qml
-    readonly property var sections: ["HOME", "DECK", "BAR", "LOOK", "STYLE", "WINDOWS", "DISPLAY", "AUDIO", "POWER", "INPUT", "IDLE", "SHELL", "FEATURES", "DESKTOPS"]
+    readonly property var sections: ["HOME", "DECK", "BAR", "LOOK", "STYLE", "LOCK", "WINDOWS", "DISPLAY", "AUDIO", "POWER", "INPUT", "IDLE", "SHELL", "FEATURES", "ESSENTIAL", "DESKTOPS"]
     readonly property string moves: "shift ←→ move · ↵ swap · del drop · drag"
     readonly property string rings: "drag round the rings · scroll"
-    readonly property var hints: [moves, moves, moves, "", "hover to preview · ↵ or click sets it", rings, "drag a screen to move it · " + rings, "click or ←→ a device", "↵ or click a mode", rings, "drag the marks", "", "", ""]
+    readonly property var hints: [moves, moves, moves, "", "hover to preview · ↵ or click sets it · click a colour to change it", "the face they meet first", rings, "drag a screen to move it · " + rings, "click or ←→ a device", "↵ or click a mode", rings, "drag the marks", "", "", "click picks who gets through", ""]
     readonly property var r: Rules.store
 
     // glyphs for home views, deck sections and the bar tray
@@ -675,40 +675,6 @@ PanelWindow {
             caption: "look · the home screen, live"
             property bool dim: false // colon is dimmed
 
-            // profile photo: set copies the file next to galaga.json (state.avatar) and to
-            // ~/.face; a ~/.face that was already there is backed up into the state dir
-            // first, and clear brings it back (or removes ours). The lock reads
-            // state.avatar; the greeter gets its copy from install.sh --greeter.
-            property string photoMsg: ""
-            function setPhoto() {
-                const raw = photoIn.text.trim();
-                const p = raw.startsWith("~/") ? Quickshell.env("HOME") + raw.slice(1) : raw;
-                if (!p) { photoMsg = "type a path first"; return; }
-                photoSet.exec(["sh", "-c",
-                    'st="${XDG_STATE_HOME:-$HOME/.local/state}/rice"; mkdir -p "$st"; src="$1"; [ -f "$src" ] || { echo missing; exit 1; }\n' +
-                    'ext="${src##*.}"; case "$ext" in jpg|jpeg|png|webp|JPG|JPEG|PNG|WEBP) ;; *) ext=png ;; esac\n' +
-                    '[ -f "$HOME/.face" ] && [ ! -f "$st/face-backup" ] && cp "$HOME/.face" "$st/face-backup"\n' +
-                    'cp "$src" "$st/avatar.$ext" && cp "$src" "$HOME/.face" && printf "%s" "$st/avatar.$ext"',
-                    "galaga-photo", p]);
-            }
-            function clearPhoto() { photoClear.running = true; }
-            Process {
-                id: photoSet
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        const t = text.trim();
-                        if (t && t !== "missing") { Theme.state.avatar = t; look.photoMsg = ""; photoIn.text = ""; }
-                        else look.photoMsg = "no such file";
-                    }
-                }
-            }
-            Process {
-                id: photoClear
-                command: ["sh", "-c",
-                    'st="${XDG_STATE_HOME:-$HOME/.local/state}/rice"; rm -f "$st"/avatar.*\n' +
-                    'if [ -f "$st/face-backup" ]; then mv "$st/face-backup" "$HOME/.face"; else rm -f "$HOME/.face"; fi']
-                onExited: { Theme.state.avatar = ""; look.photoMsg = ""; }
-            }
             Timer { running: look.visible && root.visible && Theme.state.blink; interval: 500; repeat: true; onTriggered: look.dim = !look.dim }
 
             Row {
@@ -747,8 +713,6 @@ PanelWindow {
                     Toggle { width: 200; text: "24 hours"; on: Theme.state.clock24; onFlip: Theme.state.clock24 = !Theme.state.clock24 }
                     Toggle { width: 200; text: "blink"; on: Theme.state.blink; onFlip: Theme.state.blink = !Theme.state.blink }
                     Toggle { width: 200; text: "edges"; on: Theme.state.edges; onFlip: Theme.state.edges = !Theme.state.edges }
-                    Toggle { width: 200; text: "hide length"; on: Theme.state.lockHideLen; onFlip: Theme.state.lockHideLen = !Theme.state.lockHideLen }
-                    Toggle { width: 200; text: "one screen"; on: Theme.state.lockOneScreen; onFlip: Theme.state.lockOneScreen = !Theme.state.lockOneScreen }
                     // on home: which parts of the home screen show at all (Isaqdn03's section hides)
                     Toggle { width: 200; text: "home · clock"; on: Theme.state.homeClock; onFlip: Theme.state.homeClock = !Theme.state.homeClock }
                     Toggle { width: 200; text: "home · greeting"; on: Theme.state.homeHello; onFlip: Theme.state.homeHello = !Theme.state.homeHello }
@@ -763,66 +727,6 @@ PanelWindow {
                     }
                 }
             }
-
-            // profile photo: a path field and a live preview -- the picker this shell can
-            // stand behind (there is no file dialog in its toolkit). Set -- the photo shows
-            // on the lock (and, after install.sh --greeter, at boot); clear -- back to dots.
-            Row {
-                spacing: 14
-                Item {
-                    width: 72
-                    height: 72
-                    Ring { anchors.fill: parent; n: 24; dot: 3; f: 1 }
-                    Item {
-                        visible: pvImg.status === Image.Ready
-                        anchors { fill: parent; margins: 12 }
-                        layer.enabled: true
-                        layer.effect: MultiEffect { maskEnabled: true; maskSource: pvMask; maskThresholdMin: 0.5; maskSpreadAtMin: 1 }
-                        Image {
-                            id: pvImg
-                            anchors.fill: parent
-                            fillMode: Image.PreserveAspectCrop
-                            asynchronous: true
-                            sourceSize: Qt.size(96, 96)
-                            source: {
-                                const t = photoIn.text.trim();
-                                const p = t.startsWith("~/") ? Quickshell.env("HOME") + t.slice(1) : t;
-                                return p ? "file://" + p : Theme.state.avatar ? "file://" + Theme.state.avatar : "";
-                            }
-                        }
-                    }
-                    Rectangle { id: pvMask; anchors { fill: parent; margins: 12 } radius: width / 2; visible: false; layer.enabled: true }
-                    Rectangle { visible: pvImg.status !== Image.Ready; anchors.centerIn: parent; width: 10; height: 10; radius: 5; color: Theme.fg }
-                }
-                Rectangle {
-                    width: 360
-                    height: 72
-                    radius: Theme.corner(36)
-                    color: Theme.s2
-                    border { width: photoIn.activeFocus ? 1 : 0; color: Theme.fg }
-                    Lb { id: photoL; x: 30; anchors.verticalCenter: parent.verticalCenter; text: "photo"; color: photoIn.activeFocus ? Theme.fg : Theme.grey }
-                    TextInput {
-                        id: photoIn
-                        anchors { left: photoL.right; leftMargin: 24; right: parent.right; rightMargin: 30; verticalCenter: parent.verticalCenter }
-                        font { family: Theme.ui; pixelSize: 20 }
-                        color: Theme.fg
-                        selectionColor: Theme.s3
-                        clip: true
-                        activeFocusOnTab: true
-                        Text { visible: !photoIn.text; text: Theme.state.avatar || "~/Pictures/me.png"; font: photoIn.font; color: Theme.mute }
-                        Keys.onPressed: e => {
-                            if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) look.setPhoto();
-                            else if (e.key === Qt.Key_Up || e.key === Qt.Key_Down) root.go(root.sel + (e.key === Qt.Key_Up ? -1 : 1));
-                            else if (e.key === Qt.Key_Escape) stage.forceActiveFocus();
-                            else return;
-                            e.accepted = true;
-                        }
-                    }
-                }
-                Act { icon: "\u{F012C}"; text: "set"; onHit: look.setPhoto() }
-                Act { visible: !!Theme.state.avatar; icon: "\u{F0156}"; text: "clear"; onHit: look.clearPhoto() }
-            }
-            Lb { visible: !!look.photoMsg; text: look.photoMsg; px: 10; color: Theme.red }
 
             // name in the greeting; empty -- $USER
             Rectangle {
@@ -993,9 +897,224 @@ PanelWindow {
             }
         }
 
+        // ---- LOCK: everything about the face -- the photo, a wallpaper of its own, the
+        // clock's shape, and what may show on it. The desktop's look stays on LOOK; this page
+        // is the lock alone (and the greeter, which shares the face) ----
+        Page {
+            id: lockp
+            k: 5
+            caption: "lock · the face they meet first"
+
+            // profile photo: set copies the file next to galaga.json (state.avatar) and to
+            // ~/.face; a ~/.face that was already there is backed up into the state dir
+            // first, and clear brings it back (or removes ours). The lock reads
+            // state.avatar; the greeter gets its copy from install.sh --greeter.
+            property string photoMsg: ""
+            function setPhoto() {
+                const raw = photoIn.text.trim();
+                const p = raw.startsWith("~/") ? Quickshell.env("HOME") + raw.slice(1) : raw;
+                if (!p) { photoMsg = "type a path first"; return; }
+                photoSet.exec(["sh", "-c",
+                    'st="${XDG_STATE_HOME:-$HOME/.local/state}/rice"; mkdir -p "$st"; src="$1"; [ -f "$src" ] || { echo missing; exit 1; }\n' +
+                    'ext="${src##*.}"; case "$ext" in jpg|jpeg|png|webp|JPG|JPEG|PNG|WEBP) ;; *) ext=png ;; esac\n' +
+                    '[ -f "$HOME/.face" ] && [ ! -f "$st/face-backup" ] && cp "$HOME/.face" "$st/face-backup"\n' +
+                    'cp "$src" "$st/avatar.$ext" && cp "$src" "$HOME/.face" && printf "%s" "$st/avatar.$ext"',
+                    "galaga-photo", p]);
+            }
+            function clearPhoto() { photoClear.running = true; }
+            Process {
+                id: photoSet
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        const t = text.trim();
+                        if (t && t !== "missing") { Theme.state.avatar = t; lockp.photoMsg = ""; photoIn.text = ""; }
+                        else lockp.photoMsg = "no such file";
+                    }
+                }
+            }
+            Process {
+                id: photoClear
+                command: ["sh", "-c",
+                    'st="${XDG_STATE_HOME:-$HOME/.local/state}/rice"; rm -f "$st"/avatar.*\n' +
+                    'if [ -f "$st/face-backup" ]; then mv "$st/face-backup" "$HOME/.face"; else rm -f "$HOME/.face"; fi']
+                onExited: { Theme.state.avatar = ""; lockp.photoMsg = ""; }
+            }
+
+            // the lock's own wallpaper: set copies the file next to galaga.json
+            // (state.lockWall) and the face draws it instead of the desktop wallpaper;
+            // the greeter gets its copy from install.sh --greeter. Clear -- the desktop
+            // wallpaper again
+            property string wallMsg: ""
+            function setWall() {
+                const raw = wallIn.text.trim();
+                const p = raw.startsWith("~/") ? Quickshell.env("HOME") + raw.slice(1) : raw;
+                if (!p) { wallMsg = "type a path first"; return; }
+                lwSet.exec(["sh", "-c",
+                    'st="${XDG_STATE_HOME:-$HOME/.local/state}/rice"; mkdir -p "$st"; src="$1"; [ -f "$src" ] || { echo missing; exit 1; }\n' +
+                    'ext="${src##*.}"; case "$ext" in jpg|jpeg|png|webp|JPG|JPEG|PNG|WEBP) ;; *) ext=jpg ;; esac\n' +
+                    'rm -f "$st"/lockwall.*\n' +
+                    'cp "$src" "$st/lockwall.$ext" && printf "%s" "$st/lockwall.$ext"',
+                    "galaga-lockwall", p]);
+            }
+            function clearWall() { lwClear.running = true; }
+            Process {
+                id: lwSet
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        const t = text.trim();
+                        if (t && t !== "missing") { Theme.state.lockWall = t; lockp.wallMsg = ""; wallIn.text = ""; }
+                        else lockp.wallMsg = "no such file";
+                    }
+                }
+            }
+            Process {
+                id: lwClear
+                command: ["sh", "-c", 'st="${XDG_STATE_HOME:-$HOME/.local/state}/rice"; rm -f "$st"/lockwall.*']
+                onExited: { Theme.state.lockWall = ""; lockp.wallMsg = ""; }
+            }
+
+            // profile photo: a path field and a live preview -- the picker this shell can
+            // stand behind (there is no file dialog in its toolkit). Set -- the photo shows
+            // on the lock (and, after install.sh --greeter, at boot); clear -- back to dots.
+            Row {
+                spacing: 14
+                Item {
+                    width: 72
+                    height: 72
+                    Ring { anchors.fill: parent; n: 24; dot: 3; f: 1 }
+                    Item {
+                        visible: pvImg.status === Image.Ready
+                        anchors { fill: parent; margins: 12 }
+                        layer.enabled: true
+                        layer.effect: MultiEffect { maskEnabled: true; maskSource: pvMask; maskThresholdMin: 0.5; maskSpreadAtMin: 1 }
+                        Image {
+                            id: pvImg
+                            anchors.fill: parent
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                            sourceSize: Qt.size(96, 96)
+                            source: {
+                                const t = photoIn.text.trim();
+                                const p = t.startsWith("~/") ? Quickshell.env("HOME") + t.slice(1) : t;
+                                return p ? "file://" + p : Theme.state.avatar ? "file://" + Theme.state.avatar : "";
+                            }
+                        }
+                    }
+                    Rectangle { id: pvMask; anchors { fill: parent; margins: 12 } radius: width / 2; visible: false; layer.enabled: true }
+                    Rectangle { visible: pvImg.status !== Image.Ready; anchors.centerIn: parent; width: 10; height: 10; radius: 5; color: Theme.fg }
+                }
+                Rectangle {
+                    width: 360
+                    height: 72
+                    radius: Theme.corner(36)
+                    color: Theme.s2
+                    border { width: photoIn.activeFocus ? 1 : 0; color: Theme.fg }
+                    Lb { id: photoL; x: 30; anchors.verticalCenter: parent.verticalCenter; text: "photo"; color: photoIn.activeFocus ? Theme.fg : Theme.grey }
+                    TextInput {
+                        id: photoIn
+                        anchors { left: photoL.right; leftMargin: 24; right: parent.right; rightMargin: 30; verticalCenter: parent.verticalCenter }
+                        font { family: Theme.ui; pixelSize: 20 }
+                        color: Theme.fg
+                        selectionColor: Theme.s3
+                        clip: true
+                        activeFocusOnTab: true
+                        Text { visible: !photoIn.text; text: Theme.state.avatar || "~/Pictures/me.png"; font: photoIn.font; color: Theme.mute }
+                        Keys.onPressed: e => {
+                            if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) lockp.setPhoto();
+                            else if (e.key === Qt.Key_Up || e.key === Qt.Key_Down) root.go(root.sel + (e.key === Qt.Key_Up ? -1 : 1));
+                            else if (e.key === Qt.Key_Escape) stage.forceActiveFocus();
+                            else return;
+                            e.accepted = true;
+                        }
+                    }
+                }
+                Act { icon: "\u{F012C}"; text: "set"; onHit: lockp.setPhoto() }
+                Act { visible: !!Theme.state.avatar; icon: "\u{F0156}"; text: "clear"; onHit: lockp.clearPhoto() }
+            }
+            Lb { visible: !!lockp.photoMsg; text: lockp.photoMsg; px: 10; color: Theme.red }
+
+            // the lock's own wallpaper: a path field and a preview, like the photo
+            Row {
+                spacing: 14
+                Item {
+                    width: 128
+                    height: 72
+                    Rectangle { anchors.fill: parent; radius: Theme.corner(14); color: Theme.s2 }
+                    Item {
+                        anchors.fill: parent
+                        layer.enabled: true
+                        layer.effect: MultiEffect { maskEnabled: true; maskSource: lwMask; maskThresholdMin: 0.5; maskSpreadAtMin: 1 }
+                        Image {
+                            id: lwImg
+                            anchors.fill: parent
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                            sourceSize: Qt.size(256, 144)
+                            source: {
+                                const t = wallIn.text.trim();
+                                const p = t.startsWith("~/") ? Quickshell.env("HOME") + t.slice(1) : t;
+                                return p ? "file://" + p : Theme.state.lockWall ? "file://" + Theme.state.lockWall : "";
+                            }
+                        }
+                    }
+                    Rectangle { id: lwMask; anchors.fill: parent; radius: Theme.corner(14); visible: false; layer.enabled: true }
+                    Lb { visible: lwImg.status !== Image.Ready; anchors.centerIn: parent; text: "wall"; px: 10; color: Theme.mute }
+                }
+                Rectangle {
+                    width: 360
+                    height: 72
+                    radius: Theme.corner(36)
+                    color: Theme.s2
+                    border { width: wallIn.activeFocus ? 1 : 0; color: Theme.fg }
+                    Lb { id: wallL; x: 30; anchors.verticalCenter: parent.verticalCenter; text: "wallpaper"; color: wallIn.activeFocus ? Theme.fg : Theme.grey }
+                    TextInput {
+                        id: wallIn
+                        anchors { left: wallL.right; leftMargin: 24; right: parent.right; rightMargin: 30; verticalCenter: parent.verticalCenter }
+                        font { family: Theme.ui; pixelSize: 20 }
+                        color: Theme.fg
+                        selectionColor: Theme.s3
+                        clip: true
+                        activeFocusOnTab: true
+                        Text { visible: !wallIn.text; text: Theme.state.lockWall || "~/Pictures/lock.jpg"; font: wallIn.font; color: Theme.mute }
+                        Keys.onPressed: e => {
+                            if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) lockp.setWall();
+                            else if (e.key === Qt.Key_Up || e.key === Qt.Key_Down) root.go(root.sel + (e.key === Qt.Key_Up ? -1 : 1));
+                            else if (e.key === Qt.Key_Escape) stage.forceActiveFocus();
+                            else return;
+                            e.accepted = true;
+                        }
+                    }
+                }
+                Act { icon: "\u{F012C}"; text: "set"; onHit: lockp.setWall() }
+                Act { visible: !!Theme.state.lockWall; icon: "\u{F0156}"; text: "clear"; onHit: lockp.clearWall() }
+            }
+            Lb { visible: !!lockp.wallMsg; text: lockp.wallMsg; px: 10; color: Theme.red }
+
+            // the clock's shape: matrix -- the dotted time; stacked -- hours over minutes;
+            // analogue -- dots and hands, like the nothing widget clocks
+            Row {
+                spacing: 14
+                Pick {
+                    label: "clock"
+                    opts: ["matrix", "stacked", "analogue"]
+                    cur: Theme.state.lockClock
+                    onPicked: i => Theme.state.lockClock = i
+                }
+                Lb { anchors.verticalCenter: parent.verticalCenter; text: "how the time sits on the face"; px: 10; color: Theme.mute }
+            }
+
+            Grid {
+                columns: 2
+                spacing: 14
+                Toggle { width: 250; text: "media + summary"; on: Theme.state.featLockMedia; onFlip: Theme.state.featLockMedia = !Theme.state.featLockMedia }
+                Toggle { width: 250; text: "hide length"; on: Theme.state.lockHideLen; onFlip: Theme.state.lockHideLen = !Theme.state.lockHideLen }
+                Toggle { width: 250; text: "one screen"; on: Theme.state.lockOneScreen; onFlip: Theme.state.lockOneScreen = !Theme.state.lockOneScreen }
+            }
+        }
+
         // ---- WINDOWS: desktop with two windows using live ring values. Window animation -- only if motion ----
         Page {
-            k: 5
+            k: 6
             caption: `windows · hyprland · gaps ${gIn.v} / ${gOut.v} · border ${bord.v} · rounding ${rnd.v} · panels ${pan.v} %`
 
             // narrower than the other pages on purpose: this row carries TWO toggle
@@ -1083,7 +1202,7 @@ PanelWindow {
         // one's: brightness (the built-in's), logical px, scale and hz, bar and home on it. Night light -- on all ----
         Page {
             id: disp
-            k: 6
+            k: 7
             readonly property var m: Rules.mons.find(x => x.name === root.mon) ?? Rules.mon
             readonly property var w: Rules.want(m)
             caption: `display · ${m.name.toLowerCase()} · ${m.w} × ${m.h} · ${m.hz} hz`
@@ -1224,7 +1343,7 @@ PanelWindow {
         // ---- AUDIO: output and input -- volume, mute, level, the default device (prefs/Audio) ----
         Page {
             id: audioPage
-            k: 7
+            k: 8
             caption: aud.caption
             Audio { id: aud; live: audioPage.visible && root.shown }
         }
@@ -1232,7 +1351,7 @@ PanelWindow {
         // ---- POWER: power modes (Rules.modes) -- four circles, the ring glows with strength, the selected one white.
         // battery saver -- power saver plus 60 Hz, no animations, blur or shadows on top of the settings ----
         Page {
-            k: 8
+            k: 9
             caption: `power · ${Rules.modes[Rules.mode].what} · ${Rules.hz} hz`
             onVisibleChanged: if (visible) Rules.checkPower() // the daemon answer can change (installed, stopped) -- ask again
 
@@ -1294,7 +1413,7 @@ PanelWindow {
         // ---- INPUT: hold a key -- first dot immediately, delay pause, then rate per second; on live rings ----
         Page {
             id: inp
-            k: 9
+            k: 10
             caption: "input · keyboard · touchpad"
             property int n: 0 // how many "typed"; 0 -- key released
             Timer {
@@ -1359,7 +1478,7 @@ PanelWindow {
         // ---- IDLE: minute scale without input. Dots dim on each event: awake -> locked -> screen off -> asleep.
         // Labels stretch along, past 60 -- never ----
         Page {
-            k: 10
+            k: 11
             caption: "idle · minutes without input · hypridle"
 
             Item {
@@ -1414,7 +1533,7 @@ PanelWindow {
 
         // ---- SHELL: the rice mark and the name of the live shell; the switcher -- the Rice app ----
         Page {
-            k: 11
+            k: 12
             caption: "shell · quickshell"
 
             Row {
@@ -1452,35 +1571,12 @@ PanelWindow {
         // ---- FEATURES: one persisted switch per feature of the programme; off -- the feature is fully inert.
         // Grouped by what the feature touches. The detailed controls live with their feature: theme and
         // its times on STYLE (the theme switch used to sit here too -- one home per setting, so it went),
-        // desktop names/walls in DESKTOPS, the profile photo in LOOK. Essential notifications is a
-        // section of its own below the groups ----
+        // desktop names/walls in DESKTOPS, the profile photo in LOCK. Essential notifications
+        // has a page of its own (ESSENTIAL) ----
         Page {
             id: feats
-            k: 12
+            k: 13
             caption: "features · one switch each · off is fully off"
-
-            // installed apps for the essential picker -- built once the entry list settles,
-            // like the launcher (DesktopEntries trickles in at startup)
-            property var apps: []
-            Timer {
-                id: fAppsT
-                interval: 300
-                running: true
-                onTriggered: feats.apps = DesktopEntries.applications.values.filter(e => !e.noDisplay)
-                    .map(e => ({ id: e.id, name: e.name, src: e.icon ? Quickshell.iconPath(e.icon, true) : "" }))
-                    .sort((a, b) => a.name.localeCompare(b.name))
-            }
-            Connections {
-                target: DesktopEntries.applications
-                function onValuesChanged() { fAppsT.restart(); }
-            }
-            property string essQuery: ""
-            readonly property var essList: apps.filter(a => !essQuery || a.name.toLowerCase().includes(essQuery))
-            function flipApp(id) {
-                const a = Theme.state.essentialApps.slice(), i = a.indexOf(id);
-                if (i >= 0) a.splice(i, 1); else a.push(id);
-                Theme.state.essentialApps = a;
-            }
 
             Column {
                 spacing: 10
@@ -1500,7 +1596,6 @@ PanelWindow {
                     spacing: 14
                     Toggle { width: 250; text: "reactive edges"; on: Theme.state.featEdges; onFlip: Theme.state.featEdges = !Theme.state.featEdges }
                     Toggle { width: 250; text: "exposé"; on: Theme.state.featExpose; onFlip: Theme.state.featExpose = !Theme.state.featExpose }
-                    Toggle { width: 250; text: "lock media"; on: Theme.state.featLockMedia; onFlip: Theme.state.featLockMedia = !Theme.state.featLockMedia }
                     Toggle { width: 250; text: "launcher smarts"; on: Theme.state.featLauncher; onFlip: Theme.state.featLauncher = !Theme.state.featLauncher }
                     Toggle { width: 250; text: "focus in bar"; on: Theme.state.featFocus; onFlip: Theme.state.featFocus = !Theme.state.featFocus }
                     Toggle { width: 250; text: "named desktops"; on: Theme.state.featDesktops; onFlip: Theme.state.featDesktops = !Theme.state.featDesktops }
@@ -1518,20 +1613,59 @@ PanelWindow {
                 }
             }
 
-            // ---- ESSENTIAL NOTIFICATIONS, its own section: while the mode is on, only the
-            // picked apps arrive out loud (island, edge flash, sound); the rest still land in
-            // quick settings, muted, and critical notifications always come through (Notes.qml).
-            // The list is kept with the mode off. Widths stay inside the 514 column the picker
-            // sets, and the header word is width-capped + elided: at 23 characters it is the
-            // longest word on the page and must never push it wide ----
+            // the first-login card (welcome/Welcome.qml): bring it back
+            Row {
+                spacing: 14
+                Lb { anchors.verticalCenter: parent.verticalCenter; text: "welcome card" }
+                Rectangle {
+                    width: showL.implicitWidth + 28
+                    height: 32
+                    radius: 16
+                    color: Theme.s2
+                    Lb { id: showL; anchors.centerIn: parent; text: "show"; px: 11; color: Theme.fg }
+                    TapHandler { onTapped: { Theme.state.welcomed = false; root.close(); } }
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                }
+                Lb { anchors.verticalCenter: parent.verticalCenter; text: "the keys, once more"; px: 10; color: Theme.mute }
+            }
+        }
+
+        // ---- ESSENTIAL: who gets through. While the mode is on, only the picked apps
+        // arrive out loud (island, edge flash, sound); the rest still land in quick
+        // settings, muted, and critical notifications always come through (Notes.qml).
+        // The list is kept with the mode off. It was a section of FEATURES until it
+        // outgrew it; the mode and the list live here now ----
+        Page {
+            id: ess
+            k: 14
+            caption: "essential · who gets through"
+
+            // installed apps for the essential picker -- built once the entry list settles,
+            // like the launcher (DesktopEntries trickles in at startup)
+            property var apps: []
+            Timer {
+                id: fAppsT
+                interval: 300
+                running: true
+                onTriggered: ess.apps = DesktopEntries.applications.values.filter(e => !e.noDisplay)
+                    .map(e => ({ id: e.id, name: e.name, src: e.icon ? Quickshell.iconPath(e.icon, true) : "" }))
+                    .sort((a, b) => a.name.localeCompare(b.name))
+            }
+            Connections {
+                target: DesktopEntries.applications
+                function onValuesChanged() { fAppsT.restart(); }
+            }
+            property string essQuery: ""
+            readonly property var essList: apps.filter(a => !essQuery || a.name.toLowerCase().includes(essQuery))
+            function flipApp(id) {
+                const a = Theme.state.essentialApps.slice(), i = a.indexOf(id);
+                if (i >= 0) a.splice(i, 1); else a.push(id);
+                Theme.state.essentialApps = a;
+            }
+
+
             Column {
                 spacing: 12
-                Row {
-                    spacing: 12
-                    Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 10; height: 10; radius: 5; color: Theme.red }
-                    Num { width: 492; elide: Text.ElideRight; text: "ESSENTIAL NOTIFICATIONS"; font.pixelSize: 28 }
-                }
-                Rectangle { width: 514; height: 1; color: Theme.s2 }
                 Row {
                     spacing: 14
                     Toggle { width: 250; text: "essential only"; on: Theme.state.featEssential; onFlip: Theme.state.featEssential = !Theme.state.featEssential }
@@ -1567,13 +1701,13 @@ PanelWindow {
                         selectedTextColor: Theme.fg
                         font { family: Theme.ui; pixelSize: 14 }
                         clip: true
-                        onTextChanged: feats.essQuery = text.trim().toLowerCase()
+                        onTextChanged: ess.essQuery = text.trim().toLowerCase()
                     }
                     Lb { visible: !essIn.text && !essIn.activeFocus; x: 16; anchors.verticalCenter: parent.verticalCenter; text: "search apps"; px: 11 }
                 }
                 Flickable {
                     width: 514
-                    height: 272
+                    height: 336
                     clip: true
                     contentHeight: pickCol.height
                     boundsBehavior: Flickable.StopAtBounds
@@ -1582,7 +1716,7 @@ PanelWindow {
                         width: parent.width
                         spacing: 4
                         Repeater {
-                            model: feats.essList
+                            model: ess.essList
                             Rectangle {
                                 id: prow
                                 required property var modelData
@@ -1620,30 +1754,15 @@ PanelWindow {
                                     Behavior on color { ColorAnimation { duration: Theme.t } }
                                     Rectangle { visible: prow.on; anchors.centerIn: parent; width: 8; height: 8; radius: 4; color: Theme.red }
                                 }
-                                TapHandler { onTapped: feats.flipApp(prow.modelData.id) }
+                                TapHandler { onTapped: ess.flipApp(prow.modelData.id) }
                                 HoverHandler { cursorShape: Qt.PointingHandCursor }
                             }
                         }
                     }
                 }
-                Lb { visible: feats.essList.length === 0 && feats.essQuery !== ""; text: "no app matches the search"; px: 10; color: Theme.mute }
+                Lb { visible: ess.essList.length === 0 && ess.essQuery !== ""; text: "no app matches the search"; px: 10; color: Theme.mute }
             }
 
-            // the first-login card (welcome/Welcome.qml): bring it back
-            Row {
-                spacing: 14
-                Lb { anchors.verticalCenter: parent.verticalCenter; text: "welcome card" }
-                Rectangle {
-                    width: showL.implicitWidth + 28
-                    height: 32
-                    radius: 16
-                    color: Theme.s2
-                    Lb { id: showL; anchors.centerIn: parent; text: "show"; px: 11; color: Theme.fg }
-                    TapHandler { onTapped: { Theme.state.welcomed = false; root.close(); } }
-                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                }
-                Lb { anchors.verticalCenter: parent.verticalCenter; text: "the keys, once more"; px: 10; color: Theme.mute }
-            }
         }
 
         // ---- DESKTOPS: a name and a wallpaper per workspace (prefs FEATURES -> named desktops).
@@ -1652,7 +1771,7 @@ PanelWindow {
         // conversion the wallpaper picker runs, so the wave crossfade has pixels to work with ----
         Page {
             id: dpage
-            k: 13
+            k: 15
             caption: "name + wallpaper per desktop"
             property int dws: 1
             property var wallFiles: []

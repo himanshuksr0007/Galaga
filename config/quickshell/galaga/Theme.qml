@@ -231,7 +231,7 @@ Singleton {
             property bool featExpose: true     // all-windows exposé of the current desktop (expose/Expose.qml)
             property bool featLockMedia: true  // media controls + notification summary on the session lock (lock/LockFace.qml)
             property bool featEssential: false // essential notifications: only the picked apps light the edges (Notes.qml); off by default -- it changes notification behaviour
-            property var essentialApps: []     // desktop entry ids picked in prefs FEATURES
+            property var essentialApps: []     // desktop entry ids picked in prefs ESSENTIAL
             property var peek: []              // latest notifications [{ app, summary }] -- written by Notes, read by the lock face
             property bool featLauncher: true   // launcher smarts in apps mode: maths, conversions, kill, files (launcher/Launcher.qml)
             property bool featFocus: true      // focus timer as a bar tray widget (bar/Bar.qml); the timer itself also lives in cal/Cal.qml
@@ -254,6 +254,8 @@ Singleton {
             property string avatar: ""         // profile photo: the copy in the state dir; "" -- the dotted face (lock/LockFace.qml)
             property bool lockHideLen: false // lock: three fixed dots while typing, the password's length doesn't show (SenulMapa's idea, AMM021's port)
             property bool lockOneScreen: false // lock: the full face only on the screen in focus, the others get a plain cover
+            property string lockWall: ""     // the lock's own wallpaper: the copy in the state dir; "" -- the desktop wallpaper (prefs LOCK)
+            property int lockClock: 0        // the lock's clock: 0 matrix, 1 stacked, 2 analogue (prefs LOCK)
             property var deck: ["clock", "weather", "perf", "net", "media", "min"] // its sections in order, see decks
             property var bar: ["layout", "wifi", "bluetooth", "sound", "notes", "focus", "battery", "mode", "power"] // bar tray from top to bottom, see bars
             property bool barTitle: true   // window title stacked in the bar

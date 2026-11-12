@@ -1062,6 +1062,17 @@ greeter() { # boot login: greetd + the lock's face as the greeter (./install.sh 
         sudo chmod 644 "/etc/greetd/faces/$gu"
         echo "  /etc/greetd/faces/$gu"
     done < <(getent passwd)
+    # the lock's own wallpaper (prefs LOCK keeps a copy in the state dir): the greeter face
+    # shows it too, from the one synced copy. The invoking user's copy wins -- the greeter
+    # face is one screen, whichever user it lists first
+    local lw
+    for lw in "${XDG_STATE_HOME:-$HOME/.local/state}/rice"/lockwall.*; do
+        [ -f "$lw" ] || continue
+        sudo cp "$lw" /etc/greetd/faces/lockwall
+        sudo chmod 644 /etc/greetd/faces/lockwall
+        echo "  /etc/greetd/faces/lockwall"
+        break
+    done
 
     # greetd's own files (config, the stripped compositor config, the launcher script):
     # a changed one that already exists goes to the backup first -- once, only on change

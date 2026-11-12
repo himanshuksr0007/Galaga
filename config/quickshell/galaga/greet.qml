@@ -215,6 +215,9 @@ ShellRoot {
             // /etc/greetd/faces/<user>, the one place this user can always read):
             // shown as the photo; any other face source keeps the dotted rendering
             photo: gate.face.startsWith("/etc/greetd/faces/") ? "file://" + gate.face : ""
+            // the lock's own wallpaper, synced by install.sh --greeter; absent -- the face
+            // falls back to the desktop wallpaper, as before
+            lockWallUrl: "file:///etc/greetd/faces/lockwall"
             users: shell.users.filter(u => u.name !== gate.user)
             onUserPicked: name => gate.pick(name)
         }
