@@ -11,7 +11,7 @@ import qs.components
 // right-click closes the window itself; Escape just closes. Like the overview,
 // there are no live thumbnails: a card is the window's icon, title and real size,
 // which is the same information in the shell's own line language. Cards settle in
-// with a stagger, in the shell's glide. Off: prefs FEATURES -> exposé.
+// with a stagger, in the shell's glide. Off: settings -> features -> exposé.
 PanelWindow {
     id: root
 

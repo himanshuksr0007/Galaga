@@ -16,7 +16,7 @@ import qs
 // decibels) -- verified live: no restart, no relink, no gap. Settings are
 // per device (Theme.state.eqDev, by sink node name), so the speaker keeps
 // its bass and the buds keep theirs. If the chain node is not in the graph
-// (pipewire not restarted since install, featEq off in prefs) alive is
+// (pipewire not restarted since install, featEq off in settings -> sound) alive is
 // false and every eq surface hides itself -- no dead controls.
 Singleton {
     id: root

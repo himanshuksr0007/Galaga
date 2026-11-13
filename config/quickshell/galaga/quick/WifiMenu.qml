@@ -400,7 +400,7 @@ PanelWindow {
                             }
                         }
 
-                        // footer -- prefs, centred; the (i) for the info page sits at the
+                        // footer -- settings, centred; the (i) for the info page sits at the
                         // panel's right border, centred on the same line
                         Item {
                             width: parent.width

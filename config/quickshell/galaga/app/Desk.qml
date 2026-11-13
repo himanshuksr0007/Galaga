@@ -7,7 +7,7 @@ import qs.components
 // Galaga strip -- with the roles called out on the right, like a drawing: a dot on the object, a line to the role, a
 // sample, the hex and what it is. A new palette flows across.
 // The callouts are live: a click on a role (or on one of the terminal dots) fires pickColour
-// with that colour's key, and prefs opens the hex picker for it
+// with that colour's key, and the page opens the hex picker for it
 Item {
     id: root
 

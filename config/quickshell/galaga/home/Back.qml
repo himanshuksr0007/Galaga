@@ -38,8 +38,8 @@ PanelWindow {
         Wall {
             id: wall
             anchors.fill: parent
-            // two axes, one winner: a per-desktop wallpaper (prefs DESKTOPS) for THIS screen's active
-            // desktop wins; unset -- this screen's own wallpaper (prefs DISPLAY), else the shared one.
+            // two axes, one winner: a per-desktop wallpaper (settings -> desktop & deck) for THIS screen's active
+            // desktop wins; unset -- this screen's own wallpaper (settings -> displays), else the shared one.
             // Same Wall, same wave: the crossfade on switch is the path change itself
             path: Theme.wallSrc((Theme.state.featDesktops ? Theme.state.wsWalls[String(root.ownWs?.id ?? "")] : "") || Theme.scr(root.screen?.name, "wall"))
             animate: !Sys.wallOpen

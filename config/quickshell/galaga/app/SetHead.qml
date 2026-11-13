@@ -2,7 +2,7 @@ import QtQuick
 import qs
 import qs.components
 
-// section head: the red dot + a caps label, the shape Prefs' FeatHead uses
+// section head: the red dot + a caps label
 Row {
     property string text: ""
 

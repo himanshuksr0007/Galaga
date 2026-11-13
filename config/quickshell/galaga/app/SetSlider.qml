@@ -3,7 +3,7 @@ import qs
 import qs.components
 
 // a settings row with a dot-track slider: label left, value right, drag or click the
-// track. Like Prefs' Dial it speaks once -- on release, or after 200 ms of stillness --
+// track. Like Dial it speaks once -- on release, or after 200 ms of stillness --
 // so a drag doesn't fire a hyprctl eval per step.
 Item {
     id: root

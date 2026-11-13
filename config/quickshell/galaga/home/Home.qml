@@ -65,7 +65,7 @@ PanelWindow {
         // the layout sits under a left bar; bar on top or taken off this screen -- half its width to the left, centered
         x: Theme.state.barAt === "top" || !Theme.scr(root.screen?.name, "bar") ? -39 * Theme.s : 0
 
-        // the clock and date, the greeting and its line can each be hidden (prefs -> LOOK -> on home); they fade
+        // the clock and date, the greeting and its line can each be hidden (settings -> appearance -> home screen); they fade
         Item {
             opacity: Theme.state.homeClock ? 1 : 0
             visible: opacity > 0
@@ -114,7 +114,7 @@ PanelWindow {
         Repeater {
             id: bento
             model: {
-                if (!Theme.state.homeBento) return []; // prefs -> LOOK -> on home: the widgets off entirely
+                if (!Theme.state.homeBento) return []; // settings -> appearance -> home screen: the widgets off entirely
                 const out = [];
                 let r = 0, c = 0;
                 for (const id of Theme.scr(root.screen?.name, "widgets") ?? []) {

@@ -22,7 +22,7 @@ Item {
     // who is logging in. Lock: the session's own user and ~/.face. Greeter: the picked user, face resolved by greet.qml
     property string userName: Quickshell.env("USER")
     property string face: `file://${Quickshell.env("HOME")}/.face`
-    // the custom profile photo (prefs LOOK), as a file:// url: set -- the photo itself,
+    // the custom profile photo (settings -> lock), as a file:// url: set -- the photo itself,
     // round-clipped inside the dot ring; empty -- the dotted face below, which stays the default
     property string photo: ""
     // true only on the session lock (LockSurface): media controls and the notification
@@ -32,10 +32,10 @@ Item {
     // the wallpaper behind the face: the session lock passes its own screen's (LockSurface);
     // empty -- the shared one, which is also all the greeter knows
     property string wallPath: ""
-    // a wallpaper of the lock's own (prefs LOCK): the session lock passes the state copy,
+    // a wallpaper of the lock's own (settings -> lock): the session lock passes the state copy,
     // the greeter its synced one. Set and loadable -- it covers the desktop wallpaper
     property string lockWallUrl: ""
-    // the clock's shape (prefs LOCK): 0 matrix -- the dotted time as it always was,
+    // the clock's shape (settings -> lock): 0 matrix -- the dotted time as it always was,
     // 1 stacked -- hours over minutes, 2 analogue -- a ring of minute dots and two hands.
     // Stacked runs taller, so the lines under the clock shift down with it
     readonly property int clockStyle: Theme.state.lockClock
@@ -57,7 +57,7 @@ Item {
     Behavior on t { NumberAnimation { duration: root.auth.leaving ? 450 : 1100 } }
     Component.onCompleted: t = Qt.binding(() => root.auth.leaving ? 0 : 1)
     function ph(a, b) { const x = Math.max(0, Math.min(1, (t - a) / (b - a))); return 1 - Math.pow(1 - x, 4); }
-    // hide the password's length (prefs LOCK, off by default): three fixed dots that pulse
+    // hide the password's length (settings -> lock, off by default): three fixed dots that pulse
     // on each key instead of one dot per character. Off -- the dot count is the length, exactly
     readonly property bool hideLen: Theme.state.lockHideLen
     // power from the lock (AMM021's lock power menu): sleep, reboot, power off -- the session

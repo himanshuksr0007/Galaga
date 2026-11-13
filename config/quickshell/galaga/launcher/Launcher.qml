@@ -91,7 +91,7 @@ PanelWindow {
         return out.sort((a, b) => b.score - a.score || (uses[b.id] ?? 0) - (uses[a.id] ?? 0));
     }
 
-    // ---- smarts (apps mode, prefs FEATURES): the query is understood before it is searched ----
+    // ---- smarts (apps mode, settings -> features): the query is understood before it is searched ----
     // a conversion from the built-in table (no rates -- no currency), an arithmetic line for
     // qalc, or "kill <app>" for the app's windows. The answer is a strip above the results;
     // it holds Enter until Down hands the keys to the grid. Files ride the grid itself.

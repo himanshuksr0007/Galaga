@@ -46,7 +46,7 @@ Singleton {
             property real monScale: 0      // 0 -- auto, hypr decides
             property int refresh: 0        // 0 -- the screen's highest rate, like mode = "highres" in hyprland.lua
             property string main: ""       // whose monScale and refresh are (Rules.mon); empty -- the first monitor read decides
-            // the other screens, if prefs touched them, by Rules.key: { "TS2700-S6-1": { scale: 1, refresh: 144, pos: [-560, -1440] } };
+            // the other screens, if settings touched them, by Rules.key: { "TS2700-S6-1": { scale: 1, refresh: 144, pos: [-560, -1440] } };
             // pos is relative to the main screen, which then sits at 0x0
             property var outs: ({})
             property int brightness: 62
@@ -61,7 +61,7 @@ Singleton {
             property bool motion: true
             property bool ultra: false   // battery saver mode (setMode 0; the key keeps its old name): 60 Hz and no decorations on top of the settings
             property bool game: false    // game mode, like caelestia: no animations, blur, shadows, gaps or rounding, tearing (Theme.apply)
-            // what game mode keeps (prefs -> WINDOWS -> in a game); tearing is always on in it (Isaqdn03's choices)
+            // what game mode keeps (settings -> windows -> in a game); tearing is always on in it (Isaqdn03's choices)
             property bool gameGaps: false   // gaps, border and rounding as set
             property bool gameMotion: false // animations
             property bool gameBlur: false
@@ -72,7 +72,7 @@ Singleton {
             property int palette: 0
             property bool paintHypr: true
             property bool paintKitty: true
-            // hands off (SenulMapa's guards, as prefs): off -- the shell never writes that part of
+            // hands off (SenulMapa's guards, as settings): off -- the shell never writes that part of
             // the hypr config; for a rotated screen or a hand-built input setup it would fight you
             property bool manageMonitor: true
             property bool manageInput: true
@@ -172,7 +172,7 @@ Singleton {
     // first (a screen was plugged in): a burst of screensChanged collapses into one read 500 ms later, and the reply
     // already has the new screen. Only shell.qml calls this
     function monitor(fresh) {
-        if (!store.manageMonitor) return; // prefs -> DISPLAY -> arrange screens off: monitors are the hypr config's
+        if (!store.manageMonitor) return; // settings -> displays -> arrange off: monitors are the hypr config's
         driving = true;
         if (fresh || !mons.length) {
             monWanted = true;
@@ -185,7 +185,7 @@ Singleton {
         if (ms.length) hypr(ms.map(rule).join("\n"));
         monReread.restart();
     }
-    // prefs -> display: scale (0 -- auto) or refresh of the screen name. The main -- monScale and refresh, an external --
+    // settings -> displays: scale (0 -- auto) or refresh of the screen name. The main -- monScale and refresh, an external --
     // outs (place). A scale changes the size -- settle fixes the edge to the neighbour after the re-read
     function set(name, k, v) {
         const m = mons.find(x => x.name === name);
@@ -207,7 +207,7 @@ Singleton {
         store.outs = o;
         monitor();
     }
-    // prefs -> display "reset": forget the externals' places, scales and rates -- back to the hypr config (user.lua). The
+    // settings -> displays "forget": forget the externals' places, scales and rates -- back to the hypr config (user.lua). The
     // shell's rules live in hypr until the config is re-read -- ask for that; the rest returns via configreloaded (shell.qml)
     function forget() {
         store.outs = {};
@@ -268,7 +268,7 @@ Singleton {
     function motion() { hypr(`hl.config({ animations = { enabled = ${moving} } })`); }
     readonly property var switches: [["alt+shift", "grp:alt_shift_toggle"], ["caps", "grp:caps_toggle"], ["ctrl+shift", "grp:ctrl_shift_toggle"]]
     function input() {
-        if (!store.manageInput) return; // prefs -> INPUT -> shell sets input off: keyboard/mouse are the hypr config's
+        if (!store.manageInput) return; // settings -> keyboard -> shell sets input off: keyboard/mouse are the hypr config's
         const s = store;
         hypr(`hl.config({ input = { kb_options = "${switches[s.kbSwitch]?.[1] ?? switches[0][1]}", repeat_delay = ${s.repeatDelay}, repeat_rate = ${s.repeatRate}, `
            + `sensitivity = ${s.sens / 100}, accel_profile = "${s.flat ? "flat" : "adaptive"}", natural_scroll = ${s.mouseNatural}, scroll_factor = ${s.mouseScroll / 100}, `

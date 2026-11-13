@@ -489,7 +489,7 @@ services() {
     say "services"
     run sudo systemctl enable NetworkManager bluetooth
     bt_policy
-    # the shell's power modes (quick, the bar, prefs -> POWER) set power-profiles-daemon's profile.
+    # the shell's power modes (quick, the bar, settings -> battery) set power-profiles-daemon's profile.
     # tuned and tlp manage the same knobs their own way -- two of them at once fight over the cpu,
     # so if one is already this system's choice, leave it in charge and say what switching takes
     if systemctl is-enabled -q tuned.service 2>/dev/null || systemctl is-enabled -q tlp.service 2>/dev/null \
@@ -1062,7 +1062,7 @@ greeter() { # boot login: greetd + the lock's face as the greeter (./install.sh 
         sudo chmod 644 "/etc/greetd/faces/$gu"
         echo "  /etc/greetd/faces/$gu"
     done < <(getent passwd)
-    # the lock's own wallpaper (prefs LOCK keeps a copy in the state dir): the greeter face
+    # the lock's own wallpaper (settings -> lock keeps a copy in the state dir): the greeter face
     # shows it too, from the one synced copy. The invoking user's copy wins -- the greeter
     # face is one screen, whichever user it lists first
     local lw

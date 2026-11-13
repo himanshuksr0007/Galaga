@@ -17,7 +17,7 @@ Singleton {
     // schemes.js); scheme -- a ready palette, the theme is its own. A palette is { light, c: the greys by the roles
     // below, accent, red, ansi: kitty's 16 colours }
     readonly property var palBase: make({})
-    // your own colours (prefs STYLE -- click a colour well): st.custom sits on top of whatever
+    // your own colours (settings -> appearance — click a colour well): st.custom sits on top of whatever
     // palette is live. Keys: bg s1 s2 s3 mute grey fg accent red, and a0..a15 for the terminal
     // colours. Everything reads pal -- the shell, kitty (apply), gtk/qt/tmux/firefox (apps) --
     // so a custom colour follows the whole system until it is reset
@@ -116,7 +116,7 @@ Singleton {
     }
     // theme: a palette's own, or its pair from the same group (mocha -> latte, dawn -> main); no pair (nord, dracula...)
     // -- the theme does not change, or st.light would diverge from the screen and surface at a source switch.
-    // setLight is the ONE door for light/dark: the prefs toggle, quick's dark tile and the theme-Auto schedule
+    // setLight is the ONE door for light/dark: the appearance toggle, quick's dark tile and the theme-Auto schedule
     // (shell.qml) all go through it, so the schedule applies within whatever source STYLE picked
     function pair(l) { return st.paint !== "scheme" ? null : pal.light === l ? pal : Schemes.ALL.find(x => x.group === pal.group && x.light === l) ?? null; }
     function setLight(l) {
@@ -190,7 +190,7 @@ Singleton {
     function url(p) { return p ? "file://" + p.split("/").map(encodeURIComponent).join("/") : ""; }
 
     function fade(c, a) { return Qt.rgba(c.r, c.g, c.b, a); }
-    // a panel's, tile's, pill's corner radius -- by the corners setting (prefs -> WINDOWS -> panels): 0 straight, 100 as designed
+    // a panel's, tile's, pill's corner radius -- by the corners setting (settings -> windows -> panels): 0 straight, 100 as designed
     function corner(px) { return px * st.corners / 100; }
     // clock per 12/24 setting: "09" or "9"
     function hh(d) { const h = d.getHours(); return st.clock24 ? String(h).padStart(2, "0") : String(h % 12 || 12); }
@@ -218,13 +218,13 @@ Singleton {
             property int paintAt: 0       // which of the wallpaper tones
             property var tones: []        // the wallpaper tones, written by the quantizer; empty -- grey wallpaper or no picture
             property string variant: "tonalspot" // how a wallpaper tone becomes a palette, an id from schemes.js (VARIANTS)
-            property var custom: ({})      // your own colours over the palette (prefs STYLE): role -> "#hex"; empty -- the palette as designed
+            property var custom: ({})      // your own colours over the palette (settings -> appearance): role -> "#hex"; empty -- the palette as designed
             property bool dnd: false  // new ones are not shown, critical ones always
             property int unread: 0    // for the lock
             property bool welcomed: false // the first-login card was dismissed (welcome/Welcome.qml)
-            // ---- what the settings (prefs) change ----
+            // ---- what the settings app changes ----
             property var widgets: ["weather", "calendar", "cpu", "player", "buds", "system"] // home bento in order, see kinds
-            property bool homeClock: true  // home shows the clock and date (prefs -> LOOK -> on home)
+            property bool homeClock: true  // home shows the clock and date (settings -> appearance -> home screen)
             property bool homeHello: true  // ... the greeting and the line under it
             property bool homeBento: true  // ... the widgets
             property bool clock24: true
@@ -247,20 +247,20 @@ Singleton {
             property bool quickHover: true // quick settings on hover at the right edge
             property bool deckHover: true  // deck -- bottom-center panel, slides out on hovering the edge
             property bool genie: true      // minimise warps the window into the deck's minimised section (genie/Genie.qml); off -- a plain park
-            // ---- the feature programme: one persisted toggle per feature (prefs FEATURES). Off -- the feature is fully inert ----
+            // ---- the feature programme: one persisted toggle per feature (settings -> features). Off -- the feature is fully inert ----
             property bool featGenieBack: true  // restore expands the park-time snapshot back out of the minimised section (genie/Genie.qml)
             property bool featEdges: true      // reactive galaga edges: music VU, charging fill, focus drain (galaga/Galaga.qml)
             property bool featExpose: true     // all-windows exposé of the current desktop (expose/Expose.qml)
             property bool featLockMedia: true  // media controls + notification summary on the session lock (lock/LockFace.qml)
             property bool featEssential: false // essential notifications: only the picked apps light the edges (Notes.qml); off by default -- it changes notification behaviour
-            property var essentialApps: []     // desktop entry ids picked in prefs ESSENTIAL
+            property var essentialApps: []     // desktop entry ids picked in settings -> notifications
             property var peek: []              // latest notifications [{ app, summary }] -- written by Notes, read by the lock face
             property bool featLauncher: true   // launcher smarts in apps mode: maths, conversions, kill, files (launcher/Launcher.qml)
             property bool featFocus: true      // focus timer as a bar tray widget (bar/Bar.qml); the timer itself also lives in cal/Cal.qml
             property int themeMode: 0          // 0 -- manual (the light field above decides), 1 -- auto on the schedule below
-            property int lightAt: 420          // auto: light from 07:00 -- minutes after midnight, edited in prefs LOOK
+            property int lightAt: 420          // auto: light from 07:00 -- minutes after midnight, edited in settings -> appearance
             property int darkAt: 1140          // auto: dark from 19:00
-            property bool featDesktops: true   // per-desktop names + wallpapers (prefs DESKTOPS)
+            property bool featDesktops: true   // per-desktop names + wallpapers (settings -> desktop & deck)
             property var wsNames: ({})         // desktop id (as string) -> name; missing -- just the number
             property var wsWalls: ({})         // desktop id (as string) -> wallpaper path; missing/"" -- the global wall above
             property bool featShot: true       // shot: grab text (OCR) and scan QR modes (shot/Shot.qml)
@@ -276,8 +276,8 @@ Singleton {
             property string avatar: ""         // profile photo: the copy in the state dir; "" -- the dotted face (lock/LockFace.qml)
             property bool lockHideLen: false // lock: three fixed dots while typing, the password's length doesn't show (SenulMapa's idea, AMM021's port)
             property bool lockOneScreen: false // lock: the full face only on the screen in focus, the others get a plain cover
-            property string lockWall: ""     // the lock's own wallpaper: the copy in the state dir; "" -- the desktop wallpaper (prefs LOCK)
-            property int lockClock: 0        // the lock's clock: 0 matrix, 1 stacked, 2 analogue (prefs LOCK)
+            property string lockWall: ""     // the lock's own wallpaper: the copy in the state dir; "" -- the desktop wallpaper (settings -> lock)
+            property int lockClock: 0        // the lock's clock: 0 matrix, 1 stacked, 2 analogue (settings -> lock)
             property var deck: ["clock", "weather", "perf", "net", "media", "min"] // its sections in order, see decks
             property var bar: ["layout", "wifi", "bluetooth", "sound", "notes", "focus", "battery", "mode", "power"] // bar tray from top to bottom, see bars
             property bool barTitle: true   // window title stacked in the bar

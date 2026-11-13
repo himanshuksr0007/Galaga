@@ -4,7 +4,7 @@ import qs.components
 import qs.services
 
 // a settings row with a segmented pick on the right: the white segment slides to the
-// current option, the shape Prefs' Pick uses at row size.
+// current option, the segmented pick at row size.
 Item {
     id: root
 

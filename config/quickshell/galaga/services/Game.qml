@@ -9,8 +9,8 @@ import qs.settings
 
 // automatic game mode (Isaqdn03's Game service; AMM021 ships the same design). A fullscreen game
 // window (the rice's own list from hyprland/rules.lua -- steam_app_*, gamescope -- or a window that
-// says its content is a game) turns on game mode (Rules.store.game: tearing, and whatever prefs ->
-// WINDOWS -> in a game doesn't keep) and do not disturb, and cava stops while it lasts. Gone for
+// says its content is a game) turns on game mode (Rules.store.game: tearing, and whatever settings ->
+// windows -> in a game doesn't keep) and do not disturb, and cava stops while it lasts. Gone for
 // 5 s -- alt-tab, a loading screen -- both go back to what they were. What they were is kept in
 // Theme.state.gameAuto, so a shell restart mid-game still puts them back. Off: FEATURES -> auto
 // game mode. Dnd here is the ordinary one -- critical notifications still come through.
@@ -58,7 +58,7 @@ Singleton {
         if (s.featGameAuto === false || root.on) return;
         s.gameAuto = { game: Rules.store.game, dnd: s.dnd };
         Rules.store.game = true;
-        if (Rules.store.gameDnd) s.dnd = true; // prefs -> WINDOWS -> in a game -> dnd
+        if (Rules.store.gameDnd) s.dnd = true; // settings -> windows -> in a game -> dnd
     }
     function exit() {
         const s = Theme.state, was = s.gameAuto;

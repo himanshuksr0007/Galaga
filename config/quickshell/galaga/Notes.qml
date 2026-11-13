@@ -16,7 +16,7 @@ Singleton {
     // progress of long tasks -- hint value (notify-send -h int:value:64 ...): the bottom Galaga strip
     readonly property var task: list.slice().reverse().find(n => n.hints?.value !== undefined) ?? null
 
-    // essential mode (prefs FEATURES, off by default): only the picked apps arrive out loud --
+    // essential mode (settings -> notifications, off by default): only the picked apps arrive out loud --
     // the island, the edge flash. Everything is still tracked below, so quick settings keeps
     // the full history; the unpicked ones just arrive muted. Matching: the notification's
     // desktop-entry hint against the picked ids; senders that omit it fall back to the

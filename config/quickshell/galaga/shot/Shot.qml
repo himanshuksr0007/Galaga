@@ -15,7 +15,7 @@ Scope {
     id: root
 
     readonly property var modes: ["region", "window", "screen", "record", "text", "qr"]
-    // text/qr ride along only while their switch is on (prefs FEATURES); the first four never move
+    // text/qr ride along only while their switch is on (settings -> features); the first four never move
     readonly property var modeList: Theme.state.featShot ? modes : modes.slice(0, 4)
     readonly property var delays: [0, 3, 13]
     readonly property string run: Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"

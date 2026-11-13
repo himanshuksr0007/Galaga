@@ -45,7 +45,7 @@ Scope {
     }
     Timer { id: sideT; interval: 3000; onTriggered: root.flash = false }
 
-    // ---- reactive edges (prefs FEATURES): the strips get standing jobs ----
+    // ---- reactive edges (settings -> features): the strips get standing jobs ----
     // music: while something plays, the right strip is a VU meter fed by cava -- the same
     // process home's Glyph Matrix uses (services/Cava registers consumers by name, one
     // process for all). The vol/bri/mic flash takes the strip while it is up; the meter

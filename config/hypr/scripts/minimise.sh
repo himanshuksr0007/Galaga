@@ -10,7 +10,7 @@
 # by answering "go" to the IPC call; it then captures, shows the ghost, and
 # dispatches the park itself (with its own fallback timer, so the park lands
 # even if the snapshot fails). ANY other outcome -- galaga not the running
-# shell, the effect off in settings (Prefs -> DECK -> genie), a shell too old
+# shell, the effect off in settings (settings -> features -> genie), a shell too old
 # to have the handler, qs missing -- and this script parks the window directly,
 # exactly as the rice always did. Minimising never depends on the effect.
 #

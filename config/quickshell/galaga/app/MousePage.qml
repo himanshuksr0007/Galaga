@@ -3,8 +3,8 @@ import qs
 import qs.components
 import qs.settings
 
-// mouse & touchpad: the pointer half of Rules' input model, moved out of Prefs'
-// INPUT page. Rules.input() writes two levels and the cards follow it exactly --
+// mouse & touchpad: the pointer half of Rules' input model. Rules.input()
+// writes two levels and the cards follow it exactly --
 // the top-level keywords (sensitivity, accel profile, natural scroll, scroll
 // factor) are the mouse's; the touchpad table holds the pad's own four.
 Item {

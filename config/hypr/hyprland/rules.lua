@@ -205,4 +205,4 @@ hl.layer_rule({ match = { namespace = "demonshot-.*" }, no_anim = true })
 -- galaga: OSD strips, island, quick settings and its own modules draw their own appearance -- the compositor stays out of it (and does not slow the OSD);
 -- the power menu has no animation of its own -- a soft fade
 hl.layer_rule({ match = { namespace = "galaga-power" }, animation = "fade" })
-hl.layer_rule({ match = { namespace = "galaga-(launcher|edge|island|buds|quick|home|bar|caffeine|shot|clip|charms|vpn|deck|prefs|hot|cal|wall|back)" }, no_anim = true })
+hl.layer_rule({ match = { namespace = "galaga-(launcher|edge|island|buds|quick|home|bar|caffeine|shot|clip|charms|vpn|deck|hot|cal|wall|back)" }, no_anim = true })

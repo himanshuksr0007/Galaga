@@ -7,10 +7,9 @@ import qs.components
 import qs.services
 import qs.settings
 
-// battery: UPower's display device for charge and time, /sys for health, and the
-// power controls that used to live on Prefs' POWER page -- the modes (Rules),
-// the auto saver, and the shell's own performance pick. One home: Prefs no
-// longer carries them.
+// battery: UPower's display device for charge and time, /sys for health, the
+// power controls -- the modes (Rules), the auto saver, and the shell's own
+// performance pick -- and the idle scale at the bottom.
 Item {
     id: pg
 

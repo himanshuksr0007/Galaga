@@ -118,7 +118,7 @@ PanelWindow {
                     width: parent.width
                     height: 64
                     Lb { anchors.verticalCenter: parent.verticalCenter; text: "this card again: super + i → features" }
-                    // the got-it pill (AMM021's Act, inlined -- prefs has no Act here)
+                    // the got-it pill (AMM021's Act, inlined)
                     Rectangle {
                         anchors.right: parent.right
                         width: gotL.implicitWidth + 88

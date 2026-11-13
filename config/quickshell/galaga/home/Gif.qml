@@ -3,9 +3,9 @@ import qs
 import qs.components
 import qs.services
 
-// the cat tile's gif -- Gifs.cur (services/Gifs: the gif folder, picked here or in prefs -> home). A grey dot matrix
+// the cat tile's gif -- Gifs.cur (services/Gifs: the gif folder, picked here or in settings -> desktop & deck). A grey dot matrix
 // through the wallpaper shader, as before. Click -- next, wheel -- flip through; a new one arrives on the shader's wave
-// from the click (from the centre when picked in prefs)
+// from the click (from the centre when picked in settings)
 Item {
     id: root
 

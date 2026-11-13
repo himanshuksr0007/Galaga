@@ -5,7 +5,7 @@ import Qt.labs.folderlistmodel
 import Quickshell
 import qs
 
-// gifs for the home cat tile (home/Gif) and its picker in prefs -> home: every *.gif in Theme.state.gifDir
+// gifs for the home cat tile (home/Gif) and its picker in settings -> desktop & deck: every *.gif in Theme.state.gifDir
 // (empty -- ~/Pictures/Gifs); none there -- the built-in cat. The choice is Theme.state.gif, a path; empty -- the first
 Singleton {
     id: root

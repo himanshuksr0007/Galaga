@@ -13,7 +13,7 @@ WlSessionLockSurface {
 
     color: Theme.bg
 
-    // one screen (prefs LOOK): the screen in focus at lock time gets the face, the others a plain
+    // one screen (settings -> lock): the screen in focus at lock time gets the face, the others a plain
     // cover (SenulMapa's idea, AMM021's port). Once, not a binding: moving the cursor mustn't swap
     // them. Typing works from any screen, the buffer is shared through auth
     property string mainName: ""

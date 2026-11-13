@@ -2,7 +2,7 @@ import QtQuick
 import qs
 import qs.services
 
-// a gif as a grey dot matrix through the wallpaper shader -- the home cat tile without the wave (thumbnails in prefs)
+// a gif as a grey dot matrix through the wallpaper shader -- the home cat tile without the wave (thumbnails in settings -> desktop & deck)
 Item {
     id: root
 

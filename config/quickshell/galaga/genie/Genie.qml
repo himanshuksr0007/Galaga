@@ -20,11 +20,11 @@ import qs.components
 // macOS), the far edge follows last, everything funnels into one point on
 // the bottom edge, at the section's centre.
 // The target is computed from the CURRENT section order (Theme.state.deck)
-// on every park -- move the minimised section in Prefs and the windows
+// on every park -- move the minimised section in settings and the windows
 // follow it. The deck itself is always bottom-centre in this shell.
 // Safety: the shell owns the park only after answering "go"; inside, a
 // fallback timer parks the window even if grim hangs or fails, so a minimise
-// can never be lost to the effect. Off: Prefs -> FEATURES -> genie · minimise
+// can never be lost to the effect. Off: settings -> features -> genie · minimise
 // (the IPC then answers "plain" and minimise.sh parks directly, as before).
 // Restore (FEATURES -> genie · restore): the reverse lamp, honestly labelled --
 // a parked window is unmapped, so there are no fresh pixels to un-warp. What
