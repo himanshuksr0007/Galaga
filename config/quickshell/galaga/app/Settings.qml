@@ -32,6 +32,8 @@ FloatingWindow {
         about: ["ABOUT", "this machine · hardware and system"],
         general: ["GENERAL", "name · date and time"],
         sound: ["SOUND", "output · volume · per-device eq"],
+        notifications: ["NOTIFICATIONS", "essential only · who gets through"],
+        lock: ["LOCK", "the face they meet first"],
         wifi: ["WI-FI", "networks · hotspot · saved and nearby"],
         bt: ["BLUETOOTH", "paired and nearby devices · adapter"],
         network: ["NETWORK", "devices and saved connections"],
@@ -258,11 +260,14 @@ FloatingWindow {
                     NavRow { pid: "about"; icon: "\u{F02FC}"; label: "About"; keys: "system machine info version hardware" }
                     NavRow { pid: "general"; icon: "\u{F0493}"; label: "General"; keys: "hostname date time timezone clock name" }
                     NavRow { pid: "sound"; icon: "\u{F057E}"; label: "Sound"; keys: "sound audio volume output speaker eq equalizer mute" }
+                    NavRow { pid: "notifications"; icon: "\u{F009A}"; label: "Notifications"; keys: "notifications essential dnd alerts apps mute island" }
                     Lb { x: 10; visible: !win.query; text: "network"; px: 10.5; color: Theme.mute; topPadding: 14; bottomPadding: 4 }
                     NavRow { pid: "wifi"; icon: "\u{F05A9}"; label: "Wi-Fi"; keys: "wifi wi-fi wireless networks hotspot internet" }
                     NavRow { pid: "bt"; icon: "\u{F00AF}"; label: "Bluetooth"; keys: "bluetooth devices pairing buds headphones" }
                     NavRow { pid: "network"; icon: "\u{F059F}"; label: "Network"; keys: "ethernet wifi connections ip address devices" }
                     NavRow { pid: "vpn"; icon: "\u{F0483}"; label: "VPN"; keys: "vpn wireguard tunnel clash verge proxy portal" }
+                    Lb { x: 10; visible: !win.query; text: "appearance"; px: 10.5; color: Theme.mute; topPadding: 14; bottomPadding: 4 }
+                    NavRow { pid: "lock"; icon: "\u{F033E}"; label: "Lock"; keys: "lock screen photo wallpaper clock face greeter password" }
                     Lb { x: 10; visible: !win.query; text: "power"; px: 10.5; color: Theme.mute; topPadding: 14; bottomPadding: 4 }
                     NavRow { pid: "battery"; icon: "\u{F0079}"; label: "Battery"; keys: "battery power saver mode performance health charge" }
                     Lb { x: 10; visible: !win.query; text: "devices"; px: 10.5; color: Theme.mute; topPadding: 14; bottomPadding: 4 }
@@ -338,6 +343,8 @@ FloatingWindow {
                     VpnPage { anchors.fill: parent; active: win.page === "vpn"; onPanelRequested: win.vpnRequested() }
                     BatteryPage { anchors.fill: parent; active: win.page === "battery" }
                     MousePage { anchors.fill: parent; active: win.page === "mouse" }
+                    NotificationsPage { anchors.fill: parent; active: win.page === "notifications" }
+                    LockPage { anchors.fill: parent; active: win.page === "lock" }
                 }
             }
         }
