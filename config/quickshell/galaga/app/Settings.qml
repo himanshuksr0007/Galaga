@@ -33,7 +33,8 @@ FloatingWindow {
         general: ["GENERAL", "name · date and time"],
         network: ["NETWORK", "devices and saved connections"],
         vpn: ["VPN", "clash verge and networkmanager tunnels"],
-        battery: ["BATTERY", "charge · power modes · shell performance"]
+        battery: ["BATTERY", "charge · power modes · shell performance"],
+        mouse: ["MOUSE & TOUCHPAD", "pointer and pad · applied live by the shell"]
     })
 
     function open(p) {
@@ -258,6 +259,8 @@ FloatingWindow {
                     NavRow { pid: "vpn"; icon: "\u{F0483}"; label: "VPN"; keys: "vpn wireguard tunnel clash verge proxy portal" }
                     Lb { x: 10; visible: !win.query; text: "power"; px: 10.5; color: Theme.mute; topPadding: 14; bottomPadding: 4 }
                     NavRow { pid: "battery"; icon: "\u{F0079}"; label: "Battery"; keys: "battery power saver mode performance health charge" }
+                    Lb { x: 10; visible: !win.query; text: "devices"; px: 10.5; color: Theme.mute; topPadding: 14; bottomPadding: 4 }
+                    NavRow { pid: "mouse"; icon: "\u{F037D}"; label: "Mouse & Touchpad"; keys: "mouse touchpad trackpad pointer scroll tap accel speed" }
                 }
             }
 
@@ -325,6 +328,7 @@ FloatingWindow {
                     NetworkPage { anchors.fill: parent; active: win.page === "network" }
                     VpnPage { anchors.fill: parent; active: win.page === "vpn"; onPanelRequested: win.vpnRequested() }
                     BatteryPage { anchors.fill: parent; active: win.page === "battery" }
+                    MousePage { anchors.fill: parent; active: win.page === "mouse" }
                 }
             }
         }
