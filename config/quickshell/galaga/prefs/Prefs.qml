@@ -3,7 +3,6 @@ import QtQuick.Effects
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
-import Quickshell.Services.UPower
 import Quickshell.Wayland
 import qs
 import qs.components
@@ -21,10 +20,10 @@ PanelWindow {
 
     property int sel: 0
     signal wallRequested // wallpapers -- their own screen (wall/Walls), opened by shell.qml
-    readonly property var sections: ["HOME", "DECK", "BAR", "LOOK", "STYLE", "LOCK", "WINDOWS", "DISPLAY", "AUDIO", "POWER", "INPUT", "IDLE", "SHELL", "FEATURES", "ESSENTIAL", "DESKTOPS"]
+    readonly property var sections: ["HOME", "DECK", "BAR", "LOOK", "STYLE", "LOCK", "WINDOWS", "DISPLAY", "AUDIO", "INPUT", "IDLE", "SHELL", "FEATURES", "ESSENTIAL", "DESKTOPS"]
     readonly property string moves: "shift ←→ move · ↵ swap · del drop · drag"
     readonly property string rings: "drag round the rings · scroll"
-    readonly property var hints: [moves, moves, moves, "", "hover to preview · ↵ or click sets it · click a colour to change it", "the face they meet first", rings, "drag a screen to move it · " + rings, "click or ←→ a device", "↵ or click a mode", rings, "drag the marks", "", "", "click picks who gets through", ""]
+    readonly property var hints: [moves, moves, moves, "", "hover to preview · ↵ or click sets it · click a colour to change it", "the face they meet first", rings, "drag a screen to move it · " + rings, "click or ←→ a device", rings, "drag the marks", "", "", "click picks who gets through", ""]
     readonly property var r: Rules.store
 
     // glyphs for home views, deck sections and the bar tray
@@ -1378,72 +1377,10 @@ PanelWindow {
             Audio { id: aud; live: audioPage.visible && root.shown }
         }
 
-        // ---- POWER: power modes (Rules.modes) -- four circles, the ring glows with strength, the selected one white.
-        // battery saver -- power saver plus 60 Hz, no animations, blur or shadows on top of the settings ----
-        Page {
-            k: 9
-            caption: `power · ${Rules.modes[Rules.mode].what} · ${Rules.hz} hz`
-            onVisibleChanged: if (visible) Rules.checkPower() // the daemon answer can change (installed, stopped) -- ask again
-
-            Row {
-                spacing: 32
-                Repeater {
-                    model: Rules.modes.slice(0, Rules.modeCount)
-                    Rectangle {
-                        id: pc
-                        required property var modelData
-                        required property int index
-                        readonly property bool on: Rules.mode === index
-                        width: 230
-                        height: 230
-                        radius: 115
-                        color: on ? Theme.fg : Theme.s1
-                        border { width: activeFocus ? 2 : 1; color: activeFocus || on ? Theme.fg : Theme.s2 }
-                        Behavior on color { ColorAnimation { duration: Theme.t } }
-                        activeFocusOnTab: true
-                        Keys.onPressed: e => {
-                            if (e.key !== Qt.Key_Return && e.key !== Qt.Key_Enter && e.key !== Qt.Key_Space) return;
-                            Rules.setMode(index);
-                            e.accepted = true;
-                        }
-                        Ring { anchors { fill: parent; margins: 14 } n: 40; dot: 6; f: (pc.index + 1) / 4; on: pc.on ? Theme.ink : Theme.fg; off: pc.on ? Theme.mute : Theme.s3 }
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: 10
-                            Num { anchors.horizontalCenter: parent.horizontalCenter; text: pc.modelData.short; font.pixelSize: 54; color: pc.on ? Theme.ink : Theme.fg }
-                            Lb { anchors.horizontalCenter: parent.horizontalCenter; text: pc.modelData.name; color: pc.on ? Theme.ink : Theme.grey }
-                        }
-                        TapHandler { onTapped: Rules.setMode(pc.index) }
-                        HoverHandler { cursorShape: Qt.PointingHandCursor }
-                    }
-                }
-            }
-            Lb { text: Rules.store.ultra ? `battery saver · ${Rules.rates[0]} hz, no motion, no blur, no shadows — your settings come back when you leave` : "cpu profile only · hz, motion and looks stay yours" }
-            Lb { visible: Rules.powerOk && !PowerProfiles.hasPerformanceProfile; text: "no performance profile on this machine" }
-            Lb { visible: !Rules.powerOk; px: 10; color: Theme.red; text: "power-profiles-daemon isn't answering — the cpu profile can't change (battery saver's screen and looks still apply). fix: sudo systemctl enable --now power-profiles-daemon" }
-            Row {
-                visible: UPower.displayDevice?.isLaptopBattery ?? false
-                spacing: 20
-                Toggle { text: "auto saver on battery"; on: root.r.powerAuto; onFlip: root.r.powerAuto = !root.r.powerAuto }
-                Lb { anchors.verticalCenter: parent.verticalCenter; px: 10; text: "unplug — battery saver takes over by itself · plug in — the mode you had comes back · a mode picked by hand on battery cancels the return" }
-            }
-            // shell performance (Theme.perf): a different thing from the modes above -- those set the
-            // cpu through the daemon; this sets what the galaga shell itself spends on polling and
-            // ambient motion. Every number below is the cadence the code actually runs at
-            Column {
-                spacing: 12
-                Lb { text: "shell performance · what the shell itself spends — not the cpu profile above" }
-                Pick { label: "shell"; opts: ["full", "trim", "lite"]; cur: Theme.state.perf; onPicked: i => Theme.state.perf = i }
-                Lb { visible: Theme.state.perf === 0; px: 11; color: Theme.grey; text: "full · stats every 2 s · recording/airplane check every 3 s · monitor read-back every 5 s · visualisers and ambient motion as set" }
-                Lb { visible: Theme.state.perf === 1; px: 11; color: Theme.grey; text: "trim · stats every 4 s · check every 6 s · read-back every 10 s · the orb breathes at half rate" }
-                Lb { visible: Theme.state.perf === 2; px: 11; color: Theme.grey; text: "lite · stats every 8 s · check every 12 s · read-back every 20 s · visualisers off, the cat and the spinning covers stand still, the orb frozen" }
-            }
-        }
-
         // ---- INPUT: hold a key -- first dot immediately, delay pause, then rate per second; on live rings ----
         Page {
             id: inp
-            k: 10
+            k: 9
             caption: "input · keyboard · touchpad"
             property int n: 0 // how many "typed"; 0 -- key released
             Timer {
@@ -1508,7 +1445,7 @@ PanelWindow {
         // ---- IDLE: minute scale without input. Dots dim on each event: awake -> locked -> screen off -> asleep.
         // Labels stretch along, past 60 -- never ----
         Page {
-            k: 11
+            k: 10
             caption: "idle · minutes without input · hypridle"
 
             Item {
@@ -1563,7 +1500,7 @@ PanelWindow {
 
         // ---- SHELL: the rice mark and the name of the live shell; the switcher -- the Rice app ----
         Page {
-            k: 12
+            k: 11
             caption: "shell · quickshell"
 
             Row {
@@ -1605,7 +1542,7 @@ PanelWindow {
         // has a page of its own (ESSENTIAL) ----
         Page {
             id: feats
-            k: 13
+            k: 12
             caption: "features · one switch each · off is fully off"
 
             Column {
@@ -1667,7 +1604,7 @@ PanelWindow {
         // outgrew it; the mode and the list live here now ----
         Page {
             id: ess
-            k: 14
+            k: 13
             caption: "essential · who gets through"
 
             // installed apps for the essential picker -- built once the entry list settles,
@@ -1801,7 +1738,7 @@ PanelWindow {
         // conversion the wallpaper picker runs, so the wave crossfade has pixels to work with ----
         Page {
             id: dpage
-            k: 15
+            k: 14
             caption: "name + wallpaper per desktop"
             property int dws: 1
             property var wallFiles: []

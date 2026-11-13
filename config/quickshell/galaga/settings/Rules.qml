@@ -330,7 +330,7 @@ Singleton {
     // with no daemon behind it the profile reads a stale default and setting it goes nowhere, silently.
     // powerprofilesctl is the daemon's own tool and answers only when a daemon does (power-profiles-daemon
     // itself, or tuned's ppd emulation) -- sh -c so a missing tool is a plain nonzero exit, not a spawn
-    // failure. Probed at startup and whenever prefs -> POWER opens (checkPower); prefs says when it's out
+    // failure. Probed at startup and whenever settings -> battery opens (checkPower); the page says when it's out
     property bool powerOk: true
     Process {
         id: powerProbe

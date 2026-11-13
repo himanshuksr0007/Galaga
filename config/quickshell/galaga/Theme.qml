@@ -265,7 +265,7 @@ Singleton {
             property var wsWalls: ({})         // desktop id (as string) -> wallpaper path; missing/"" -- the global wall above
             property bool featShot: true       // shot: grab text (OCR) and scan QR modes (shot/Shot.qml)
             property bool featGameAuto: true   // a fullscreen game turns on game mode (+ dnd) by itself (services/Game.qml)
-            property int perf: 0           // shell performance (prefs -> POWER): 0 full, 1 trim, 2 lite -- what the shell itself spends: polling cadences and ambient motion. The cpu profile is Rules.modes, not this
+            property int perf: 0           // shell performance (settings -> battery): 0 full, 1 trim, 2 lite -- what the shell itself spends: polling cadences and ambient motion. The cpu profile is Rules.modes, not this
             property bool sounds: true         // interface sounds (services/Sounds): quiet synthesized blips -- lock, shots, notes, ticks
             property int soundVol: 55          // their volume, %
             property bool soundUi: true        // interface: panels opening (pop), the volume tick

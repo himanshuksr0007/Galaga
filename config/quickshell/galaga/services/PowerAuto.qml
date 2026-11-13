@@ -6,7 +6,7 @@ import QtQuick
 import qs
 import qs.settings
 
-// battery saver on battery, by itself (prefs -> POWER -> auto saver on battery; Rules.store.powerAuto). Unplug --
+// battery saver on battery, by itself (settings -> battery -> auto saver on battery; Rules.store.powerAuto). Unplug --
 // the mode you had is kept in Theme.state.powerHold and battery saver (Rules.setMode 0) takes over; plug back
 // in -- the kept mode returns. Same discipline as services/Game: the hold lives in Theme.state, so a
 // shell restart mid-hold still puts the mode back (the settle below), and taking a mode by hand while
