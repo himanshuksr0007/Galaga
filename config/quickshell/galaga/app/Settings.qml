@@ -31,6 +31,7 @@ FloatingWindow {
     readonly property var heads: ({
         about: ["ABOUT", "this machine · hardware and system"],
         general: ["GENERAL", "name · date and time"],
+        sound: ["SOUND", "output · volume · per-device eq"],
         wifi: ["WI-FI", "networks · hotspot · saved and nearby"],
         bt: ["BLUETOOTH", "paired and nearby devices · adapter"],
         network: ["NETWORK", "devices and saved connections"],
@@ -256,6 +257,7 @@ FloatingWindow {
                     Lb { x: 10; visible: !win.query; text: "system"; px: 10.5; color: Theme.mute; bottomPadding: 4 }
                     NavRow { pid: "about"; icon: "\u{F02FC}"; label: "About"; keys: "system machine info version hardware" }
                     NavRow { pid: "general"; icon: "\u{F0493}"; label: "General"; keys: "hostname date time timezone clock name" }
+                    NavRow { pid: "sound"; icon: "\u{F057E}"; label: "Sound"; keys: "sound audio volume output speaker eq equalizer mute" }
                     Lb { x: 10; visible: !win.query; text: "network"; px: 10.5; color: Theme.mute; topPadding: 14; bottomPadding: 4 }
                     NavRow { pid: "wifi"; icon: "\u{F05A9}"; label: "Wi-Fi"; keys: "wifi wi-fi wireless networks hotspot internet" }
                     NavRow { pid: "bt"; icon: "\u{F00AF}"; label: "Bluetooth"; keys: "bluetooth devices pairing buds headphones" }
@@ -329,6 +331,7 @@ FloatingWindow {
                     anchors { left: parent.left; right: parent.right; top: ptitle.bottom; topMargin: 52; bottom: parent.bottom }
                     AboutPage { anchors.fill: parent; active: win.page === "about" }
                     GeneralPage { anchors.fill: parent; active: win.page === "general" }
+                    SoundPage { anchors.fill: parent; active: win.visible && win.page === "sound" }
                     WifiPage { anchors.fill: parent; active: win.visible && win.page === "wifi" }
                     BtPage { anchors.fill: parent; active: win.visible && win.page === "bt" }
                     NetworkPage { anchors.fill: parent; active: win.page === "network" }
