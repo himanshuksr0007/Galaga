@@ -3,7 +3,7 @@ import qs
 import qs.components
 import qs.services
 
-// a settings row with the house switch on the right (DeviceSettings' Switch shape).
+// a settings row with the house switch on the right (the Switch shape the device pages used).
 // Controlled: the owner binds on and writes its store in onFlip.
 Item {
     id: root

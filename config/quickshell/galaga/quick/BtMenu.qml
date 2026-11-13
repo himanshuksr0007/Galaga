@@ -14,9 +14,8 @@ import qs.services
 // picker's manners in quick settings) and new devices found while the menu
 // is open (tap pairs). Battery is the number bluez itself reports
 // (BluetoothDevice.battery), shown only when the device reports one.
-// The footer opens the bluetooth settings page (prefs/DeviceSettings --
-// its own window, not part of prefs, reached only from here); the (i)
-// the info page: adapter name, address and bluez version (bluetoothctl --
+// The footer opens the settings app's bluetooth page; the (i) beside it
+// opens the info page: adapter name, address and bluez version (bluetoothctl --
 // quickshell does not expose the address), and the heavy actions -- reset
 // the adapter (a power cycle), restart the service (pkexec), remove every
 // device (two taps, armed).

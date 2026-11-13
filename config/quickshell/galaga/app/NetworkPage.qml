@@ -4,8 +4,8 @@ import Quickshell.Io
 import qs
 import qs.components
 
-// network: NetworkManager through nmcli, the same calls WifiMenu and DeviceSettings
-// make. Devices with their addresses, wired connect/disconnect, and every saved
+// network: NetworkManager through nmcli, the same calls WifiMenu makes.
+// Devices with their addresses, wired connect/disconnect, and every saved
 // connection with up/down -- vpn and wireguard profiles live on the VPN page instead.
 Item {
     id: pg

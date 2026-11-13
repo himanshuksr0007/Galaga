@@ -16,8 +16,8 @@ import qs.services
 // network asks its password in place (connectWithPsk; a wrong one comes
 // back as a connectionFailed and the password row returns), right-click
 // forgets a saved one. Joining a hidden network by name lives under the
-// other networks. The footer opens the wi-fi settings page (its own window,
-// prefs/DeviceSettings); the (i) beside it opens the
+// other networks. The footer opens the settings app's wi-fi page; the (i)
+// beside it opens the
 // info page: interface, mac, card and driver (nmcli), the address, and
 // the heavy actions -- restart wi-fi, restart networkmanager (pkexec),
 // forget every saved network (two taps, armed).

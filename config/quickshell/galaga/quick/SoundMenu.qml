@@ -365,7 +365,7 @@ PanelWindow {
                             Controls { id: mctl; anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter } size: 18; play: 40 }
                         }
 
-                        // footer -- the sound settings page (prefs/DeviceSettings, its own window)
+                        // footer -- the settings app's sound page
                         Item {
                             width: parent.width
                             height: 22

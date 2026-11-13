@@ -1,7 +1,7 @@
 import QtQuick
 import qs
 
-// a small pill button (DeviceSettings' PillBtn shape). danger paints the label red.
+// a small pill button (the PillBtn shape the device pages used). danger paints the label red.
 Rectangle {
     id: root
 

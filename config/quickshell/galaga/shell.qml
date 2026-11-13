@@ -35,14 +35,13 @@ ShellRoot {
 
     Launcher { id: launcher }
     Quick { id: quick; onPowerRequested: power.open(); onSettingsRequested: shell.openSettings() }
-    SoundMenu { id: soundMenu; onSettingsRequested: shell.openDevSettings("sound") }
-    BtMenu { id: btMenu; onSettingsRequested: shell.openDevSettings("bt") }
-    WifiMenu { id: wifiMenu; onSettingsRequested: shell.openDevSettings("wifi") }
+    SoundMenu { id: soundMenu; onSettingsRequested: shell.openSettings("sound") }
+    BtMenu { id: btMenu; onSettingsRequested: shell.openSettings("bt") }
+    WifiMenu { id: wifiMenu; onSettingsRequested: shell.openSettings("wifi") }
     // the settings windows load on first use, not at shell start: together
     // they are the biggest object trees in the shell and most sessions never
     // open them. Once loaded they stay loaded -- page memory and open state
     // behave exactly as when they were instantiated eagerly.
-    LazyLoader { id: devSettingsL; DeviceSettings {} }
     Power { id: power }
     LazyLoader { id: prefsL; Prefs { onWallRequested: walls.open() } }
     LazyLoader { id: settingsL; Settings { onStudioRequested: shell.openPrefs(); onVpnRequested: vpn.toggle() } }
@@ -51,7 +50,6 @@ ShellRoot {
     function openPrefs() { prefsL.active = true; prefsL.item.open(); }
     function closePrefs() { if (prefsL.item) prefsL.item.close(); }
     function togglePrefs() { prefsL.active = true; prefsL.item.toggle(); }
-    function openDevSettings(page) { closePrefs(); devSettingsL.active = true; devSettingsL.item.open(page); }
     Galaga {}
     Buds {}
     Cal { id: cal }

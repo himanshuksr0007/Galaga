@@ -6,7 +6,7 @@ import qs.components
 import qs.services
 
 // general: the computer's name, and date & time. Changes go through timedatectl /
-// hostnamectl behind pkexec (the DeviceSettings pattern); every value shown is read
+// hostnamectl behind pkexec; every value shown is read
 // back from the tool afterwards, never assumed.
 Item {
     id: pg
