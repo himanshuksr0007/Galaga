@@ -30,7 +30,9 @@ FloatingWindow {
 
     readonly property var heads: ({
         about: ["ABOUT", "this machine · hardware and system"],
-        general: ["GENERAL", "name · date and time"]
+        general: ["GENERAL", "name · date and time"],
+        network: ["NETWORK", "devices and saved connections"],
+        vpn: ["VPN", "clash verge and networkmanager tunnels"]
     })
 
     function open(p) {
@@ -250,6 +252,9 @@ FloatingWindow {
                     Lb { x: 10; visible: !win.query; text: "system"; px: 10.5; color: Theme.mute; bottomPadding: 4 }
                     NavRow { pid: "about"; icon: "\u{F02FC}"; label: "About"; keys: "system machine info version hardware" }
                     NavRow { pid: "general"; icon: "\u{F0493}"; label: "General"; keys: "hostname date time timezone clock name" }
+                    Lb { x: 10; visible: !win.query; text: "network"; px: 10.5; color: Theme.mute; topPadding: 14; bottomPadding: 4 }
+                    NavRow { pid: "network"; icon: "\u{F059F}"; label: "Network"; keys: "ethernet wifi connections ip address devices" }
+                    NavRow { pid: "vpn"; icon: "\u{F0483}"; label: "VPN"; keys: "vpn wireguard tunnel clash verge proxy portal" }
                 }
             }
 
@@ -314,6 +319,8 @@ FloatingWindow {
                     anchors { left: parent.left; right: parent.right; top: ptitle.bottom; topMargin: 52; bottom: parent.bottom }
                     AboutPage { anchors.fill: parent; active: win.page === "about" }
                     GeneralPage { anchors.fill: parent; active: win.page === "general" }
+                    NetworkPage { anchors.fill: parent; active: win.page === "network" }
+                    VpnPage { anchors.fill: parent; active: win.page === "vpn"; onPanelRequested: win.vpnRequested() }
                 }
             }
         }
