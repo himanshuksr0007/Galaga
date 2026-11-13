@@ -23,7 +23,7 @@ FloatingWindow {
     property string query: ""
     property string host: ""
     property real t: visible ? 1 : 0
-    signal studioRequested
+    signal wallRequested
     signal vpnRequested
 
     Behavior on t { NumberAnimation { duration: Theme.t; easing { type: Easing.Bezier; bezierCurve: Theme.glide } } }
@@ -34,6 +34,10 @@ FloatingWindow {
         sound: ["SOUND", "output · volume · per-device eq"],
         notifications: ["NOTIFICATIONS", "essential only · who gets through"],
         lock: ["LOCK", "the face they meet first"],
+        appearance: ["APPEARANCE", "colour · the home screen"],
+        desktop: ["DESKTOP & DECK", "home bento · deck · bar · desktops"],
+        displays: ["DISPLAYS", "screens · scale · rate · night light"],
+        windows: ["WINDOWS", "gaps · border · rounding · game mode"],
         wifi: ["WI-FI", "networks · hotspot · saved and nearby"],
         bt: ["BLUETOOTH", "paired and nearby devices · adapter"],
         network: ["NETWORK", "devices and saved connections"],
@@ -248,7 +252,7 @@ FloatingWindow {
             }
 
             Flickable {
-                anchors { left: parent.left; right: parent.right; top: ucard.bottom; topMargin: 18; bottom: studio.top }
+                anchors { left: parent.left; right: parent.right; top: ucard.bottom; topMargin: 18; bottom: parent.bottom; bottomMargin: 14 }
                 clip: true
                 contentWidth: width
                 contentHeight: navCol.height
@@ -269,6 +273,10 @@ FloatingWindow {
                     NavRow { pid: "network"; icon: "\u{F059F}"; label: "Network"; keys: "ethernet wifi connections ip address devices" }
                     NavRow { pid: "vpn"; icon: "\u{F0483}"; label: "VPN"; keys: "vpn wireguard tunnel clash verge proxy portal" }
                     Lb { x: 10; visible: !win.query; text: "appearance"; px: 10.5; color: Theme.mute; topPadding: 14; bottomPadding: 4 }
+                    NavRow { pid: "appearance"; icon: "\u{F03D8}"; label: "Appearance"; keys: "appearance colour color theme palette style wallpaper home name dark light" }
+                    NavRow { pid: "desktop"; icon: "\u{F056E}"; label: "Desktop & Deck"; keys: "desktop deck bar home bento widgets tray desktops names wallpaper" }
+                    NavRow { pid: "displays"; icon: "\u{F0379}"; label: "Displays"; keys: "display screen monitor resolution scale hz refresh brightness night light arrange" }
+                    NavRow { pid: "windows"; icon: "\u{F05AF}"; label: "Windows"; keys: "windows gaps border rounding blur shadow motion game panels" }
                     NavRow { pid: "lock"; icon: "\u{F033E}"; label: "Lock"; keys: "lock screen photo wallpaper clock face greeter password" }
                     Lb { x: 10; visible: !win.query; text: "power"; px: 10.5; color: Theme.mute; topPadding: 14; bottomPadding: 4 }
                     NavRow { pid: "battery"; icon: "\u{F0079}"; label: "Battery"; keys: "battery power saver mode performance health charge" }
@@ -280,45 +288,6 @@ FloatingWindow {
                 }
             }
 
-            Item {
-                id: studio
-                anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-                height: 58
-                Rectangle {
-                    anchors { left: parent.left; right: parent.right; top: parent.top }
-                    height: 1
-                    color: Theme.s2
-                }
-                Item {
-                    x: 12
-                    y: 9
-                    width: parent.width - 24
-                    height: 40
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: Theme.corner(12)
-                        color: Theme.s2
-                        opacity: shov.hovered ? 0.7 : 0
-                        Behavior on opacity { NumberAnimation { duration: 140 } }
-                    }
-                    Icon { x: 12; anchors.verticalCenter: parent.verticalCenter; text: "\u{F030C}"; font.pixelSize: 19; color: Theme.grey }
-                    Text {
-                        x: 44
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "Galaga Studio"
-                        font { family: Theme.ui; pixelSize: 14 }
-                        color: Theme.fg
-                    }
-                    Icon { anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter } text: "\u{F0142}"; font.pixelSize: 17; color: Theme.mute }
-                    HoverHandler { id: shov; cursorShape: Qt.PointingHandCursor }
-                    TapHandler {
-                        onTapped: {
-                            win.close();
-                            win.studioRequested();
-                        }
-                    }
-                }
-            }
         }
 
         // ---- content ----
@@ -352,6 +321,10 @@ FloatingWindow {
                     LockPage { anchors.fill: parent; active: win.page === "lock" }
                     KeyboardPage { anchors.fill: parent; active: win.page === "keyboard" }
                     FeaturesPage { anchors.fill: parent; active: win.page === "features"; onCloseRequested: win.close() }
+                    AppearancePage { anchors.fill: parent; active: win.page === "appearance"; onWallRequested: { win.close(); win.wallRequested(); } }
+                    DesktopPage { anchors.fill: parent; active: win.page === "desktop" }
+                    DisplaysPage { anchors.fill: parent; active: win.page === "displays" }
+                    WindowsPage { anchors.fill: parent; active: win.page === "windows" }
                 }
             }
         }

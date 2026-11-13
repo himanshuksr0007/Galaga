@@ -5,7 +5,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import qs
 import qs.components
-import "../prefs"
+import "../app"
 
 // wallpapers: Super+Shift+W or settings -> look. Not a grid of images -- the whole screen is the preview: the selected one is assembled as dots
 // in a wave from the ribbon at the bottom. The ribbon -- thumbnail circles as dots, the selected one in the center in a ring (it burns with the fraction of the path through the collection),

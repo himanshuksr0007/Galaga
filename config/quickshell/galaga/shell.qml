@@ -18,7 +18,6 @@ import "galaga"
 import "home"
 import "launcher"
 import "power"
-import "prefs"
 import "quick"
 import "settings"
 import "shot"
@@ -38,18 +37,14 @@ ShellRoot {
     SoundMenu { id: soundMenu; onSettingsRequested: shell.openSettings("sound") }
     BtMenu { id: btMenu; onSettingsRequested: shell.openSettings("bt") }
     WifiMenu { id: wifiMenu; onSettingsRequested: shell.openSettings("wifi") }
-    // the settings windows load on first use, not at shell start: together
-    // they are the biggest object trees in the shell and most sessions never
-    // open them. Once loaded they stay loaded -- page memory and open state
-    // behave exactly as when they were instantiated eagerly.
+    // the settings app loads on first use, not at shell start: it is the
+    // biggest object tree in the shell and most sessions never open it. Once
+    // loaded it stays loaded -- page memory and open state behave exactly as
+    // when it was instantiated eagerly.
     Power { id: power }
-    LazyLoader { id: prefsL; Prefs { onWallRequested: walls.open() } }
-    LazyLoader { id: settingsL; Settings { onStudioRequested: shell.openPrefs(); onVpnRequested: vpn.toggle() } }
+    LazyLoader { id: settingsL; Settings { onWallRequested: walls.open(); onVpnRequested: vpn.toggle() } }
     function openSettings(page) { settingsL.active = true; settingsL.item.open(page); }
     function toggleSettings() { settingsL.active = true; settingsL.item.toggle(); }
-    function openPrefs() { prefsL.active = true; prefsL.item.open(); }
-    function closePrefs() { if (prefsL.item) prefsL.item.close(); }
-    function togglePrefs() { prefsL.active = true; prefsL.item.toggle(); }
     Galaga {}
     Buds {}
     Cal { id: cal }
@@ -61,7 +56,7 @@ ShellRoot {
     Genie {}
     Shot { id: shot }
     Vpn { id: vpn }
-    LazyLoader { active: !Theme.state.welcomed; Welcome {} } // the first-login card; FEATURES brings it back
+    LazyLoader { active: !Theme.state.welcomed; Welcome {} } // the first-login card; the features page brings it back
     readonly property bool autoGame: Game.on // starts services/Game: a fullscreen game turns on game mode and dnd
     readonly property bool autoPower: PowerAuto.on // starts services/PowerAuto: battery saver on battery, by itself (settings -> battery)
     // starts services/Sounds (its players preload) and keeps it quiet while a game is fullscreen
@@ -74,7 +69,7 @@ ShellRoot {
             id: s
             required property var modelData
             Back { screen: s.modelData }
-            // bar and home can be taken off a screen (settings -> display); the wallpaper stays. Here, not in the
+            // bar and home can be taken off a screen (settings -> displays); the wallpaper stays. Here, not in the
             // window: visible from its own screen is a loop (the window is recreated, screen changes)
             Home { screen: s.modelData; visible: Theme.scr(s.modelData.name, "home") }
             Hot { screen: s.modelData; onTriggered: quick.peek() }
@@ -109,11 +104,11 @@ ShellRoot {
             Theme.state.hotspotPass = p;
         }
     }
-    // theme auto (prefs LOOK / FEATURES): light between lightAt and darkAt (minutes after
+    // theme auto (settings -> appearance / features): light between lightAt and darkAt (minutes after
     // midnight; lightAt past darkAt reads as an overnight span, equal -- no switch). It
     // applies through Theme.setLight -- the one door every light/dark change uses -- so
     // the schedule picks light/dark WITHIN the colour source STYLE picked (nothing, the
-    // wallpaper's tones, or a palette and its pair). A manual flip (prefs LOOK, quick's
+    // wallpaper's tones, or a palette and its pair). A manual flip (settings -> appearance, quick's
     // dark tile) sets themeMode back to 0, and that choice holds until auto is picked
     // again. The 30 s tick also catches up after suspend or a late login: the first
     // tick that sees the wrong side fixes it.
@@ -140,7 +135,7 @@ ShellRoot {
         target: Hyprland
         function onRawEvent(e) { if (e.name === "configreloaded") shell.hypr(); }
     }
-    // a screen was plugged in -- its scale and refresh come from prefs -> display (Rules.store.outs)
+    // a screen was plugged in -- its scale and refresh come from settings -> displays (Rules.store.outs)
     Connections {
         target: Quickshell
         function onScreensChanged() { Rules.monitor(true); }
