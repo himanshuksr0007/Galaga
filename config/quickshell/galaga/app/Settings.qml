@@ -47,7 +47,9 @@ FloatingWindow {
         keyboard: ["KEYBOARD", "repeat · layout switch"],
         features: ["FEATURES", "one switch each · the shell itself"],
         users: ["USERS", "accounts · admins · passwords"],
-        apps: ["APPS", "installed packages · remove what you don't use"]
+        apps: ["APPS", "installed packages · remove what you don't use"],
+        storage: ["STORAGE", "volumes · what's taking the room"],
+        update: ["SOFTWARE UPDATE", "repositories and the aur · checked on request"]
     })
 
     function open(p) {
@@ -269,6 +271,8 @@ FloatingWindow {
                     NavRow { pid: "general"; icon: "\u{F0493}"; label: "General"; keys: "hostname date time timezone clock name" }
                     NavRow { pid: "sound"; icon: "\u{F057E}"; label: "Sound"; keys: "sound audio volume output speaker eq equalizer mute" }
                     NavRow { pid: "notifications"; icon: "\u{F009A}"; label: "Notifications"; keys: "notifications essential dnd alerts apps mute island" }
+                    NavRow { pid: "storage"; icon: "\u{F02CA}"; label: "Storage"; keys: "storage disk space volumes trash cache home size" }
+                    NavRow { pid: "update"; icon: "\u{F06B0}"; label: "Software Update"; keys: "update upgrade pacman yay aur packages software checkupdates" }
                     Lb { x: 10; visible: !win.query; text: "network"; px: 10.5; color: Theme.mute; topPadding: 14; bottomPadding: 4 }
                     NavRow { pid: "wifi"; icon: "\u{F05A9}"; label: "Wi-Fi"; keys: "wifi wi-fi wireless networks hotspot internet" }
                     NavRow { pid: "bt"; icon: "\u{F00AF}"; label: "Bluetooth"; keys: "bluetooth devices pairing buds headphones" }
@@ -331,6 +335,8 @@ FloatingWindow {
                     WindowsPage { anchors.fill: parent; active: win.page === "windows" }
                     UsersPage { anchors.fill: parent; active: win.page === "users" }
                     AppsPage { anchors.fill: parent; active: win.page === "apps" }
+                    StoragePage { anchors.fill: parent; active: win.page === "storage" }
+                    UpdatePage { anchors.fill: parent; active: win.page === "update" }
                 }
             }
         }
