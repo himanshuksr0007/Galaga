@@ -46,7 +46,8 @@ FloatingWindow {
         mouse: ["MOUSE & TOUCHPAD", "pointer and pad · applied live by the shell"],
         keyboard: ["KEYBOARD", "repeat · layout switch"],
         features: ["FEATURES", "one switch each · the shell itself"],
-        users: ["USERS", "accounts · admins · passwords"]
+        users: ["USERS", "accounts · admins · passwords"],
+        apps: ["APPS", "installed packages · remove what you don't use"]
     })
 
     function open(p) {
@@ -287,6 +288,7 @@ FloatingWindow {
                     Lb { x: 10; visible: !win.query; text: "advanced"; px: 10.5; color: Theme.mute; topPadding: 14; bottomPadding: 4 }
                     NavRow { pid: "features"; icon: "\u{F04CE}"; label: "Features"; keys: "features shell genie exposé launcher dnd disturb reload switch welcome sounds" }
                     NavRow { pid: "users"; icon: "\u{F0849}"; label: "Users"; keys: "users accounts admin password add remove people login" }
+                    NavRow { pid: "apps"; icon: "\u{F01D7}"; label: "Apps"; keys: "apps applications packages uninstall remove software pacman flatpak" }
                 }
             }
 
@@ -328,6 +330,7 @@ FloatingWindow {
                     DisplaysPage { anchors.fill: parent; active: win.page === "displays" }
                     WindowsPage { anchors.fill: parent; active: win.page === "windows" }
                     UsersPage { anchors.fill: parent; active: win.page === "users" }
+                    AppsPage { anchors.fill: parent; active: win.page === "apps" }
                 }
             }
         }
