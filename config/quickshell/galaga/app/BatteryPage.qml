@@ -220,6 +220,126 @@ Item {
                     }
                 }
             }
+
+            // idle: minutes without input, on one scale. Dots dim on each
+            // event: awake -> locked -> screen off -> asleep. Past 60 — never
+            Column {
+                width: parent.width
+                spacing: 10
+                SetHead { text: "idle" }
+                SetCard {
+                    Item {
+                        id: idleLine
+                        width: parent.width
+                        height: 268
+                        readonly property var at: [lk.v, dpms.v, zz.v]
+
+                        Repeater {
+                            model: 61
+                            Rectangle {
+                                required property int index
+                                readonly property int lvl: idleLine.at.filter(m => m && m <= index).length
+                                x: index * 12 - 3
+                                y: 224
+                                width: 7
+                                height: 7
+                                radius: 3.5
+                                color: [Theme.fg, Theme.grey, Theme.mute, Theme.s3][lvl]
+                            }
+                        }
+                        // never -- an empty ring beyond the scale
+                        Rectangle { x: 62 * 12 - 6; y: 221; width: 13; height: 13; radius: 6.5; color: "transparent"; border { width: 1; color: Theme.mute } }
+                        Repeater {
+                            model: [0, 15, 30, 45, 60]
+                            Lb { required property int modelData; x: modelData * 12 - width / 2; y: 246; text: modelData; px: 10 }
+                        }
+                        Lb { x: 62 * 12 - width / 2; y: 246; text: "never"; px: 10 }
+
+                        Mark { id: lk; row: 0; label: "lock"; value: Rules.store.lockAfter; onMoved: v => { Rules.store.lockAfter = v; Rules.idle(); } }
+                        Mark { id: dpms; row: 1; label: "screen off"; value: Rules.store.dpmsAfter; onMoved: v => { Rules.store.dpmsAfter = v; Rules.idle(); } }
+                        Mark { id: zz; row: 2; label: Rules.hibernateOn ? "sleep · hibernate" : "sleep"; value: Rules.store.sleepAfter; onMoved: v => { Rules.store.sleepAfter = v; Rules.idle(); } }
+                    }
+                    Row {
+                        spacing: 26
+                        Repeater {
+                            model: [["awake", Theme.fg], ["locked", Theme.grey], ["dark", Theme.mute], ["asleep", Theme.s3]]
+                            Row {
+                                required property var modelData
+                                spacing: 10
+                                Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 8; height: 8; radius: 4; color: parent.modelData[1] }
+                                Lb { text: parent.modelData[0]; px: 10 }
+                            }
+                        }
+                    }
+                    SetPick {
+                        label: "sleep into"
+                        visible: Rules.canHibernate
+                        opts: ["suspend", "hibernate"]
+                        cur: Rules.store.hibernate ? 1 : 0
+                        onPicked: i => { Rules.store.hibernate = i === 1; Rules.idle(); }
+                    }
+                    SetToggle {
+                        label: "caffeine"
+                        on: Sys.caffeine
+                        divider: false
+                        onFlip: want => Sys.caffeine = want
+                    }
+                }
+            }
+        }
+    }
+
+    // an idle mark: leg to the scale, Doto number and name. Drag along the
+    // scale, left/right -- by a minute; past 60 -- never (0). While dragging
+    // -- its own v; rules.json and hypridle update on release or after
+    // 400 ms of silence
+    component Mark: Item {
+        id: mk
+        property int row
+        property string label
+        property int value
+        property int v: value
+        signal moved(int v)
+        function put(m) {
+            m = m > 60.5 ? 0 : Math.max(1, Math.round(m));
+            if (m === v) return;
+            v = m;
+            wait.restart();
+        }
+        onValueChanged: if (!ma.pressed && !wait.running) v = value
+        Timer { id: wait; interval: 400; onTriggered: if (!ma.pressed && mk.v !== mk.value) mk.moved(mk.v) }
+
+        x: (v || 62) * 12
+        y: row * 76
+        width: 140
+        height: 224 - y
+        activeFocusOnTab: true
+        Keys.onPressed: e => {
+            if (e.key === Qt.Key_Left) put(v ? v - 1 : 60);
+            else if (e.key === Qt.Key_Right) put(v ? v + 1 : 61);
+            else return;
+            e.accepted = true;
+        }
+        Behavior on x { NumberAnimation { duration: 120 } }
+
+        Rectangle { width: 1; height: parent.height; color: mk.activeFocus || ma.pressed ? Theme.fg : Theme.mute }
+        Column {
+            x: 12
+            Num { text: mk.v || "—"; font.pixelSize: 40 }
+            Lb { topPadding: 6; text: mk.label; px: 10; color: mk.activeFocus ? Theme.fg : Theme.grey }
+        }
+        MouseArea {
+            id: ma
+            width: parent.width
+            height: 76
+            preventStealing: true
+            cursorShape: Qt.SizeHorCursor
+            onPressed: mk.forceActiveFocus()
+            onPositionChanged: e => mk.put(mapToItem(idleLine, e.x, 0).x / 12)
+            onReleased: {
+                wait.stop();
+                if (mk.v !== mk.value) mk.moved(mk.v);
+            }
         }
     }
 }

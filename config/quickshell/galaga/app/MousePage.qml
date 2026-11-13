@@ -35,7 +35,7 @@ Item {
                     width: parent.width
                     wrapMode: Text.WordWrap
                     px: 11
-                    text: "the shell isn't applying input settings — turn on shell sets input in galaga studio, and these take over"
+                    text: "the shell isn't applying input settings — turn on shell sets input on the keyboard page, and these take over"
                 }
             }
 

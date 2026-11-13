@@ -39,7 +39,9 @@ FloatingWindow {
         network: ["NETWORK", "devices and saved connections"],
         vpn: ["VPN", "clash verge and networkmanager tunnels"],
         battery: ["BATTERY", "charge · power modes · shell performance"],
-        mouse: ["MOUSE & TOUCHPAD", "pointer and pad · applied live by the shell"]
+        mouse: ["MOUSE & TOUCHPAD", "pointer and pad · applied live by the shell"],
+        keyboard: ["KEYBOARD", "repeat · layout switch"],
+        features: ["FEATURES", "one switch each · the shell itself"]
     })
 
     function open(p) {
@@ -272,6 +274,9 @@ FloatingWindow {
                     NavRow { pid: "battery"; icon: "\u{F0079}"; label: "Battery"; keys: "battery power saver mode performance health charge" }
                     Lb { x: 10; visible: !win.query; text: "devices"; px: 10.5; color: Theme.mute; topPadding: 14; bottomPadding: 4 }
                     NavRow { pid: "mouse"; icon: "\u{F037D}"; label: "Mouse & Touchpad"; keys: "mouse touchpad trackpad pointer scroll tap accel speed" }
+                    NavRow { pid: "keyboard"; icon: "\u{F030C}"; label: "Keyboard"; keys: "keyboard repeat rate delay layout switch input" }
+                    Lb { x: 10; visible: !win.query; text: "advanced"; px: 10.5; color: Theme.mute; topPadding: 14; bottomPadding: 4 }
+                    NavRow { pid: "features"; icon: "\u{F04CE}"; label: "Features"; keys: "features shell genie exposé launcher dnd disturb reload switch welcome sounds" }
                 }
             }
 
@@ -345,6 +350,8 @@ FloatingWindow {
                     MousePage { anchors.fill: parent; active: win.page === "mouse" }
                     NotificationsPage { anchors.fill: parent; active: win.page === "notifications" }
                     LockPage { anchors.fill: parent; active: win.page === "lock" }
+                    KeyboardPage { anchors.fill: parent; active: win.page === "keyboard" }
+                    FeaturesPage { anchors.fill: parent; active: win.page === "features"; onCloseRequested: win.close() }
                 }
             }
         }

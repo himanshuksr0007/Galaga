@@ -15,6 +15,9 @@ import qs.services
 // nothing / cmf buds (Sys.ear, their own protocol), its own volume, and the
 // system eq the pc applies in front of it (services/Eq, gains saved per
 // device in Theme.state.eqDev). Playback rides the shell's player (Media).
+// The rest of the old audio settings live here too: the input side (the mic,
+// its volume and the default source), the level meter, the shell's own sound
+// volume and kinds, and the system eq master switch.
 Item {
     id: pg
 
@@ -32,6 +35,24 @@ Item {
     onSelGoneChanged: if (selGone) selDev = null
     onSelDevChanged: if (selDev && devIsBuds) Sys.earRun([])
     PwObjectTracker { objects: pg.selDev ? [pg.selDev] : [] }
+
+    // input devices, hardware only (no app streams), grouped by card -- the
+    // old audio page's split: "SSL 2+" + "Line Inputs 1/L + 2/R". A duplex
+    // node (a virtual mic-and-speaker) is a sink and a source at once
+    readonly property var ins: devs(false)
+    function devs(out) {
+        return Pipewire.nodes.values.filter(n => n.audio && !n.isStream && n.name !== "galaga-eq" && (out ? n.isSink : n.type & PwNodeType.Source))
+            .map(n => Object.assign({ node: n }, split(n)))
+            .sort((a, b) => a.card.localeCompare(b.card) || a.port.localeCompare(b.port));
+    }
+    function split(n) {
+        const d = n.description || n.name, nick = (n.nickname || "").replace(/ #\d+$/, "");
+        if (nick && d.startsWith(nick + " ")) return { card: nick, port: d.slice(nick.length + 1) };
+        // HDMI: "GA102 … Digital Stereo (HDMI 2) [ED340CU S3]" — the monitor is the name
+        const bus = d.match(/\(((?:HDMI|DP)[^)]*)\)/);
+        if (nick && d.includes(`[${nick}]`)) return { card: bus ? bus[1] : "", port: nick };
+        return { card: "", port: d };
+    }
 
     function barHas(w) { return Theme.state.bar.includes(w); }
     function barFlip(w) {
@@ -68,6 +89,20 @@ Item {
                         onFlip: want => { if (Pipewire.defaultAudioSink?.audio) Pipewire.defaultAudioSink.audio.muted = want; }
                     }
                     SetToggle {
+                        label: "level meter"
+                        on: Theme.state.audioMeter
+                        onFlip: want => Theme.state.audioMeter = want
+                    }
+                    Meter { visible: Theme.state.audioMeter; width: parent.width; node: Pipewire.defaultAudioSink }
+                    Lb {
+                        visible: !Theme.state.audioMeter
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        topPadding: 10
+                        px: 10.5
+                        text: "meter off: its monitor crashes quickshell 0.3.0 — on 0.3.1+ it just works"
+                    }
+                    SetToggle {
                         label: "show in the bar"
                         on: pg.barHas("sound")
                         divider: false
@@ -82,6 +117,30 @@ Item {
                 open: true
                 inspectable: true
                 onInspect: n => pg.selDev = n
+            }
+
+            // the eq master switch: off -- the chain parks, every device is
+            // picked plain, and the per-device eq cards hide themselves
+            Column {
+                width: parent.width
+                spacing: 10
+                SetHead { text: "system eq" }
+                SetCard {
+                    SetToggle {
+                        label: "system eq"
+                        sub: "bass / mid / treble per output, applied by the pc before the sound leaves"
+                        on: Theme.state.featEq
+                        divider: false
+                        onFlip: want => Theme.state.featEq = want
+                    }
+                    Lb {
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        topPadding: 10
+                        px: 10.5
+                        text: "needs one pipewire restart after install"
+                    }
+                }
             }
 
             // the picked output: what it is, its charge, its own volume, then the eq
@@ -263,6 +322,68 @@ Item {
                 }
                 Controls { id: sctl; anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter } size: 18; play: 40 }
             }
+
+            // input: the mic -- its volume (dragging it does not unmute it),
+            // mute, the meter, and the default source list
+            Column {
+                width: parent.width
+                spacing: 10
+                SetHead { text: "input" }
+                SetCard {
+                    SetRow {
+                        label: Pipewire.defaultAudioSource ? (Pipewire.defaultAudioSource.description || Pipewire.defaultAudioSource.name) : "none"
+                    }
+                    DevVol { width: parent.width; node: Pipewire.defaultAudioSource; unmute: false }
+                    SetToggle {
+                        label: "mute"
+                        on: Pipewire.defaultAudioSource?.audio?.muted ?? false
+                        onFlip: want => { if (Pipewire.defaultAudioSource?.audio) Pipewire.defaultAudioSource.audio.muted = want; }
+                    }
+                    Meter { visible: Theme.state.audioMeter; width: parent.width; node: Pipewire.defaultAudioSource }
+                    Repeater {
+                        model: pg.ins
+                        SetRow {
+                            required property var modelData
+                            required property int index
+                            label: modelData.port
+                            value: modelData.card
+                            clickable: true
+                            divider: index < pg.ins.length - 1
+                            onHit: Pipewire.preferredDefaultAudioSource = modelData.node
+                            Rectangle {
+                                visible: modelData.node === Pipewire.defaultAudioSource
+                                width: 9
+                                height: 9
+                                radius: 4.5
+                                color: Theme.accent
+                            }
+                        }
+                    }
+                    Lb { visible: !pg.ins.length; topPadding: 6; text: "no input devices"; px: 10.5; color: Theme.mute }
+                }
+            }
+
+            // the shell's own sounds (services/Sounds): how loud, and which
+            // kinds. The master switch lives on the features page with the
+            // other features; moving the volume answers with a tick at the
+            // new volume, so you hear what you picked
+            Column {
+                width: parent.width
+                spacing: 10
+                SetHead { text: "shell sounds" }
+                SetCard {
+                    SetSlider {
+                        label: "volume"
+                        from: 0; to: 100
+                        unit: "%"
+                        value: Theme.state.soundVol
+                        onMoved: v => { Theme.state.soundVol = Math.round(v); Sounds.play("tick"); }
+                    }
+                    SetToggle { label: "interface"; sub: "panels and the volume tick"; on: Theme.state.soundUi; onFlip: want => Theme.state.soundUi = want }
+                    SetToggle { label: "alerts"; sub: "a notification"; on: Theme.state.soundAlerts; onFlip: want => Theme.state.soundAlerts = want }
+                    SetToggle { label: "system"; sub: "lock, screenshot, charger"; on: Theme.state.soundSys; divider: false; onFlip: want => Theme.state.soundSys = want }
+                }
+            }
         }
     }
 
@@ -317,10 +438,12 @@ Item {
         }
     }
 
-    // one device's own volume, the same slider driving the node itself
+    // one device's own volume, the same slider driving the node itself.
+    // unmute false -- the mic: dragging its gain is not a reason to open it
     component DevVol: Rectangle {
         id: dv
         property var node
+        property bool unmute: true
         readonly property real value: node?.audio?.muted ? 0 : node?.audio?.volume ?? 0
         readonly property real shown: area.pressed ? area.v : value
         height: 54
@@ -360,7 +483,7 @@ Item {
             function set(x) {
                 if (!dv.node?.audio) return;
                 v = Math.max(0, Math.min(1, x / width));
-                dv.node.audio.muted = false;
+                if (dv.unmute) dv.node.audio.muted = false;
                 dv.node.audio.volume = v;
             }
             onPressed: e => set(e.x)
@@ -421,6 +544,38 @@ Item {
                 bd.moved(Math.max(-12, Math.min(12, bd.shown + Math.round(wacc))));
                 wacc = 0;
             }
+        }
+    }
+
+    // the level meter for one node: 12 dots — 10 white, then 2 red from
+    // -7.5 dB, close to clipping. The peak monitor exists only while the
+    // meter is on (and the page is up): not created at all otherwise -- on
+    // quickshell 0.3.0 creating it is the crash. peak is ∛amplitude, so
+    // dB = 60·log10(peak); the row shows -60…0 dB → 1 + log10(peak). Jumps
+    // up on a peak, falls back slowly on the timer so a word stays readable
+    component Meter: Item {
+        id: meter
+        property var node
+        property real peakV: 0
+        property real lv: 0
+        readonly property real at: Math.max(0, Math.min(1, 1 + Math.log10(Math.max(peakV, 1e-9))))
+        onAtChanged: lv = Math.max(lv, at)
+        height: visible ? 26 : 0
+
+        Loader {
+            active: pg.active && Theme.state.audioMeter && !!meter.node
+            sourceComponent: Component {
+                PwNodePeakMonitor { node: meter.node; onPeakChanged: meter.peakV = peak; onNodeChanged: meter.lv = 0 }
+            }
+        }
+        Timer { interval: 33; repeat: true; running: pg.active && meter.lv > 0; onTriggered: meter.lv = Math.max(meter.at, meter.lv - 0.03) }
+
+        Row {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 7
+            Seg { n: 10; spacing: 7; width: 163; height: 10; f: meter.lv * 1.2 }
+            Seg { n: 2; spacing: 7; width: 27; height: 10; f: meter.lv * 6 - 5; on: Theme.red }
+            Lb { anchors.verticalCenter: parent.verticalCenter; leftPadding: 8; text: meter.node?.audio?.muted ? "level · muted" : "level"; px: 10 }
         }
     }
 }
