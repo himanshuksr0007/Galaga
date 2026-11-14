@@ -19,7 +19,9 @@ import qs.settings
 // placed rects share a full edge. regroup() rebuilds the groups per workspace
 // from the stored rects after every placement, so the rule is one and the same
 // however the windows got there. A group never spans workspaces, and holds at
-// most four windows (the grid is the largest layout).
+// most four windows (the grid is the largest layout). Grouped windows resize
+// together: resize one and the watcher moves the shared boundary for its
+// neighbours (linkedResize below; settings -> windows -> resize neighbours).
 //
 // Geometry has no hyprland event and a toplevel's lastIpcObject is a snapshot
 // from the last full fetch, so actions and the group watcher both read fresh
@@ -215,10 +217,14 @@ Singleton {
         for (const g in groups) if (groups[g].includes(addr)) return g;
         return "";
     }
-    // full-edge sharing between two placed rects: the edge coincides and both
-    // windows run its whole length
-    function shareV(a, b) { return Math.abs(a.x + a.w - b.x) <= 2 && Math.abs(a.y - b.y) <= 2 && Math.abs(a.h - b.h) <= 2; }
-    function shareH(a, b) { return Math.abs(a.y + a.h - b.y) <= 2 && Math.abs(a.x - b.x) <= 2 && Math.abs(a.w - b.w) <= 2; }
+    // full-edge sharing between two placed rects: the edges face each
+    // other across the inner gap and both windows run its whole length.
+    // Placed rects never touch -- zoneRect keeps gapsIn between
+    // neighbours -- so the test has to expect the gap, not coincidence:
+    // with gaps_in at 6, a coincidence test leaves every placed pair
+    // ungrouped and linked resize with nothing to link.
+    function shareV(a, b) { return Math.abs(a.x + a.w + Rules.store.gapsIn - b.x) <= 2 && Math.abs(a.y - b.y) <= 2 && Math.abs(a.h - b.h) <= 2; }
+    function shareH(a, b) { return Math.abs(a.y + a.h + Rules.store.gapsIn - b.y) <= 2 && Math.abs(a.x - b.x) <= 2 && Math.abs(a.w - b.w) <= 2; }
     function linked(a, b) { return shareV(a, b) || shareV(b, a) || shareH(a, b) || shareH(b, a); }
     function regroupWs(ws) {
         const mine = Object.keys(recs).filter(a => recs[a].ws === ws);
@@ -454,12 +460,63 @@ Singleton {
                 saveRec(addr, rec);
                 continue;
             }
-            // the user took it: dragged away, or resized out of its space.
-            // Either way it is a free window again -- record cleared, left
-            // floating exactly where it is.
-            touched[rec.ws] = true;
-            dropRec(addr);
+            const sizeSame = cur.w === rec.rect.w && cur.h === rec.rect.h;
+            if (sizeSame) {
+                // dragged away whole: a free window again -- record cleared,
+                // left floating exactly where it was dropped
+                touched[rec.ws] = true;
+                dropRec(addr);
+                continue;
+            }
+            // resized. In a group, with linked resize on, the neighbours'
+            // shared edges follow and the record learns the new rect; anywhere
+            // else the window has left its space, and the record ends with it.
+            const gid = groupOf(addr);
+            if (Theme.state.snapLinked && gid) {
+                linkedResize(addr, rec.rect, cur, gid);
+                rec.rect = cur;
+                saveRec(addr, rec);
+            } else {
+                touched[rec.ws] = true;
+                dropRec(addr);
+            }
         }
         for (const ws in touched) regroupWs(Number(ws));
+    }
+
+    function spansOverlap(p1, l1, p2, l2) { return p1 < p2 + l2 && p2 < p1 + l1; }
+    // M was resized from oldR to newR: every group mate sharing an edge with
+    // M's old rect has that boundary moved to M's new edge, the inner gap
+    // preserved -- its far edge stays, so it grows or shrinks into the space. In a 2x2 group a corner
+    // window shares one vertical and one horizontal edge, so both mates move
+    // and the cross follows. A mate that would end up under 240x160 is left.
+    function linkedResize(addr, oldR, newR, gid) {
+        let applied = false;
+        const gi = Rules.store.gapsIn; // the shared boundary sits across the inner gap, and keeps it
+        for (const n of (groups[gid] ?? [])) {
+            if (n === addr) continue;
+            const nr = recs[n];
+            if (!nr) continue;
+            const r = nr.rect;
+            let nx = r.x, ny = r.y, nw = r.w, nh = r.h, adj = false;
+            if (Math.abs(oldR.x + oldR.w + gi - r.x) <= 3 && spansOverlap(oldR.y, oldR.h, r.y, r.h)) {
+                const b = newR.x + newR.w + gi; nx = b; nw = r.x + r.w - b; adj = true;
+            } else if (Math.abs(oldR.x - gi - (r.x + r.w)) <= 3 && spansOverlap(oldR.y, oldR.h, r.y, r.h)) {
+                nw = newR.x - gi - r.x; adj = true;
+            }
+            if (Math.abs(oldR.y + oldR.h + gi - r.y) <= 3 && spansOverlap(oldR.x, oldR.w, r.x, r.w)) {
+                const b = newR.y + newR.h + gi; ny = b; nh = r.y + r.h - b; adj = true;
+            } else if (Math.abs(oldR.y - gi - (r.y + r.h)) <= 3 && spansOverlap(oldR.x, oldR.w, r.x, r.w)) {
+                nh = newR.y - gi - r.y; adj = true;
+            }
+            if (!adj || nw < 240 || nh < 160) continue;
+            const nrect = { x: nx, y: ny, w: nw, h: nh };
+            dsp(resizeStr(n, nrect));
+            dsp(moveStr(n, nrect));
+            nr.rect = nrect;
+            saveRec(n, nr);
+            applied = true;
+        }
+        if (applied) guard();
     }
 }
