@@ -10,8 +10,12 @@ hl.on("hyprland.start", function()
     -- guaranteed -- re-runs the config with the plugin in and every key,
     -- button and no_bar rule lands, error-free. It is also the recovery
     -- path after a Hyprland upgrade, once `hyprpm update` has rebuilt the
-    -- .so. First, so even the fallback lands before anything visual.
-    hl.exec_cmd("sh -c 'hyprpm reload -n; hyprctl reload'")
+    -- .so. It runs ONLY when the compositor says hyprbars is not loaded:
+    -- on a normal boot the in-config load already landed it, and an
+    -- unconditional pass announced the plugin load on screen and re-ran
+    -- the whole config again for nothing. First, so even the fallback
+    -- lands before anything visual.
+    hl.exec_cmd("sh -c 'hyprctl plugin list | grep -qi hyprbars || { hyprpm reload -n; hyprctl reload; }'")
 
     -- Shell: whichever one is selected in rice
     hl.exec_cmd(vars.rice .. " start")
