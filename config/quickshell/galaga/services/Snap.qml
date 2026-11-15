@@ -714,6 +714,7 @@ Singleton {
             const z = dragZoneAt(cl, cur);
             dragZone = z?.zone ?? "";
             dragRect = z?.rect ?? null;
+            root.beginFill(addr);
         }
         livePrev = { addr: addr, x: r.x, y: r.y, w: r.w, h: r.h, cx: cur.x, cy: cur.y };
     }
@@ -833,9 +834,48 @@ Singleton {
                  floating: !!c.floating, cx: cur.x, cy: cur.y };
     }
     function dragAbort() {
+        endFill();
         dragT = null;
         dragZone = "";
         dragRect = null;
+    }
+
+    // the tiling gesture, lent to a snapped pair: when one of two windows
+    // that tile a rectangle together is dragged away, the other fills the
+    // whole space for the length of the drag. A tiled pair does this by
+    // itself -- the layout reflows around the dragged window and takes it
+    // back on release -- but a snapped pair floats outside the layout, so
+    // the service lends it the same manners. endFill (from dragAbort, so
+    // every way a drag can end is covered) puts the mate back in its own
+    // space before the landing proceeds: dropped home, the pair is
+    // exactly restored; dropped elsewhere, the landing's own rules
+    // (accommodate, regroup) take it from there.
+    property var dragFill: null // { mate, rect, zone }
+    function beginFill(addr) {
+        if (!Theme.state.snapLinked || dragFill) return;
+        const rec = recs[addr];
+        if (!rec) return;
+        const gid = groupOf(addr);
+        const members = gid ? (groups[gid] ?? []) : [];
+        if (members.length !== 2) return;
+        const mate = members.find(m => m !== addr);
+        const mr = recs[mate];
+        if (!mr) return;
+        const a = rec.rect, b = mr.rect, gi = Rules.store.gapsIn;
+        let union = null;
+        if (shareV(a, b)) union = { x: a.x, y: a.y, w: a.w + gi + b.w, h: a.h };
+        else if (shareV(b, a)) union = { x: b.x, y: b.y, w: b.w + gi + a.w, h: b.h };
+        else if (shareH(a, b)) union = { x: a.x, y: a.y, w: a.w, h: a.h + gi + b.h };
+        else if (shareH(b, a)) union = { x: b.x, y: b.y, w: b.w, h: b.h + gi + a.h };
+        if (!union) return;
+        dragFill = { mate: mate, rect: { x: b.x, y: b.y, w: b.w, h: b.h }, zone: mr.zone };
+        place(mate, union, mr.zone);
+    }
+    function endFill() {
+        if (!dragFill) return;
+        const f = dragFill;
+        dragFill = null;
+        if (recs[f.mate]) place(f.mate, f.rect, f.zone);
     }
     // the zone the cursor is on: within 6 px of the work area's edges. The
     // bottom alone is not a zone -- windows maximises at the top, not there.
@@ -913,6 +953,7 @@ Singleton {
             const z = dragZoneAt(c, cur);
             dragZone = z?.zone ?? "";
             dragRect = z?.rect ?? null;
+            beginFill(a);
         }
         dragPrev = dragSample(c, cur);
     }
