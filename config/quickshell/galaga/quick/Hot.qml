@@ -28,12 +28,12 @@ PanelWindow {
         onHoveredChanged: {
             if (hovered) {
                 root.s1 = null;
-                DragWatch.sample(s => { root.s1 = s; });
+                if (!DragWatch.alive) DragWatch.sample(s => { root.s1 = s; }); // the event world needs no sample
                 dwell.restart();
             } else dwell.stop();
         }
     }
-    // the dwell decides with two DragWatch samples: a window being dragged or
-    // resized across the edge must not peek the panel (services/DragWatch)
-    Timer { id: dwell; interval: 150; onTriggered: DragWatch.sample(s2 => { if (hov.hovered && !DragWatch.busyBetween(root.s1, s2)) root.triggered(); }) }
+    // the dwell decides with DragWatch: a window being dragged or resized
+    // across the edge must not peek the panel (services/DragWatch)
+    Timer { id: dwell; interval: 150; onTriggered: DragWatch.mayOpen(root.s1, ok => { if (hov.hovered && ok) root.triggered(); }) }
 }

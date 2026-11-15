@@ -79,9 +79,9 @@ Scope {
             // closed -- the mouse is caught only by the strip at the edge (screen corners are free), open -- the whole window including the gap under the panel
             mask: Region { y: win.open ? 0 : win.height - 2; width: win.width; height: win.open ? win.height : 2 }
 
-            // the dwell decides with two DragWatch samples: a window being dragged or
+            // the dwell decides with DragWatch: a window being dragged or
             // resized across the strip must not open the deck (services/DragWatch)
-            Timer { id: dwell; interval: 150; onTriggered: DragWatch.sample(s2 => { if (hov.hovered && !DragWatch.busyBetween(win.s1, s2)) root.on = win.modelData; }) }
+            Timer { id: dwell; interval: 150; onTriggered: DragWatch.mayOpen(win.s1, ok => { if (hov.hovered && ok) root.on = win.modelData; }) }
             Timer { id: leave; interval: 300; onTriggered: if (win.open) root.on = null }
 
             Stage {
@@ -93,7 +93,7 @@ Scope {
                             leave.stop();
                             if (!win.open && Theme.state.deckHover) {
                                 win.s1 = null;
-                                DragWatch.sample(s => { win.s1 = s; });
+                                if (!DragWatch.alive) DragWatch.sample(s => { win.s1 = s; }); // the event world needs no sample
                                 dwell.restart();
                             }
                         } else {

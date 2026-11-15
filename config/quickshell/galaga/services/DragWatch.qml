@@ -2,21 +2,87 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 
-// drag watch: tells a hover strip whether the focused window is being
-// dragged or resized right now, so the deck and the quick panel stay down
-// while a window is carried across their edges. Compositor drags keep
-// feeding hover to layer surfaces, so a plain dwell cannot tell a
-// deliberate linger from a window passing through -- two samples can:
-// one when the hover begins, one when the strip's dwell fires. Between
-// them a hand drag moves the window at one size with the cursor holding
-// the same point of it; a resize changes the size with the cursor at the
-// window. Anything else (or no reading at all) is not a drag, and the
-// strips fail open -- a panel must never get stuck shut. Samples run on
-// demand only, when a strip asks: no polling.
+// drag watch: the shell's one answer to "is a window being dragged or
+// resized right now, and which one". The deck and the quick panel ask
+// before they open (a compositor drag keeps feeding hover to their edge
+// strips, so a plain dwell cannot tell a deliberate linger from a window
+// passing through); Snap's drag tracker and the deck's drop targets run
+// on the start/stop signals.
+//
+// Two worlds, one interface. With the hyprdrag plugin loaded
+// (config/hypr/hyprland/drag.lua) the compositor's own drag state arrives
+// as socket2 events -- movestart/movestop, resizestart/resizestop, each
+// with the window's address -- and `dragging` is simply true between a
+// start and its stop. `alive` turns true at the session's first hyprdrag
+// event and stays true: that is the plugin proving itself. Without the
+// plugin (not installed, stale after a Hyprland upgrade) the events never
+// arrive, alive stays false, and every consumer falls back to the
+// sampling path below: two samples of the focused window and the cursor,
+// one when a hover begins and one when the strip's dwell fires -- a hand
+// drag moves the window at one size with the cursor holding the same
+// point of it, a resize changes the size with the cursor at the window,
+// and anything else (or no reading at all) is not a drag. Either way the
+// strips fail open -- a panel must never get stuck shut.
 Singleton {
     id: root
+
+    // ---- the event core (hyprdrag) ----
+    property bool alive: false // a hyprdrag event has arrived this session
+    property bool moveActive: false
+    property bool resizeActive: false
+    property string addr: "" // the dragged window, 0x form, while a drag is on
+    readonly property bool dragging: moveActive || resizeActive
+    readonly property string kind: moveActive ? "move" : (resizeActive ? "resize" : "")
+
+    signal dragStarted(string kind, string addr)
+    signal dragStopped(string kind, string addr)
+
+    Connections {
+        target: Hyprland
+        function onRawEvent(e) {
+            const data = String(e.data ?? "").trim();
+            switch (e.name) {
+            case "hyprdrag-movestart":
+                root.alive = true;
+                root.addr = data;
+                root.moveActive = true;
+                root.dragStarted("move", data);
+                break;
+            case "hyprdrag-resizestart":
+                root.alive = true;
+                root.addr = data;
+                root.resizeActive = true;
+                root.dragStarted("resize", data);
+                break;
+            case "hyprdrag-movestop":
+                root.alive = true;
+                if (!root.moveActive) break;
+                root.moveActive = false;
+                { const stopped = data || root.addr; if (!root.dragging) root.addr = ""; root.dragStopped("move", stopped); }
+                break;
+            case "hyprdrag-resizestop":
+                root.alive = true;
+                if (!root.resizeActive) break;
+                root.resizeActive = false;
+                { const stopped = data || root.addr; if (!root.dragging) root.addr = ""; root.dragStopped("resize", stopped); }
+                break;
+            }
+        }
+    }
+
+    // may a hover strip open its panel? cb(true/false). Event world: the
+    // answer is just "no drag is on". Sampling world: the second sample is
+    // taken now and busyBetween decides (s1 is the hover-start sample the
+    // strip took, possibly null -- that fails open, as before).
+    function mayOpen(s1, cb) {
+        if (alive) { cb(!dragging); return; }
+        sample(s2 => cb(!busyBetween(s1, s2)));
+    }
+
+    // ---- the sampling fallback (no plugin) ----
 
     // one sample: the focused window's rect and the cursor, from the same
     // hyprctl pair Snap samples. cb gets { addr, x, y, w, h, cx, cy }, or
