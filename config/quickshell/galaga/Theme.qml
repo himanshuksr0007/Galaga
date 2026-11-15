@@ -269,6 +269,7 @@ Singleton {
             property bool snapLinked: true // snapped neighbours resize together: drag one window's edge, the next one follows
             property bool snapAssist: true // after a snap, offer the other windows to fill the rest of the space
             property bool snapDrag: true   // drag a window to an edge or corner and let go to snap it there
+            property bool snapDrop: true   // while a window is dragged, the deck offers its workspaces as drop targets (deck/DropDeck)
             property int perf: 0           // shell performance (settings -> battery): 0 full, 1 trim, 2 lite -- what the shell itself spends: polling cadences and ambient motion. The cpu profile is Rules.modes, not this
             property bool sounds: true         // interface sounds (services/Sounds): quiet synthesized blips -- lock, shots, notes, ticks
             property int soundVol: 55          // their volume, %

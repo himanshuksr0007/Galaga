@@ -52,6 +52,7 @@ ShellRoot {
     Clip { id: clip }
     Charms { id: charms }
     Deck { id: deck }
+    DropDeck {}
     Desktops { id: desktops }
     Expose { id: expose }
     Genie {}

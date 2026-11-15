@@ -36,7 +36,8 @@ Item {
                     SetToggle { label: "window snapping"; sub: "super + arrow keys snap · super + z opens layouts. off: the arrows move focus again"; on: Theme.state.snap; onFlip: want => Theme.state.snap = want }
                     SetToggle { label: "resize neighbours together"; sub: "drag one snapped window's edge and its neighbour follows"; on: Theme.state.snapLinked; onFlip: want => Theme.state.snapLinked = want }
                     SetToggle { label: "snap assist"; sub: "after snapping, offer the other windows to fill the space"; on: Theme.state.snapAssist; onFlip: want => Theme.state.snapAssist = want }
-                    SetToggle { label: "snap by dragging"; sub: "drag a window to an edge or corner and let go"; on: Theme.state.snapDrag; divider: false; onFlip: want => Theme.state.snapDrag = want }
+                    SetToggle { label: "snap by dragging"; sub: "drag a window to an edge or corner and let go"; on: Theme.state.snapDrag; onFlip: want => Theme.state.snapDrag = want }
+                    SetToggle { label: "drop on the deck"; sub: "drag a window and let go over a workspace to move it there"; on: Theme.state.snapDrop; divider: false; onFlip: want => Theme.state.snapDrop = want }
                 }
                 SetCard {
                     SetRow { label: "super + ← →"; value: "halves" }
