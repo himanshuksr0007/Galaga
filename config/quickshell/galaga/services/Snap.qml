@@ -786,6 +786,7 @@ Singleton {
             dragZone = z?.zone ?? "";
             dragRect = z?.rect ?? null;
             root.beginFill(addr);
+            DragWatch.fxSuspend();
         }
         livePrev = { addr: addr, x: r.x, y: r.y, w: r.w, h: r.h, cx: cur.x, cy: cur.y };
     }
@@ -906,6 +907,7 @@ Singleton {
     }
     function dragAbort() {
         endFill();
+        DragWatch.fxRestore();
         dragT = null;
         dragZone = "";
         dragRect = null;
@@ -1025,6 +1027,7 @@ Singleton {
             dragZone = z?.zone ?? "";
             dragRect = z?.rect ?? null;
             beginFill(a);
+            DragWatch.fxSuspend();
         }
         dragPrev = dragSample(c, cur);
     }

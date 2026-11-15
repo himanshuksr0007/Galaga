@@ -58,24 +58,28 @@ Singleton {
                 root.alive = true;
                 root.addr = data;
                 root.moveActive = true;
+                root.fxSuspend();
                 root.dragStarted("move", data);
                 break;
             case "hyprdrag-resizestart":
                 root.alive = true;
                 root.addr = data;
                 root.resizeActive = true;
+                root.fxSuspend();
                 root.dragStarted("resize", data);
                 break;
             case "hyprdrag-movestop":
                 root.alive = true;
                 if (!root.moveActive) break;
                 root.moveActive = false;
+                if (!root.dragging) root.fxRestore();
                 { const stopped = data || root.addr; if (!root.dragging) root.addr = ""; root.dragStopped("move", stopped); }
                 break;
             case "hyprdrag-resizestop":
                 root.alive = true;
                 if (!root.resizeActive) break;
                 root.resizeActive = false;
+                if (!root.dragging) root.fxRestore();
                 { const stopped = data || root.addr; if (!root.dragging) root.addr = ""; root.dragStopped("resize", stopped); }
                 break;
             case "hyprdrag-movemotion":
@@ -121,6 +125,7 @@ Singleton {
                     root.moveActive = false;
                     root.resizeActive = false;
                     root.addr = "";
+                    root.fxRestore(); // a drag cut off mid-flight leaves no stop to restore by
                 }
             }
         }
@@ -132,6 +137,42 @@ Singleton {
         triggeredOnStart: true
         onTriggered: if (!plist.running) plist.running = true
     }
+
+    // ---- drag-time effects suspension ----
+    // Blur and shadows are the compositor's per-frame tax: while a window
+    // is dragged or resized the desktop re-renders continuously, and the
+    // shadow pass and the blur passes run on every one of those frames.
+    // For the length of a drag they buy nothing -- the window is in
+    // motion under the cursor -- so a drag switches them off and the
+    // drop switches back exactly what was on. The user's own settings
+    // are read once at startup and are what gets restored; if they were
+    // never read (or nothing is on), suspension simply does not happen.
+    // Snap calls these too, for the sampling world's drags.
+    property var fxBlur: null // the user's decoration:blur:enabled
+    property var fxShadow: null // the user's decoration:shadow:enabled
+    property bool fxOff: false
+    function fxSuspend() {
+        if (fxOff || fxBlur === null || fxShadow === null) return;
+        if (!fxBlur && !fxShadow) return;
+        fxOff = true;
+        Hyprland.dispatch("hl.config({ decoration = { blur = { enabled = false }, shadow = { enabled = false } } })");
+    }
+    function fxRestore() {
+        if (!fxOff) return;
+        fxOff = false;
+        Hyprland.dispatch(`hl.config({ decoration = { blur = { enabled = ${fxBlur} }, shadow = { enabled = ${fxShadow} } } })`);
+    }
+    Process {
+        id: fxB
+        command: ["hyprctl", "getoption", "decoration:blur:enabled"]
+        stdout: StdioCollector { onStreamFinished: root.fxBlur = text.includes("true") }
+    }
+    Process {
+        id: fxS
+        command: ["hyprctl", "getoption", "decoration:shadow:enabled"]
+        stdout: StdioCollector { onStreamFinished: root.fxShadow = text.includes("true") }
+    }
+    Component.onCompleted: { fxB.running = true; fxS.running = true; }
 
     // ---- the sampling fallback (no plugin) ----
 
