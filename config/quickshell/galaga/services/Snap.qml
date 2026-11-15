@@ -594,25 +594,128 @@ Singleton {
             root.evSeed = true;
             root.evBase = null;
             root.dragPrev = null;
+            root.livePrev = null;
             root.dragFetch(); // the baseline sample: the window has not moved yet
+        }
+        function onDragMotion(kind, addr, rect, cur) {
+            // the drag at its own rate, geometry included: a resize of a
+            // grouped window is followed live (liveFollow), a move feeds
+            // the drag tracker's begin/track rules directly (motionTrack)
+            // -- neither path polls, so neither can trail the pointer
+            if (kind === "resize") { root.liveFollow(addr, rect); return; }
+            if (!Theme.state.snap || !Theme.state.snapDrag || root.popOpen) return;
+            root.motionTrack(addr, rect, cur);
         }
         function onDragStopped(kind, addr) {
             if (kind === "move" && root.dragT) {
-                // land on one last sample, taken now: the legacy tracker's
-                // still-tick release always read the cursor's final resting
-                // place, but the stop event fires the instant the button
-                // lifts -- with the zone from the last mid-drag tick, a
-                // quick flick to an edge lets go before the preview caught
-                // up and the snap is missed. dFetched() lands it below.
-                root.pendingLand = true;
-                root.dragFetch();
+                if (DragWatch.motionAlive) {
+                    root.dragRelease(); // the last motion set the zone, a mouse-move ago
+                } else {
+                    // land on one last sample, taken now: the legacy tracker's
+                    // still-tick release always read the cursor's final resting
+                    // place, but the stop event fires the instant the button
+                    // lifts -- with the zone from the last mid-drag tick, a
+                    // quick flick to an edge lets go before the preview caught
+                    // up and the snap is missed. dFetched() lands it below.
+                    root.pendingLand = true;
+                    root.dragFetch();
+                }
             }
+            root.liveBase = null;
+            root.livePrev = null;
             root.evDrag = false;
             root.evSeed = false;
             root.evBase = null;
             settleT.restart();
             if (Object.keys(root.groups).length > 0 && !root.fetching && !root.pendingAct) root.fetch(null);
         }
+    }
+
+    // ---- live drags: the plugin's motion events, followed directly ----
+
+    // liveBase: a resize follow in progress -- the dragged window's rect
+    // when the drag began, and each group mate's rect then. Every motion
+    // recomputes the mates from those bases and the live rect, so the
+    // follow is exact at any rate. (linkedResize cannot do this: its edge
+    // tests read the mates' current records, which the first step of the
+    // follow itself has already moved.) The dragged window's own record
+    // stays at the base for the whole drag; the watcher reconciles it
+    // when the drag ends.
+    property var liveBase: null // { addr, gid, rect, mates: { addr: rect } }
+    function liveFollow(addr, r) {
+        if (!Theme.state.snap || !Theme.state.snapLinked) return;
+        const rec = recs[addr];
+        if (!rec) return;
+        if (!liveBase || liveBase.addr !== addr) {
+            const gid = groupOf(addr);
+            if (!gid) return;
+            const mates = {};
+            for (const n of (groups[gid] ?? [])) if (n !== addr && recs[n]) mates[n] = recs[n].rect;
+            if (!Object.keys(mates).length) return;
+            liveBase = { addr: addr, gid: gid, rect: rec.rect, mates: mates };
+        }
+        const base = liveBase.rect, gi = Rules.store.gapsIn;
+        let applied = false;
+        for (const n in liveBase.mates) {
+            const m = liveBase.mates[n], nr = recs[n];
+            if (!nr) continue;
+            let nx = m.x, ny = m.y, nw = m.w, nh = m.h, adj = false;
+            if (Math.abs(base.x + base.w + gi - m.x) <= 3 && spansOverlap(base.y, base.h, m.y, m.h)) {
+                const b = r.x + r.w + gi; nx = b; nw = m.x + m.w - b; adj = true;
+            } else if (Math.abs(base.x - gi - (m.x + m.w)) <= 3 && spansOverlap(base.y, base.h, m.y, m.h)) {
+                nw = r.x - gi - m.x; adj = true;
+            }
+            if (Math.abs(base.y + base.h + gi - m.y) <= 3 && spansOverlap(base.x, base.w, m.x, m.w)) {
+                const b = r.y + r.h + gi; ny = b; nh = m.y + m.h - b; adj = true;
+            } else if (Math.abs(base.y - gi - (m.y + m.h)) <= 3 && spansOverlap(base.x, base.w, m.x, m.w)) {
+                nh = r.y - gi - m.y; adj = true;
+            }
+            if (!adj || nw < 240 || nh < 160) continue;
+            const nrect = { x: nx, y: ny, w: nw, h: nh };
+            if (rectEq(nrect, nr.rect, 0)) continue; // this motion changed the other axis only
+            dsp(resizeStr(n, nrect));
+            dsp(moveStr(n, nrect));
+            nr.rect = nrect;
+            saveRec(n, nr);
+            applied = true;
+        }
+        if (applied) guard();
+    }
+
+    // livePrev: the last motion sample of a move drag. motionTrack runs
+    // the sampling tracker's begin/track rules on the event's sample
+    // instead of a fetched one -- the preview follows the cursor at the
+    // drag's own rate, and the release lands with the final motion's zone.
+    property var livePrev: null // { addr, x, y, w, h, cx, cy }
+    function motionTrack(addr, r, cur) {
+        if (!snapM) { fetch(null); return; } // zones need the monitors first
+        const cl = (dsnapC ?? []).find(x => x.address === addr) ?? null;
+        if (!cl || cl.workspace.id < 0) return; // the seed fetch has not landed, or the window is parked
+        const offX = cur.x - r.x, offY = cur.y - r.y;
+        if (dragT) {
+            if (dragT.addr !== addr) return;
+            if (r.w !== dragT.lastW || r.h !== dragT.lastH
+                || Math.abs(offX - dragT.offX) > 12 || Math.abs(offY - dragT.offY) > 12) { dragAbort(); return; }
+            dragT.lastX = r.x;
+            dragT.lastY = r.y;
+            const z = dragZoneAt(cl, cur);
+            dragZone = z?.zone ?? "";
+            dragRect = z?.rect ?? null;
+            return;
+        }
+        const p = livePrev;
+        if (p && p.addr === addr && r.w === p.w && r.h === p.h && (r.x !== p.x || r.y !== p.y)
+            && Math.abs(offX - (p.cx - p.x)) <= 12 && Math.abs(offY - (p.cy - p.y)) <= 12) {
+            const rec = recs[addr];
+            const base = (evBase && evBase.addr === addr) ? evBase : p;
+            dragT = { addr: addr, offX: offX, offY: offY,
+                      lastX: r.x, lastY: r.y, lastW: r.w, lastH: r.h, still: 0,
+                      pre: rec ? rec.pre : { floating: base.floating ?? true, x: base.x, y: base.y, w: base.w, h: base.h } };
+            const z = dragZoneAt(cl, cur);
+            dragZone = z?.zone ?? "";
+            dragRect = z?.rect ?? null;
+        }
+        livePrev = { addr: addr, x: r.x, y: r.y, w: r.w, h: r.h, cx: cur.x, cy: cur.y };
     }
 
     // ---- drag snapping: drag a window to an edge or corner, let go ----
@@ -676,11 +779,13 @@ Singleton {
     function dFetched() {
         if (!haveDC || !haveDA || !haveDP) return;
         dFetching = false;
+        const wasT = root.dragT; // the tick below may abort it; the landing still needs it
         dragTick();
         if (root.pendingLand) {
             // the drag stopped: land with the zone under the cursor NOW,
             // from this final sample (see onDragStopped)
             root.pendingLand = false;
+            if (!root.dragT && wasT) root.dragT = wasT;
             if (root.dragT) {
                 const c = (root.dsnapC ?? []).find(x => x.address === root.dragT.addr) ?? null;
                 if (c && root.dsnapPos) {
@@ -697,9 +802,11 @@ Singleton {
         repeat: true
         // legacy: whenever drag-snapping is on. Event mode: only while a
         // move drag is actually on -- between drags the tracker costs
-        // nothing at all (DragWatch says when one starts and ends)
+        // nothing at all (DragWatch says when one starts and ends). When
+        // the plugin reports motion, motionTrack drives the tracker from
+        // the events and this timer stands down entirely.
         running: Theme.state.snap && Theme.state.snapDrag && !root.popOpen
-                 && (!DragWatch.alive || DragWatch.moveActive)
+                 && (!DragWatch.alive || (DragWatch.moveActive && !DragWatch.motionAlive))
         onTriggered: root.dragFetch()
     }
 
@@ -828,7 +935,23 @@ Singleton {
         if (zone) {
             const mon = monOf(c);
             if (!mon) return;
-            place(d.addr, zoneRect(zf[zone], workarea(mon)), zone, d.pre);
+            const wa = workarea(mon), target = zoneRect(zf[zone], wa);
+            // accommodate: a snapped window already sits in this space --
+            // it yields instead of being stacked under the dropped one:
+            // to the dropped window's own old space when it had one (the
+            // two trade places), else to this space's complement, so the
+            // pair ends up side by side
+            const occ = Object.keys(recs).find(a => a !== d.addr && recs[a].ws === c.workspace.id && rectEq(recs[a].rect, target, 6));
+            if (occ) {
+                const mine = recs[d.addr];
+                if (mine && mine.zone && zf[mine.zone]) place(occ, zoneRect(zf[mine.zone], wa), mine.zone);
+                else {
+                    const free = complements(zone).filter(z => !Object.keys(recs).some(a => a !== occ && a !== d.addr
+                        && recs[a].ws === c.workspace.id && rectEq(recs[a].rect, zoneRect(zf[z], wa), 6)));
+                    if (free.length) place(occ, zoneRect(zf[free[0]], wa), free[0]);
+                }
+            }
+            place(d.addr, target, zone, d.pre);
             regroupWs(c.workspace.id);
         } else {
             const rec = recs[d.addr];

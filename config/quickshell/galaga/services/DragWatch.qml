@@ -16,7 +16,10 @@ import Quickshell.Io
 // (config/hypr/hyprland/drag.lua) the compositor's own drag state arrives
 // as socket2 events -- movestart/movestop, resizestart/resizestop, each
 // with the window's address -- and `dragging` is simply true between a
-// start and its stop. `alive` turns true at the session's first hyprdrag
+// start and its stop. While a drag runs the plugin also posts a motion
+// event per mouse move carrying the dragged window's live geometry and
+// the cursor (dragMotion below), so a follower never has to poll to keep
+// up with a drag. `alive` turns true at the session's first hyprdrag
 // event and stays true: that is the plugin proving itself. Without the
 // plugin (not installed, stale after a Hyprland upgrade) the events never
 // arrive, alive stays false, and every consumer falls back to the
@@ -31,6 +34,7 @@ Singleton {
 
     // ---- the event core (hyprdrag) ----
     property bool alive: false // a hyprdrag event has arrived this session
+    property bool motionAlive: false // a motion event has arrived: the plugin reports geometry live
     property bool moveActive: false
     property bool resizeActive: false
     property string addr: "" // the dragged window, 0x form, while a drag is on
@@ -39,6 +43,8 @@ Singleton {
 
     signal dragStarted(string kind, string addr)
     signal dragStopped(string kind, string addr)
+    // a drag in motion: kind, the window, its live rect, the cursor
+    signal dragMotion(string kind, string addr, var rect, var cur)
 
     Connections {
         target: Hyprland
@@ -69,6 +75,16 @@ Singleton {
                 root.resizeActive = false;
                 { const stopped = data || root.addr; if (!root.dragging) root.addr = ""; root.dragStopped("resize", stopped); }
                 break;
+            case "hyprdrag-movemotion":
+            case "hyprdrag-resizemotion": {
+                root.alive = true;
+                root.motionAlive = true;
+                const p = data.split(",");
+                if (p.length < 7) break;
+                root.dragMotion(e.name === "hyprdrag-movemotion" ? "move" : "resize", p[0],
+                                { x: +p[1], y: +p[2], w: +p[3], h: +p[4] }, { x: +p[5], y: +p[6] });
+                break;
+            }
             }
         }
     }
