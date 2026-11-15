@@ -202,6 +202,19 @@ Singleton {
         running: DragWatch.alive && Object.keys(root.groups).length > 0
         onTriggered: if (!root.fetching && !root.pendingAct) root.fetch(null)
     }
+    Timer {
+        // no setup is known yet: a slow look every 5 s, and one at
+        // startup, so an arrangement already sitting on a workspace --
+        // placed by hand, or left there by a shell restart, records
+        // being memory-only -- is adopted without waiting for a snap
+        // action. Once a group forms the watchers above own the cadence
+        // and this stops.
+        interval: 5000
+        repeat: true
+        triggeredOnStart: true
+        running: Theme.state.snap && Object.keys(root.groups).length === 0
+        onTriggered: if (!root.fetching && !root.pendingAct) root.fetch(null)
+    }
 
     // ---- snapshot helpers ----
 
@@ -545,6 +558,62 @@ Singleton {
             }
         }
         for (const ws in touched) regroupWs(Number(ws));
+        adopt();
+    }
+
+    // ---- adoption: a setup is understood from its geometry, not from
+    // how it was made. Floating windows that sit in a tiling arrangement
+    // -- full edges shared across the inner gap, the same test groups are
+    // built with -- are taken in as records, so linked resize, the fill
+    // and the rest of the pair manners apply without anyone pressing
+    // Super+Z first: a pair arranged by hand, or left sitting on the
+    // workspace by a shell restart (records live in memory), is a setup
+    // the moment it is seen. Nothing is moved; the record just learns
+    // where the window already is. Tiled windows are left alone -- the
+    // layout already understands them.
+    function adopt() {
+        if (!Theme.state.snap || DragWatch.dragging || dragT) return;
+        const byWs = {};
+        for (const c of (snapC ?? [])) {
+            if (recs[c.address] || !c.floating || (c.fullscreen ?? 0) > 0 || c.workspace.id < 0) continue;
+            if (!byWs[c.workspace.id]) byWs[c.workspace.id] = [];
+            byWs[c.workspace.id].push(c);
+        }
+        for (const ws in byWs) {
+            const placed = Object.keys(recs).filter(a => recs[a].ws === Number(ws))
+                                 .map(a => ({ address: a, rect: recs[a].rect }));
+            const all = placed.concat(byWs[ws].map(c => ({ address: c.address, rect: rectOf(c) })));
+            const seen = {};
+            for (const n of all) {
+                if (seen[n.address]) continue;
+                const comp = [], stack = [n];
+                seen[n.address] = true;
+                while (stack.length) {
+                    const x = stack.pop();
+                    comp.push(x);
+                    for (const b of all)
+                        if (!seen[b.address] && linked(x.rect, b.rect)) { seen[b.address] = true; stack.push(b); }
+                }
+                if (comp.length < 2) continue;
+                for (const m of comp) {
+                    if (recs[m.address]) continue;
+                    const c = client(m.address);
+                    if (!c) continue;
+                    saveRec(m.address, { zone: zoneOfRect(m.rect, c), rect: m.rect, lastZone: "", ws: Number(ws),
+                                         pre: { floating: true, x: m.rect.x, y: m.rect.y, w: m.rect.w, h: m.rect.h } });
+                }
+            }
+            regroupWs(Number(ws));
+        }
+    }
+    // the zone a rect already matches, if any (an adopted window keeps
+    // its Super+arrow stepping when its space is a named zone)
+    function zoneOfRect(r, c) {
+        const mon = monOf(c);
+        if (!mon) return "";
+        const wa = workarea(mon);
+        for (const z in zf) if (rectEq(r, zoneRect(zf[z], wa), 4)) return z;
+        return "";
     }
 
     function spansOverlap(p1, l1, p2, l2) { return p1 < p2 + l2 && p2 < p1 + l1; }
@@ -627,7 +696,9 @@ Singleton {
             root.evSeed = false;
             root.evBase = null;
             settleT.restart();
-            if (Object.keys(root.groups).length > 0 && !root.fetching && !root.pendingAct) root.fetch(null);
+            // one fetch on every drag stop, grouped or not: a setup
+            // arranged by hand is adopted by the observe() it feeds
+            if (!root.fetching && !root.pendingAct) root.fetch(null);
         }
     }
 
