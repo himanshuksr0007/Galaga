@@ -26,7 +26,9 @@ import qs.settings
 // Geometry has no hyprland event and a toplevel's lastIpcObject is a snapshot
 // from the last full fetch, so actions and the group watcher both read fresh
 // `hyprctl clients -j` / `monitors -j` (the Game service's Process shape). The
-// watcher polls every 200 ms, only while a group exists. Our own dispatch
+// watcher polls while a group exists -- every 200 ms, and every 100 ms on a
+// clients-only fetch while a drag is on, so a linked resize follows the
+// pointer instead of trailing it. Our own dispatch
 // batches are fenced by a 150 ms guard so the poll never mistakes one of our
 // placements for the user dragging a window away.
 //
@@ -34,7 +36,11 @@ import qs.settings
 // watcher: it samples the focused window and the cursor on its own small
 // fetch. A window that moves at one size, held by one point of it, is a hand
 // drag; the zone under the cursor previews (snap/SnapZone.qml), and letting
-// go on an edge or a corner places the window there.
+// go on an edge or a corner places the window there. With the hyprdrag
+// plugin (DragWatch alive) the tracker idles between drags: the events
+// start it -- the first sample is the pre-drag baseline -- and stop it, and
+// the release is the stop event rather than a still-tick guess; without the
+// plugin the 250 ms cycle runs whenever drag-snapping is on, as it did.
 Singleton {
     id: root
 
@@ -149,10 +155,51 @@ Singleton {
         if (act) act();
         else observe();
     }
+    // the watcher's hot path while a drag is on: clients only (observe()
+    // needs nothing else), one process instead of three, so a tick lands
+    // fast enough for a linked resize to follow the pointer. Skipped while
+    // a full fetch is in flight -- its observe() covers the tick.
+    property bool wFetching: false
+    Process {
+        id: pw
+        command: ["hyprctl", "clients", "-j"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.wFetching = false;
+                try { root.snapC = JSON.parse(text); root.observe(); } catch (e) { }
+            }
+        }
+    }
+    function watchFetch() {
+        if (wFetching || fetching) return;
+        wFetching = true;
+        pw.running = true;
+    }
     Timer {
-        interval: 200
+        // while a drag is on the watcher runs hot (the 100 ms clients-only
+        // fetch above); the rest of the time it idles at 200 ms on the
+        // full fetch
+        interval: DragWatch.dragging ? 100 : 200
         repeat: true
+        // legacy (no hyprdrag): while a group exists. Event mode: only
+        // while a drag is on and for a second after it ends (settleT),
+        // plus the slow sweep below and one fetch on every drag stop --
+        // a grouped window resized or moved from the keyboard is picked
+        // up by the sweep (within 2 s) instead of the next 200 ms tick.
         running: Object.keys(root.groups).length > 0
+                 && (!DragWatch.alive || DragWatch.dragging || settleT.running)
+        onTriggered: {
+            if (root.fetching || root.pendingAct) return;
+            if (DragWatch.dragging) root.watchFetch();
+            else root.fetch(null);
+        }
+    }
+    // the event-mode settle window after a drag stops (see above)
+    Timer { id: settleT; interval: 1000 }
+    Timer {
+        interval: 2000
+        repeat: true
+        running: DragWatch.alive && Object.keys(root.groups).length > 0
         onTriggered: if (!root.fetching && !root.pendingAct) root.fetch(null)
     }
 
@@ -452,8 +499,15 @@ Singleton {
     function observe() {
         if (!snapC) return;
         const touched = {};
-        for (const addr of Object.keys(recs)) {
-            const rec = recs[addr], c = client(addr);
+        // the pass reads the records as they were when it started:
+        // linkedResize writes a mate's new rect into the live records
+        // mid-pass, while the mate's entry in this fetch still shows its
+        // old rect -- judging the mate by the live record would learn
+        // the stale rect straight back over the resize's target, and the
+        // next pass would mistake the landed resize for a fresh one
+        const passRecs = recs;
+        for (const addr of Object.keys(passRecs)) {
+            const rec = passRecs[addr], c = client(addr);
             // closed, moved to another desktop, fullscreen, or back in the
             // tiler's hands: the record is done, the window is left as it is
             if (!c || c.workspace.id !== rec.ws || (c.fullscreen ?? 0) > 0 || !c.floating) {
@@ -529,6 +583,38 @@ Singleton {
         if (applied) guard();
     }
 
+    // ---- hyprdrag events: the tracker's start/stop, the watcher's pulse ----
+
+    Connections {
+        target: DragWatch
+        function onDragStarted(kind, addr) {
+            if (kind !== "move") return;
+            if (!Theme.state.snap || !Theme.state.snapDrag || root.popOpen) return;
+            root.evDrag = true;
+            root.evSeed = true;
+            root.evBase = null;
+            root.dragPrev = null;
+            root.dragFetch(); // the baseline sample: the window has not moved yet
+        }
+        function onDragStopped(kind, addr) {
+            if (kind === "move" && root.dragT) {
+                // land on one last sample, taken now: the legacy tracker's
+                // still-tick release always read the cursor's final resting
+                // place, but the stop event fires the instant the button
+                // lifts -- with the zone from the last mid-drag tick, a
+                // quick flick to an edge lets go before the preview caught
+                // up and the snap is missed. dFetched() lands it below.
+                root.pendingLand = true;
+                root.dragFetch();
+            }
+            root.evDrag = false;
+            root.evSeed = false;
+            root.evBase = null;
+            settleT.restart();
+            if (Object.keys(root.groups).length > 0 && !root.fetching && !root.pendingAct) root.fetch(null);
+        }
+    }
+
     // ---- drag snapping: drag a window to an edge or corner, let go ----
 
     // the drag cycle's own small fetch: clients, the active window, the
@@ -591,11 +677,29 @@ Singleton {
         if (!haveDC || !haveDA || !haveDP) return;
         dFetching = false;
         dragTick();
+        if (root.pendingLand) {
+            // the drag stopped: land with the zone under the cursor NOW,
+            // from this final sample (see onDragStopped)
+            root.pendingLand = false;
+            if (root.dragT) {
+                const c = (root.dsnapC ?? []).find(x => x.address === root.dragT.addr) ?? null;
+                if (c && root.dsnapPos) {
+                    const z = root.dragZoneAt(c, root.dsnapPos);
+                    root.dragZone = z?.zone ?? "";
+                    root.dragRect = z?.rect ?? null;
+                }
+                root.dragRelease();
+            }
+        }
     }
     Timer {
         interval: 250
         repeat: true
+        // legacy: whenever drag-snapping is on. Event mode: only while a
+        // move drag is actually on -- between drags the tracker costs
+        // nothing at all (DragWatch says when one starts and ends)
         running: Theme.state.snap && Theme.state.snapDrag && !root.popOpen
+                 && (!DragWatch.alive || DragWatch.moveActive)
         onTriggered: root.dragFetch()
     }
 
@@ -603,6 +707,17 @@ Singleton {
     // tracked. dragZone / dragRect: the preview snap/SnapZone.qml draws.
     property var dragPrev: null // { addr, x, y, w, h, floating, cx, cy }
     property var dragT: null    // { addr, offX, offY, lastX, lastY, lastW, lastH, still, pre }
+    property bool pendingLand: false // a move drag stopped: land on the final sample (dFetched)
+    // event mode (DragWatch alive): evDrag while a move drag is on, evSeed
+    // until its first sample has been taken, evBase that first sample --
+    // the window before the drag touched it, kept apart from dragPrev:
+    // the begin test below compares consecutive samples (a grabbed tiled
+    // window is re-seated by the compositor as the drag takes hold, so a
+    // frozen baseline never matches it again), while `pre` -- what a
+    // restore must give back -- is the baseline's state
+    property bool evDrag: false
+    property bool evSeed: false
+    property var evBase: null
     property string dragZone: ""
     property var dragRect: null
 
@@ -637,6 +752,12 @@ Singleton {
         const c = (dsnapC ?? []).find(x => x.address === a) ?? null;
         if (!c || c.workspace.id < 0) { dragAbort(); dragPrev = null; return; } // closed, or parked away
         if (!snapM) { fetch(null); dragPrev = dragSample(c, cur); return; } // zones need the monitors first
+        if (evSeed) { // event mode: this drag's first sample is its baseline
+            evSeed = false;
+            evBase = dragSample(c, cur);
+            dragPrev = evBase;
+            return;
+        }
         const r = rectOf(c);
         const offX = cur.x - r.x, offY = cur.y - r.y; // where the cursor holds the window
 
@@ -655,7 +776,10 @@ Singleton {
                 dragPrev = dragSample(c, cur);
                 return;
             } else if (++dragT.still >= 2) {
-                dragRelease(); // the position held for two ticks: let go
+                // legacy: the position held for two ticks means let go.
+                // Event mode knows better -- the plugin's stop ends it.
+                if (DragWatch.alive) { dragPrev = dragSample(c, cur); return; }
+                dragRelease();
                 dragPrev = null;
                 return;
             } else {
@@ -667,17 +791,18 @@ Singleton {
         // begin: the window is floating in the fresh data, it moved since the
         // last sample at the same size, and the cursor still holds it by the
         // same point (±12 px) -- a hand drag. A grabbed tiled window is
-        // floating by now (hyprland floats it as the drag starts); the
-        // previous sample remembers what it was, and that state -- the
-        // record's own, if it has one -- is what a restore must give back.
+        // floating by now (hyprland floats it as the drag starts). The state
+        // a restore must give back is the record's own if it has one, else
+        // the pre-drag baseline's (event mode) or the previous sample's.
         const p = dragPrev;
         if (p && p.addr === a && c.floating
                 && r.w === p.w && r.h === p.h && (r.x !== p.x || r.y !== p.y)
                 && Math.abs(offX - (p.cx - p.x)) <= 12 && Math.abs(offY - (p.cy - p.y)) <= 12) {
             const rec = recs[a];
+            const base = (evDrag && evBase && evBase.addr === a) ? evBase : p;
             dragT = { addr: a, offX: offX, offY: offY,
                       lastX: r.x, lastY: r.y, lastW: r.w, lastH: r.h, still: 0,
-                      pre: rec ? rec.pre : { floating: p.floating, x: p.x, y: p.y, w: p.w, h: p.h } };
+                      pre: rec ? rec.pre : { floating: base.floating, x: base.x, y: base.y, w: base.w, h: base.h } };
             const z = dragZoneAt(c, cur);
             dragZone = z?.zone ?? "";
             dragRect = z?.rect ?? null;
@@ -688,6 +813,9 @@ Singleton {
     function dragRelease() {
         const d = dragT, zone = dragZone;
         dragAbort();
+        evDrag = false;
+        evSeed = false;
+        evBase = null;
         if (!d) return;
         fetch(() => dragLand(d, zone)); // land on fresh lists, so client() is true
     }
