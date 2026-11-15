@@ -19,9 +19,12 @@ import Quickshell.Io
 // start and its stop. While a drag runs the plugin also posts a motion
 // event per mouse move carrying the dragged window's live geometry and
 // the cursor (dragMotion below), so a follower never has to poll to keep
-// up with a drag. `alive` turns true at the session's first hyprdrag
-// event and stays true: that is the plugin proving itself. Without the
-// plugin (not installed, stale after a Hyprland upgrade) the events never
+// up with a drag. `alive` means the plugin is loaded NOW: an event
+// proves it the moment one arrives, and a slow plugin-list check (the
+// presence check below) notices when it goes away, so disabling or
+// unloading the plugin mid-session hands the shell back to the sampling
+// world within seconds instead of stranding it between the two. Without
+// the plugin (not installed, stale after a Hyprland upgrade) the events never
 // arrive, alive stays false, and every consumer falls back to the
 // sampling path below: two samples of the focused window and the cursor,
 // one when a hover begins and one when the strip's dwell fires -- a hand
@@ -96,6 +99,38 @@ Singleton {
     function mayOpen(s1, cb) {
         if (alive) { cb(!dragging); return; }
         sample(s2 => cb(!busyBetween(s1, s2)));
+    }
+
+    // the presence check: an event proves the plugin is there the moment
+    // one arrives, but only a look at the plugin list notices it going
+    // AWAY (disabled or unloaded mid-session, crashed). Without this,
+    // `alive` latches on for the whole session and every consumer waits
+    // on events that are never coming -- the fallback never engages and
+    // the shell is stranded between the two worlds. One hyprctl call
+    // every 15 s keeps `alive` meaning "loaded now"; when the plugin
+    // vanishes, any latched drag state goes with it (its stop event is
+    // never coming either), and the sampling world picks up from there.
+    Process {
+        id: plist
+        command: ["hyprctl", "plugin", "list"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.alive = text.includes("hyprdrag");
+                if (!root.alive) {
+                    root.motionAlive = false;
+                    root.moveActive = false;
+                    root.resizeActive = false;
+                    root.addr = "";
+                }
+            }
+        }
+    }
+    Timer {
+        interval: 15000
+        repeat: true
+        running: true
+        triggeredOnStart: true
+        onTriggered: if (!plist.running) plist.running = true
     }
 
     // ---- the sampling fallback (no plugin) ----
