@@ -797,8 +797,18 @@ update() { # step 1: the new code. Bash reads a script as it runs, so step 2 sta
     local old; old=$(git -C "$DOTS" rev-parse HEAD)
     say "getting the newest version"
     if ! git -C "$DOTS" pull --ff-only; then
-        say "could not update: local changes or no connection, see above. Nothing changed."
-        exit 1
+        # the remote history was rewritten (fixes are rebased into the
+        # commits they belong to): a checkout with no local changes of
+        # its own can simply be reset to the new history. Anything
+        # modified here is the user's, and stops the update as before.
+        if [ -z "$(git -C "$DOTS" status --porcelain --untracked-files=no)" ] \
+           && git -C "$DOTS" fetch origin; then
+            say "the history upstream was rewritten; this checkout has no local changes -- resetting to it"
+            git -C "$DOTS" reset --hard "@{upstream}" || { say "could not update, see above. Nothing changed."; exit 1; }
+        else
+            say "could not update: local changes or no connection, see above. Nothing changed."
+            exit 1
+        fi
     fi
     exec "$DOTS/install.sh" --update-rest "$old"
 }
