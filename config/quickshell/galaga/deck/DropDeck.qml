@@ -34,6 +34,11 @@ Scope {
     // and dropping there is not a move
     readonly property var dragTl: Hyprland.toplevels.values.find(tp => "0x" + tp.address === DragWatch.addr) ?? null
     readonly property int homeWs: dragTl?.workspace?.id ?? -1
+    // the same, snapshotted as the strip rises: DragWatch clears its
+    // address as the stop lands, before the drop handler below reads it,
+    // so the live homeWs is already gone by then
+    property int dragHome: -1
+    onShownChanged: if (shown) dragHome = homeWs
 
     // the cells on offer: every real workspace in id order, plus one fresh
     // (the lowest unused positive id) to drop a window onto a new desktop
@@ -87,19 +92,19 @@ Scope {
     }
 
     // the drop: the drag ended -- if a cell is hovered and it is not the
-    // window's home, the window goes there. The addressable move is the
-    // deck's own form (deck/Deck.qml, the minimised section's restore);
-    // follow = false: the window is thrown, the user stays.
+    // window's home, Snap follows it through (services/Snap.qml dropTo):
+    // the window moves there, the view goes with it, and the workspace's
+    // windows are laid out together.
     Connections {
         target: DragWatch
         function onDragStopped(kind, addr) {
             if (kind !== "move") return;
             if (root.hoverWs < 0) root.pickHover(); // the last sample may not have been picked yet
-            const target = root.hoverWs, home = root.homeWs;
+            const target = root.hoverWs, home = root.dragHome;
             root.hoverWs = -1;
             root.cur = null;
             if (target > 0 && addr && target !== home)
-                Hyprland.dispatch(`hl.dsp.window.move({ window = "address:${addr}", workspace = "${target}", follow = false })`);
+                Snap.dropTo(addr, target);
         }
     }
 

@@ -839,4 +839,41 @@ Singleton {
             }
         }
     }
+
+    // ---- deck drops: a window let go over a workspace cell lands there ----
+
+    // the drop deck's drop, followed through (deck/DropDeck.qml calls this
+    // when a drag ends over a cell): the window moves to that workspace and
+    // the view goes with it, and then the workspace's windows -- the ones
+    // already there plus this one -- are laid out together: one takes the
+    // whole space, two sit side by side, three in columns, four in a grid
+    // (the layouts popup's shapes, capped like groups are). Laid out
+    // together they share edges, so they form a group and resize together
+    // from then on.
+    function dropTo(addr, ws) {
+        dsp(`hl.dsp.window.move({ window = "address:${addr}", workspace = "${ws}", follow = true })`);
+        guard();
+        fetch(() => dropArrange(addr, ws, false));
+    }
+    function dropArrange(addr, ws, retried) {
+        const c = client(addr);
+        if (!c || c.workspace.id !== ws) {
+            // the move may not be in the fresh lists yet: one second look
+            if (!retried) fetch(() => dropArrange(addr, ws, true));
+            return;
+        }
+        const mon = monOf(c);
+        if (!mon) return;
+        const wa = workarea(mon);
+        const others = (snapC ?? [])
+            .filter(x => x.workspace.id === ws && x.address !== addr && (x.fullscreen ?? 0) === 0)
+            .sort((p, q) => (p.at[0] - q.at[0]) || (p.at[1] - q.at[1]));
+        const set = others.slice(0, 3).map(x => x.address).concat([addr]);
+        const zones = set.length === 1 ? [{ f: zf.MAX, zone: "MAX" }]
+            : set.length === 2 ? layouts[0].zones
+            : set.length === 3 ? layouts[2].zones
+            : layouts[3].zones;
+        set.forEach((a, k) => place(a, zoneRect(zones[k].f, wa), zones[k].zone));
+        regroupWs(ws);
+    }
 }
