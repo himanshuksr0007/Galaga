@@ -30,6 +30,12 @@ PanelWindow {
     anchors { left: true; right: !vert; top: true; bottom: vert }
     implicitWidth: Math.ceil(78 * Theme.s)  // at the side
     implicitHeight: Math.ceil(78 * Theme.s) // on top
+    // the strip is reserved, always: tiles, snaps and maximised windows are
+    // given a work area that starts past the pill, so nothing slides under
+    // the bar. A snapped window's title bar needs more room than the strip
+    // alone -- Snap adds that clearance inside its own zones instead
+    // (services/Snap.qml), so a maximised window still hugs the strip.
+    exclusiveZone: Math.ceil(78 * Theme.s)
     color: "transparent"
     WlrLayershell.namespace: "galaga-bar"
 
