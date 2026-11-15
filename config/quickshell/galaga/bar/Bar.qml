@@ -157,8 +157,18 @@ PanelWindow {
                         readonly property bool quick: modelData !== "mode" && modelData !== "power" && modelData !== "focus"
                         sourceComponent: root.parts[modelData] ?? null
                         visible: !!sourceComponent && (modelData !== "battery" || root.bat.isLaptopBattery) && (modelData !== "focus" || Theme.state.featFocus)
-                        TapHandler { enabled: part.quick; onTapped: modelData === "sound" ? root.soundClicked() : modelData === "bluetooth" ? root.btClicked() : modelData === "wifi" ? root.wifiClicked() : root.trayClicked() }
-                        HoverHandler { enabled: part.quick; cursorShape: Qt.PointingHandCursor }
+                        // the glyphs are small and the tray's spacing leaves 20 px of dead
+                        // space between them: the hit area grows 10 px into the gap on
+                        // every side, so neighbouring areas meet at the gap's middle and
+                        // a press in the space counts for the icon it is closer to. The
+                        // layout does not move -- the workspace dots' trick, wider.
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -10
+                            enabled: part.quick
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: modelData === "sound" ? root.soundClicked() : modelData === "bluetooth" ? root.btClicked() : modelData === "wifi" ? root.wifiClicked() : root.trayClicked()
+                        }
                     }
                 }
             }
@@ -297,7 +307,7 @@ PanelWindow {
                 }
             }
             HoverHandler { cursorShape: Qt.PointingHandCursor; onHoveredChanged: { root.tickHot = hovered; root.peek(ticks); } Component.onDestruction: root.tickHot = false }
-            TapHandler { onTapped: Rules.setMode((Rules.mode + 1) % Rules.modeCount) }
+            MouseArea { anchors.fill: parent; anchors.margins: -10; cursorShape: Qt.PointingHandCursor; onClicked: Rules.setMode((Rules.mode + 1) % Rules.modeCount) }
         }
     }
     Component {
@@ -306,7 +316,7 @@ PanelWindow {
             text: "\u{F0425}"
             color: pwr.hovered ? Theme.fg : Theme.grey
             HoverHandler { id: pwr; cursorShape: Qt.PointingHandCursor }
-            TapHandler { onTapped: root.powerClicked() }
+            MouseArea { anchors.fill: parent; anchors.margins: -10; onClicked: root.powerClicked() }
         }
     }
     // focus: a ring that drains as the timer runs, the remaining time under it in Doto;
@@ -314,23 +324,29 @@ PanelWindow {
     // (session-scoped: a shell restart resets it -- Focus.qml says so too)
     Component {
         id: focusC
-        Pile {
-            id: focc
-            spacing: 4
-            HoverHandler { onHoveredChanged: { root.focHot = hovered; root.peekF(focc); } Component.onDestruction: root.focHot = false }
-            Item {
-                width: 24
-                height: 24
-                Ring { anchors.fill: parent; n: 16; dot: 3; f: Focus.f; on: Focus.running ? Theme.fg : Theme.grey }
-                Icon { anchors.centerIn: parent; text: "\u{F13AB}"; font.pixelSize: 10; color: Theme.grey }
+        Item {
+            id: focw
+            implicitWidth: focc.implicitWidth
+            implicitHeight: focc.implicitHeight
+            HoverHandler { onHoveredChanged: { root.focHot = hovered; root.peekF(focw); } Component.onDestruction: root.focHot = false }
+            Pile {
+                id: focc
+                anchors.centerIn: parent
+                spacing: 4
+                Item {
+                    width: 24
+                    height: 24
+                    Ring { anchors.fill: parent; n: 16; dot: 3; f: Focus.f; on: Focus.running ? Theme.fg : Theme.grey }
+                    Icon { anchors.centerIn: parent; text: "\u{F13AB}"; font.pixelSize: 10; color: Theme.grey }
+                }
+                Num {
+                    visible: Focus.running || Focus.paused
+                    text: Focus.mmss(Focus.left)
+                    font.pixelSize: 10
+                    color: Theme.fg
+                }
             }
-            Num {
-                visible: Focus.running || Focus.paused
-                text: Focus.mmss(Focus.left)
-                font.pixelSize: 10
-                color: Theme.fg
-            }
-            TapHandler { onTapped: root.focOpen = !root.focOpen }
+            MouseArea { anchors.fill: parent; anchors.margins: -10; cursorShape: Qt.PointingHandCursor; onClicked: root.focOpen = !root.focOpen }
         }
     }
 
