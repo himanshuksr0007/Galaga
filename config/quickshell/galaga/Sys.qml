@@ -44,6 +44,43 @@ Singleton {
     PwNodeLinkTracker { id: micUse; node: root.mic }
     readonly property bool live: rec || micUse.linkGroups.length > 0
 
+    // ---- a bluetooth output takes over when it connects, and hands
+    // back when it goes. A bluez sink that appears becomes the output,
+    // through Eq.pick so a device with its eq on gets the chain in front
+    // of it and one without is the plain default. When one vanishes and
+    // the output is not another bluetooth device still here, the output
+    // returns home: the last non-bluetooth output in use, else the
+    // built-in sink. A manual pick in between stands -- nothing here
+    // re-fires until the next connect or disconnect. The first look
+    // only seeds the list: what is already connected at shell start is
+    // a state, not a connection, and a shell restart must not yank the
+    // output away from where the user left it ----
+    readonly property var btOuts: Pipewire.nodes.values.filter(n => n.isSink && n.audio && !n.isStream && /^bluez_output/.test(n.name))
+    property var btOutNames: null
+    property string homeSink: ""
+    readonly property var effOut: Eq.engaged ?? (sink && sink !== Eq.node ? sink : null)
+    onEffOutChanged: if (effOut && !/^bluez_output/.test(effOut.name)) homeSink = effOut.name
+    onBtOutsChanged: btAuto()
+    function btAuto() {
+        const now = btOuts.map(n => n.name);
+        if (btOutNames === null) { btOutNames = now; return; }
+        const appeared = now.filter(x => !btOutNames.includes(x));
+        const gone = btOutNames.filter(x => !now.includes(x));
+        btOutNames = now;
+        if (appeared.length) {
+            const dev = btOuts.find(n => n.name === appeared[appeared.length - 1]);
+            if (dev) Eq.pick(dev);
+            return;
+        }
+        if (!gone.length) return;
+        if (effOut && /^bluez_output/.test(effOut.name)) return; // another bluetooth device still has the output
+        const rest = Pipewire.nodes.values.filter(n => n.isSink && n.audio && !n.isStream && n !== Eq.node && !/^bluez_output/.test(n.name));
+        const home = rest.find(n => n.name === homeSink)
+                  ?? rest.find(n => !/^raop_sink/.test(n.name) && !/\.usb-/.test(n.name) && !/HDMI/.test(n.name))
+                  ?? rest[0];
+        if (home) Eq.pick(home);
+    }
+
     // ---- brightness: shared with demonshot Backlight (the device is found by brightnessctl) ----
     readonly property real bri: Backlight.value
     readonly property bool hasBri: !!Backlight.dev // no backlight (desktop PC with a monitor) -- no brightness controls
