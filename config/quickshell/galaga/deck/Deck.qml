@@ -57,6 +57,8 @@ Scope {
 
             required property var modelData
             readonly property bool open: root.on === modelData
+            // DragWatch sample from when this hover began; the dwell decides with it
+            property var s1: null
             property real t: open ? 1 : 0
             Behavior on t { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
 
@@ -77,16 +79,23 @@ Scope {
             // closed -- the mouse is caught only by the strip at the edge (screen corners are free), open -- the whole window including the gap under the panel
             mask: Region { y: win.open ? 0 : win.height - 2; width: win.width; height: win.open ? win.height : 2 }
 
-            Timer { id: dwell; interval: 150; onTriggered: root.on = win.modelData }
+            // the dwell decides with two DragWatch samples: a window being dragged or
+            // resized across the strip must not open the deck (services/DragWatch)
+            Timer { id: dwell; interval: 150; onTriggered: DragWatch.sample(s2 => { if (hov.hovered && !DragWatch.busyBetween(win.s1, s2)) root.on = win.modelData; }) }
             Timer { id: leave; interval: 300; onTriggered: if (win.open) root.on = null }
 
             Stage {
                 // strip and panel -- one window: the cursor does not jump between surfaces, hovered does not blink
                 HoverHandler {
+                    id: hov
                     onHoveredChanged: {
                         if (hovered) {
                             leave.stop();
-                            if (!win.open && Theme.state.deckHover) dwell.restart();
+                            if (!win.open && Theme.state.deckHover) {
+                                win.s1 = null;
+                                DragWatch.sample(s => { win.s1 = s; });
+                                dwell.restart();
+                            }
                         } else {
                             dwell.stop();
                             if (win.open) leave.restart();
