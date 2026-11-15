@@ -383,7 +383,7 @@ packages() {
     [ ${#EXT[@]} -eq 0 ] || run yay -S --needed --noconfirm "${EXT[@]}" || say "optional: not everything installed, see above"
 }
 
-plugins() { # hyprbars -- the window title bars (config/hypr/hyprland/titlebars.lua), built by hyprpm
+plugins() { # hyprbars -- the window title bars (config/hypr/hyprland/titlebars.lua), and hyprdrag -- window drag events (config/hypr/hyprland/drag.lua), built by hyprpm
     say "plugins (hyprpm)"
     if ! command -v hyprpm >/dev/null; then
         # hyprpm used to ship inside the hyprland package; it is a package of its own now,
@@ -406,6 +406,17 @@ plugins() { # hyprbars -- the window title bars (config/hypr/hyprland/titlebars.
         say "hyprbars enabled -- window title bars are on from the next login"
     else
         say "hyprpm: hyprbars could not be enabled -- no title bars"
+    fi
+    # hyprdrag: the compositor never says when a window drag or resize starts
+    # or ends; this plugin posts exactly those events, and the shell's panels,
+    # drag-snap and deck drop targets run on them (without it they sample --
+    # degraded, never broken, so a failure here only warns)
+    run hyprpm add https://github.com/himanshuksr0007/hyprdrag 2>/dev/null || true
+    if [ "$DRY" = 1 ]; then run hyprpm enable hyprdrag
+    elif hyprpm enable hyprdrag; then
+        say "hyprdrag enabled -- window drag events are on from the next login"
+    else
+        say "hyprpm: hyprdrag could not be enabled -- no drag events; the shell keeps its sampling fallback"
     fi
     say "after every Hyprland upgrade the plugin goes stale: hyprpm update (then hyprpm reload or relog)"
 }
