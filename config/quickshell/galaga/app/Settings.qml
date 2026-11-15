@@ -49,7 +49,7 @@ FloatingWindow {
         users: ["USERS", "accounts · admins · passwords"],
         apps: ["APPS", "installed packages · remove what you don't use"],
         storage: ["STORAGE", "volumes · what's taking the room"],
-        update: ["SOFTWARE UPDATE", "repositories and the aur · checked on request"]
+        update: ["SOFTWARE UPDATE", "the rice, the repositories and the aur · checked on request"]
     })
 
     function open(p) {
