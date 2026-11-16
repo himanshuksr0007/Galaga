@@ -270,6 +270,21 @@ Singleton {
         /^steam$/, /^discord$/, /^vesktop$/, /^equibop$/, /^firefox$/, /^org\.mozilla\.firefox$/, /^firefox-esr$/,
         /^zen$/, /^app\.zen_browser\.zen$/, /^io\.github\.zen_browser\.zen$/, /^org\.quickshell$/]
     function hasBar(cls) { return !!cls && !ownButtons.some(r => r.test(cls)); }
+    // windows do not always land on the exact pixel they were given -- a
+    // terminal sizes itself in whole cells (kitty's own status line reads
+    // "107 by 43 cells"), and an app with size increments or a minimum
+    // size does the same -- so every "same edge / same space" test in this
+    // service allows a cell's worth of slack. 26 px covers a full line
+    // height of rounding at the user's font; real spaces differ by
+    // hundreds, so nothing distinct is ever confused for a neighbour.
+    readonly property int edgeTol: 26
+    // the three-window arrangement: one window takes a full side, the
+    // other two stack in the remaining side. Real zones, so the title bar
+    // clearance and the arrow stepping treat each space as itself.
+    readonly property var trioZones: [
+        { f: [0, 0, 0.5, 1], zone: "L" },
+        { f: [0.5, 0, 0.5, 0.5], zone: "TR" },
+        { f: [0.5, 0.5, 0.5, 0.5], zone: "BR" }]
     // the rect a window is actually placed with: a window carrying the bar,
     // set into a zone that touches the top, starts 32 lower -- its whole
     // bar sits below the pill, not just its client area. The MAX zone is
@@ -324,8 +339,10 @@ Singleton {
     // side by side: the inner edges touch, the bottoms sit on one line and
     // the spans overlap. The tops may differ -- a window with the bar
     // starts 32 lower than an own-buttons one in the same pair of zones.
-    function shareV(a, b) { return Math.abs(a.x + a.w + Rules.store.gapsIn - b.x) <= 2 && Math.abs((a.y + a.h) - (b.y + b.h)) <= 2 && spansOverlap(a.y, a.h, b.y, b.h); }
-    function shareH(a, b) { return Math.abs(a.y + a.h + Rules.store.gapsIn - b.y) <= 2 && Math.abs(a.x - b.x) <= 2 && Math.abs(a.w - b.w) <= 2; }
+    function shareV(a, b) { return Math.abs(a.x + a.w + Rules.store.gapsIn - b.x) <= edgeTol && Math.abs((a.y + a.h) - (b.y + b.h)) <= edgeTol && spansOverlap(a.y, a.h, b.y, b.h); }
+    // stacked: the inner edges touch, and the two side edges sit on the
+    // same lines (a stack's sides never carry the title bar difference)
+    function shareH(a, b) { return Math.abs(a.y + a.h + Rules.store.gapsIn - b.y) <= edgeTol && Math.abs(a.x - b.x) <= edgeTol && Math.abs((a.x + a.w) - (b.x + b.w)) <= edgeTol && spansOverlap(a.x, a.w, b.x, b.w); }
     function linked(a, b) { return shareV(a, b) || shareV(b, a) || shareH(a, b) || shareH(b, a); }
     function regroupWs(ws) {
         const mine = Object.keys(recs).filter(a => recs[a].ws === ws);
@@ -463,8 +480,8 @@ Singleton {
         if (!comp.length) return;
         const empty = comp
             .map(z => ({ zone: z, frac: zf[z], rect: zoneRect(zf[z], wa), label: zlabel[z] }))
-            .filter(z => !Object.keys(recs).some(a => recs[a].ws === ws && (recs[a].zone === z.zone || rectEq(recs[a].rect, z.rect, 6)))
-                      && !(snapC ?? []).some(c => c.address !== addr && c.workspace.id === ws && rectEq(rectOf(c), z.rect, 6)));
+            .filter(z => !Object.keys(recs).some(a => recs[a].ws === ws && (recs[a].zone === z.zone || rectEq(recs[a].rect, z.rect, edgeTol)))
+                      && !(snapC ?? []).some(c => c.address !== addr && c.workspace.id === ws && rectEq(rectOf(c), z.rect, edgeTol)));
         if (!empty.length) return;
         const cands = candidates(ws, addr);
         if (!cands.length) return;
@@ -578,7 +595,19 @@ Singleton {
             }
             if (dragT && addr === dragT.addr) continue; // in a hand drag: its fate is decided at release
             const cur = rectOf(c);
-            if (rectEq(cur, rec.rect, 0)) continue;
+            // the app's own answer to a placement: a window that sizes
+            // itself in steps (a terminal's cells) lands a few pixels off
+            // the rect it was given. Within a cell's slack on every edge
+            // it is still the same space -- learn the real rect and move
+            // on. Reading it as a resize instead drops the record (or
+            // drags the group after a phantom), and the arrangement
+            // quietly falls apart the moment it is made.
+            if (Math.abs(cur.x - rec.rect.x) <= edgeTol && Math.abs(cur.y - rec.rect.y) <= edgeTol
+                && Math.abs((cur.x + cur.w) - (rec.rect.x + rec.rect.w)) <= edgeTol
+                && Math.abs((cur.y + cur.h) - (rec.rect.y + rec.rect.h)) <= edgeTol) {
+                if (!rectEq(cur, rec.rect, 0)) { rec.rect = cur; saveRec(addr, rec); }
+                continue;
+            }
             if (Date.now() < guardUntil) { // our own placement landing: just learn it
                 rec.rect = cur;
                 saveRec(addr, rec);
@@ -614,8 +643,8 @@ Singleton {
     // ---- arrange on open: a window that opens onto a workspace whose
     // windows already fill the screen does not land behind them or on top
     // of them -- it joins the arrangement, and the whole set is laid out
-    // again for its new count: two windows side by side, three in
-    // columns, four in a grid (the drop arrangement's own layouts). The
+    // again for its new count: two windows side by side, three as one
+    // full side and two stacked, four in a grid. The
     // windows already there keep their left-to-right order; the new one
     // takes the last space. A lone snapped window keeps its space and the
     // new window takes the complement. Dialogs and tools stay out: a
@@ -674,7 +703,7 @@ Singleton {
                 }
             }
             const set = others.slice().sort((p, q) => (p.at[0] - q.at[0]) || (p.at[1] - q.at[1])).map(x => x.address).concat([addr]);
-            const zones = set.length === 2 ? layouts[0].zones : set.length === 3 ? layouts[2].zones : layouts[3].zones;
+            const zones = set.length === 2 ? layouts[0].zones : set.length === 3 ? trioZones : layouts[3].zones;
             set.forEach((a, k) => place(a, placedRect(a, zones[k].f, wa), zones[k].zone));
             regroupWs(ws);
             return; // one arrangement per pass; another new window gets the next
@@ -761,7 +790,7 @@ Singleton {
         const mon = monOf(c);
         if (!mon) return "";
         const wa = workarea(mon);
-        for (const z in zf) if (rectEq(r, zoneRect(zf[z], wa), 4)) return z;
+        for (const z in zf) if (rectEq(r, zoneRect(zf[z], wa), edgeTol)) return z;
         return "";
     }
 
@@ -780,14 +809,14 @@ Singleton {
             if (!nr) continue;
             const r = nr.rect;
             let nx = r.x, ny = r.y, nw = r.w, nh = r.h, adj = false;
-            if (Math.abs(oldR.x + oldR.w + gi - r.x) <= 3 && spansOverlap(oldR.y, oldR.h, r.y, r.h)) {
+            if (Math.abs(oldR.x + oldR.w + gi - r.x) <= edgeTol && spansOverlap(oldR.y, oldR.h, r.y, r.h)) {
                 const b = newR.x + newR.w + gi; nx = b; nw = r.x + r.w - b; adj = true;
-            } else if (Math.abs(oldR.x - gi - (r.x + r.w)) <= 3 && spansOverlap(oldR.y, oldR.h, r.y, r.h)) {
+            } else if (Math.abs(oldR.x - gi - (r.x + r.w)) <= edgeTol && spansOverlap(oldR.y, oldR.h, r.y, r.h)) {
                 nw = newR.x - gi - r.x; adj = true;
             }
-            if (Math.abs(oldR.y + oldR.h + gi - r.y) <= 3 && spansOverlap(oldR.x, oldR.w, r.x, r.w)) {
+            if (Math.abs(oldR.y + oldR.h + gi - r.y) <= edgeTol && spansOverlap(oldR.x, oldR.w, r.x, r.w)) {
                 const b = newR.y + newR.h + gi; ny = b; nh = r.y + r.h - b; adj = true;
-            } else if (Math.abs(oldR.y - gi - (r.y + r.h)) <= 3 && spansOverlap(oldR.x, oldR.w, r.x, r.w)) {
+            } else if (Math.abs(oldR.y - gi - (r.y + r.h)) <= edgeTol && spansOverlap(oldR.x, oldR.w, r.x, r.w)) {
                 nh = newR.y - gi - r.y; adj = true;
             }
             if (!adj || nw < 240 || nh < 160) continue;
@@ -880,14 +909,14 @@ Singleton {
             const m = liveBase.mates[n], nr = recs[n];
             if (!nr) continue;
             let nx = m.x, ny = m.y, nw = m.w, nh = m.h, adj = false;
-            if (Math.abs(base.x + base.w + gi - m.x) <= 3 && spansOverlap(base.y, base.h, m.y, m.h)) {
+            if (Math.abs(base.x + base.w + gi - m.x) <= edgeTol && spansOverlap(base.y, base.h, m.y, m.h)) {
                 const b = r.x + r.w + gi; nx = b; nw = m.x + m.w - b; adj = true;
-            } else if (Math.abs(base.x - gi - (m.x + m.w)) <= 3 && spansOverlap(base.y, base.h, m.y, m.h)) {
+            } else if (Math.abs(base.x - gi - (m.x + m.w)) <= edgeTol && spansOverlap(base.y, base.h, m.y, m.h)) {
                 nw = r.x - gi - m.x; adj = true;
             }
-            if (Math.abs(base.y + base.h + gi - m.y) <= 3 && spansOverlap(base.x, base.w, m.x, m.w)) {
+            if (Math.abs(base.y + base.h + gi - m.y) <= edgeTol && spansOverlap(base.x, base.w, m.x, m.w)) {
                 const b = r.y + r.h + gi; ny = b; nh = m.y + m.h - b; adj = true;
-            } else if (Math.abs(base.y - gi - (m.y + m.h)) <= 3 && spansOverlap(base.x, base.w, m.x, m.w)) {
+            } else if (Math.abs(base.y - gi - (m.y + m.h)) <= edgeTol && spansOverlap(base.x, base.w, m.x, m.w)) {
                 nh = r.y - gi - m.y; adj = true;
             }
             if (!adj || nw < 240 || nh < 160) continue;
@@ -1206,13 +1235,13 @@ Singleton {
             // to the dropped window's own old space when it had one (the
             // two trade places), else to this space's complement, so the
             // pair ends up side by side
-            const occ = Object.keys(recs).find(a => a !== d.addr && recs[a].ws === c.workspace.id && (recs[a].zone === zone || rectEq(recs[a].rect, target, 6)));
+            const occ = Object.keys(recs).find(a => a !== d.addr && recs[a].ws === c.workspace.id && (recs[a].zone === zone || rectEq(recs[a].rect, target, edgeTol)));
             if (occ) {
                 const mine = recs[d.addr];
                 if (mine && mine.zone && zf[mine.zone]) place(occ, placedRect(occ, zf[mine.zone], wa), mine.zone);
                 else {
                     const free = complements(zone).filter(z => !Object.keys(recs).some(a => a !== occ && a !== d.addr
-                        && recs[a].ws === c.workspace.id && (recs[a].zone === z || rectEq(recs[a].rect, zoneRect(zf[z], wa), 6))));
+                        && recs[a].ws === c.workspace.id && (recs[a].zone === z || rectEq(recs[a].rect, zoneRect(zf[z], wa), edgeTol))));
                     if (free.length) place(occ, placedRect(occ, zf[free[0]], wa), free[0]);
                 }
             }
@@ -1234,7 +1263,7 @@ Singleton {
     // when a drag ends over a cell): the window moves to that workspace and
     // the view goes with it, and then the workspace's windows -- the ones
     // already there plus this one -- are laid out together: one takes the
-    // whole space, two sit side by side, three in columns, four in a grid
+    // whole space, two sit side by side, three as a side and two stacked, four in a grid
     // (the layouts popup's shapes, capped like groups are). Laid out
     // together they share edges, so they form a group and resize together
     // from then on.
@@ -1259,7 +1288,7 @@ Singleton {
         const set = others.slice(0, 3).map(x => x.address).concat([addr]);
         const zones = set.length === 1 ? [{ f: zf.MAX, zone: "MAX" }]
             : set.length === 2 ? layouts[0].zones
-            : set.length === 3 ? layouts[2].zones
+            : set.length === 3 ? trioZones
             : layouts[3].zones;
         set.forEach((a, k) => place(a, placedRect(a, zones[k].f, wa), zones[k].zone));
         regroupWs(ws);
