@@ -57,6 +57,11 @@ Scope {
         freeze.exec(["sh", "-c", 'rm -f "$3"/galaga-frozen-*; grim -t ppm -o "$1" "$2" && echo ok', "sh", scr.name, freeze.next, run]);
     }
     function close() { aim.shown = false; }
+    // edit the newest shot on disk, any time -- not only from the card in its two seconds
+    function editLast() {
+        if (aim.visible) return;
+        last.exec(["sh", "-c", 'd="$(xdg-user-dir PICTURES)/shots"; ls -t "$d"/shot-*.png 2>/dev/null | head -1']);
+    }
 
     function fire() {
         const r = sel.width > 2 && sel.height > 2 ? sel : Qt.rect(0, 0, stage.width, stage.height);
@@ -140,6 +145,20 @@ Scope {
                     Sounds.play("shot"); // read something -- a capture like any other; nothing read -- silent
                 }
                 fx.restart();
+            }
+        }
+    }
+
+    // the newest file in the shots folder; empty when there is none -- and nothing opens, silent like a failed take
+    Process {
+        id: last
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const path = text.trim();
+                if (!path) return;
+                const mon = Hyprland.focusedMonitor;
+                root.scr = Quickshell.screens.find(s => s.name === mon?.name) ?? Quickshell.screens[0];
+                editor.open(path, root.scr);
             }
         }
     }

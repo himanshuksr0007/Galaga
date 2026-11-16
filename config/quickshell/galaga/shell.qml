@@ -203,6 +203,7 @@ ShellRoot {
     Shortcut { name: "snaplayouts"; description: "snap layouts"; onPressed: Snap.toggleLayouts() }
     Shortcut { name: "power"; description: "power menu"; onPressed: power.toggle() }
     Shortcut { name: "shot"; description: "screenshot"; onPressed: shot.open() }
+    Shortcut { name: "editshot"; description: "edit the last screenshot"; onPressed: shot.editLast() }
     Shortcut { name: "pact"; description: "vpn: clash verge"; onPressed: vpn.toggle() }
     Shortcut { name: "clip"; description: "clipboard"; onPressed: clip.toggle() }
     Shortcut { name: "charms"; description: "emoji, kaomoji, symbols"; onPressed: charms.toggle() }
