@@ -22,6 +22,7 @@ import "quick"
 import "settings"
 import "shot"
 import "snap"
+import "switcher"
 import "vpn"
 import "wall"
 import "welcome"
@@ -55,6 +56,7 @@ ShellRoot {
     DropDeck {}
     Desktops { id: desktops }
     Expose { id: expose }
+    Switcher { id: switcher }
     Genie {}
     Shot { id: shot }
     SnapPop {}
@@ -193,6 +195,8 @@ ShellRoot {
     Shortcut { name: "altar"; description: "deck: bottom dashboard"; onPressed: deck.toggle() }
     Shortcut { name: "desktops"; description: "desktops overview"; onPressed: desktops.toggle() }
     Shortcut { name: "expose"; description: "exposé: windows on this desktop"; onPressed: { if (Theme.state.featExpose) expose.toggle(); } }
+    Shortcut { name: "switcher"; description: "window switcher"; onPressed: switcher.step(1) }
+    Shortcut { name: "switcherback"; description: "window switcher, backwards"; onPressed: switcher.step(-1) }
     Shortcut { name: "quick"; description: "quick settings"; onPressed: quick.toggle() }
     Shortcut { name: "ward"; description: "quick settings"; onPressed: quick.toggle() } // Super+N in demonshot -- same toggles
     Shortcut { name: "settings"; description: "settings"; onPressed: shell.toggleSettings() }

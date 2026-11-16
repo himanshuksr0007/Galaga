@@ -105,8 +105,10 @@ hl.bind("CTRL + SUPER + SHIFT + down", hl.dsp.window.move({ workspace = "e+0" })
 hl.bind("SUPER + ALT + S", hl.dsp.window.move({ workspace = "special:special" }))
 
 -- Window groups
-hl.bind(vars.kbWindowGroupCycleNext, hl.dsp.window.cycle_next(), { repeating = true })
-hl.bind(vars.kbWindowGroupCyclePrev, hl.dsp.window.cycle_next({ next = false }), { repeating = true })
+-- alt+tab: the shell's switcher steps on every press and commits when alt comes up;
+-- group cycling keeps ctrl+alt+tab below
+hl.bind("ALT + Tab", hl.dsp.global("shell:switcher"), { repeating = true })
+hl.bind("SHIFT + ALT + Tab", hl.dsp.global("shell:switcherback"), { repeating = true })
 hl.bind("CTRL + ALT + Tab", hl.dsp.group.next(), { repeating = true })
 hl.bind("CTRL + SHIFT + ALT + Tab", hl.dsp.group.prev(), { repeating = true })
 hl.bind(vars.kbToggleGroup, hl.dsp.group.toggle())
