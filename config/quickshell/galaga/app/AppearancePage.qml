@@ -68,6 +68,7 @@ Item {
                     Desk {
                         scale: 0.75
                         transformOrigin: Item.TopLeft
+                        live: pg.active
                         p: pg.p
                         onPickColour: key => pg.openPicker(key)
                     }

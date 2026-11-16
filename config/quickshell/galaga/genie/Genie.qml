@@ -151,7 +151,7 @@ Scope {
     Timer {
         interval: 15000
         repeat: true
-        running: true
+        running: Object.keys(root.kept).length > 0
         onTriggered: {
             for (const addr of Object.keys(root.kept)) {
                 const t = Hyprland.toplevels.values.find(t => t.address === addr.replace(/^0x/, ""));

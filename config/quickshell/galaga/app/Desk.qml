@@ -31,7 +31,10 @@ Item {
     width: 1040
     height: 388
 
-    SystemClock { id: clock; enabled: root.visible; precision: SystemClock.Minutes }
+    // live is bound by the page that hosts the mock (Appearance): the
+    // clock only ticks while that page is the one being looked at
+    property bool live: false
+    SystemClock { id: clock; enabled: root.live; precision: SystemClock.Minutes }
 
     Rectangle {
         width: 620
