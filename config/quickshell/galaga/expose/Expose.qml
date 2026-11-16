@@ -23,8 +23,8 @@ PanelWindow {
 
     function open() {
         Hyprland.refreshToplevels(); // fresh titles and geometry, like the deck and the overview
+        shown = true; // the wins model only exists while shown (see below) -- flip first, then read it
         sel = Math.max(0, wins.findIndex(w => w.addr === activeAddr));
-        shown = true;
     }
     function close() { shown = false; }
     function toggle() { shown ? close() : open(); }
@@ -42,8 +42,10 @@ PanelWindow {
     readonly property string activeAddr: ToplevelManager.activeToplevel?.address ?? ""
     readonly property int wsId: Hyprland.focusedWorkspace?.id ?? -1
 
-    // the focused workspace's windows, in the model's order (stacking, roughly)
-    readonly property var wins: (Hyprland.focusedWorkspace?.toplevels.values ?? []).map(t => {
+    // the focused workspace's windows, in the model's order (stacking, roughly).
+    // Built only while shown: ungated, the map (an icon lookup per window) rebuilt
+    // on every title or geometry change on the workspace, closed or not
+    readonly property var wins: !shown ? [] : (Hyprland.focusedWorkspace?.toplevels.values ?? []).map(t => {
         const o = t.lastIpcObject ?? {};
         const cls = o.class ?? "";
         const entry = DesktopEntries.heuristicLookup(cls);

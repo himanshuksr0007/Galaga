@@ -24,9 +24,9 @@ PanelWindow {
     function step(d) {
         if (!shown) {
             Hyprland.refreshToplevels(); // fresh focus history, like the exposé
-            if (wins.length < 2) return; // nothing to switch between
+            shown = true; // the wins model only exists while shown (see below) -- flip first, then read it
+            if (wins.length < 2) { shown = false; return; } // nothing to switch between
             sel = d > 0 ? 1 : wins.length - 1;
-            shown = true;
         } else {
             sel = (sel + d + wins.length) % wins.length;
         }
@@ -45,8 +45,10 @@ PanelWindow {
         shown = false;
     }
 
-    // the focused workspace's windows, most recently focused first
-    readonly property var wins: (Hyprland.focusedWorkspace?.toplevels.values ?? []).map(t => {
+    // the focused workspace's windows, most recently focused first. Built only
+    // while shown: ungated, the map and its focus-history sort rebuilt on every
+    // focus switch and title change, all day, for a strip that lives for seconds
+    readonly property var wins: !shown ? [] : (Hyprland.focusedWorkspace?.toplevels.values ?? []).map(t => {
         const o = t.lastIpcObject ?? {};
         const cls = o.class ?? "";
         const entry = DesktopEntries.heuristicLookup(cls);

@@ -399,7 +399,9 @@ Scope {
                         width: parent.width
                         spacing: 8
                         Lb { id: minLabel; text: minCol.mins.length > 0 ? `minimised · ${minCol.mins.length}` : "minimised"; px: 10 }
-                        readonly property var mins: Hyprland.toplevels.values
+                        // built only while the deck is open somewhere: ungated, the map
+                        // (an icon lookup per parked window) rebuilt on every title change
+                        readonly property var mins: root.on === null ? [] : Hyprland.toplevels.values
                             .filter(t => t.workspace?.name === "special:minimized")
                             .map(t => {
                                 const cls = t.lastIpcObject?.class ?? "";

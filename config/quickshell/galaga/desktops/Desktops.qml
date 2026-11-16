@@ -29,8 +29,8 @@ PanelWindow {
 
     function open() {
         Hyprland.refreshToplevels(); // full re-query: fresh geometry and titles, not the event-fed snapshot
+        shown = true; // the desks model only exists while shown (see below) -- flip first, then read it
         sel = Math.max(0, desks.findIndex(d => d.id === activeId));
-        shown = true;
     }
     function close() { shown = false; }
     function toggle() { shown ? close() : open(); }
@@ -45,8 +45,11 @@ PanelWindow {
     readonly property int activeId: Hyprland.focusedWorkspace?.id ?? -1
 
     // workspaces with at least one window, in id order; special workspaces have
-    // negative ids and are excluded by construction
-    readonly property var desks: Hyprland.workspaces.values
+    // negative ids and are excluded by construction. Built only while shown:
+    // the map reads every window's title, so ungated it rebuilt (and recreated
+    // the card delegates) on every title change anywhere, all day, for a panel
+    // that is almost always closed -- the launcher gates its lists the same way
+    readonly property var desks: !shown ? [] : Hyprland.workspaces.values
         .filter(w => w.id > 0 && w.toplevels.values.length > 0)
         .sort((a, b) => a.id - b.id)
         .map(w => ({
