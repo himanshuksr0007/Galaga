@@ -15,7 +15,7 @@ hl.on("hyprland.start", function()
     -- an unconditional pass announced the plugin load on screen and re-ran
     -- the whole config again for nothing. First, so even the fallback lands
     -- before anything visual.
-    hl.exec_cmd("sh -c 'hyprctl plugin list | grep -qi hyprbars && hyprctl plugin list | grep -qi hyprdrag || { hyprpm reload -n; hyprctl reload; }'")
+    hl.exec_cmd("sh -c 'l=$(hyprctl plugin list); echo \"$l\" | grep -qi hyprbars && echo \"$l\" | grep -qi hyprdrag || { hyprpm reload -n; hyprctl reload; }'")
 
     -- Shell: whichever one is selected in rice
     hl.exec_cmd(vars.rice .. " start")
@@ -64,25 +64,24 @@ hl.on("hyprland.start", function()
     -- hypridle starts the shell (Rules.idle): timings from house rules -> ~/.config/demonshot/hypridle.conf
 end)
 
--- Resizer listener
-hl.on("window.title", function(win)
-    local d = {
-        hl.dsp.window.float({ action = "on", window = win }),
-        hl.dsp.window.center({ window = win }),
-    }
-    local pip = fn.move_actions(win) or {}
+-- Resizer listener: Bitwarden floats centred at a fixed size, picture-in-picture
+-- floats at a quarter of the screen. One check for both events, and the title tests
+-- run first: window.title fires on every title change of every window, so the
+-- dispatcher tables (and the PiP geometry, which queries the monitor) are built
+-- only for a title that actually matches. The tests mirror fn.resizer's own --
+-- a plain find for Bitwarden, a pattern find for PiP
+local function resizerCheck(win)
+    if not (win and win.title) then return end
+    if string.find(win.title, "Bitwarden", 1, true) then
+        fn.resizer(win, "Bitwarden", 20, 54, {
+            hl.dsp.window.float({ action = "on", window = win }),
+            hl.dsp.window.center({ window = win }),
+        }, true)
+    end
+    if string.find(win.title, "Picture[- ]in[- ][Pp]icture", 1, false) then
+        fn.resizer(win, "Picture[- ]in[- ][Pp]icture", 0, 0, fn.move_actions(win) or {}, false)
+    end
+end
 
-    fn.resizer(win, "Bitwarden", 20, 54, d, true)
-    fn.resizer(win, "Picture[- ]in[- ][Pp]icture", 0, 0, pip, false)
-end)
-
-hl.on("window.open", function(win)
-    local d = {
-        hl.dsp.window.float({ action = "on", window = win }),
-        hl.dsp.window.center({ window = win }),
-    }
-    local pip = fn.move_actions(win) or {}
-
-    fn.resizer(win, "Bitwarden", 20, 54, d, true)
-    fn.resizer(win, "Picture[- ]in[- ][Pp]icture", 0, 0, pip, false)
-end)
+hl.on("window.title", resizerCheck)
+hl.on("window.open", resizerCheck)

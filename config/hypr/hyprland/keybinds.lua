@@ -5,6 +5,7 @@ local fn   = require("hyprland.functions")
 -- Launcher: tap Super. Since 0.57 binds on the modifier itself do not fire on press or release
 -- (hyprwm/Hyprland#15952, #15050), so we catch the Super release by polling the key state instead of bindr.
 -- Without swallowing Super+1 it would open the launcher too -- every Super+<key> that is not consumed cancels the tap.
+-- 50 ms: the poll runs for the whole session, and a human tap is far longer than one tick either way
 local superDown, superTap = false, false
 -- binds on the modifiers themselves are also dead in 0.57, so we watch Super+Shift/Ctrl/Alt here as well
 local otherMods = { "Shift_L", "Shift_R", "Control_L", "Control_R", "Alt_L", "Alt_R" }
@@ -23,7 +24,7 @@ hl.timer(function()
         superTap = false
         if tap then hl.dispatch(hl.dsp.global("shell:launcher")) end
     end
-end, { timeout = 25, type = "repeat" })
+end, { timeout = 50, type = "repeat" })
 for _, key in ipairs({
     -- workspaces
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
