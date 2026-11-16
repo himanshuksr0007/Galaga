@@ -155,12 +155,16 @@ Singleton {
         if (fxOff || fxBlur === null || fxShadow === null) return;
         if (!fxBlur && !fxShadow) return;
         fxOff = true;
-        Hyprland.dispatch("hl.config({ decoration = { blur = { enabled = false }, shadow = { enabled = false } } })");
+        // through hyprctl eval, the channel Rules uses: Hyprland.dispatch wraps
+        // its string in hl.dispatch(...), and hl.config is not a dispatcher --
+        // sent that way these calls failed on every drag and the suspension
+        // silently never happened
+        Quickshell.execDetached(["hyprctl", "eval", "hl.config({ decoration = { blur = { enabled = false }, shadow = { enabled = false } } })"]);
     }
     function fxRestore() {
         if (!fxOff) return;
         fxOff = false;
-        Hyprland.dispatch(`hl.config({ decoration = { blur = { enabled = ${fxBlur} }, shadow = { enabled = ${fxShadow} } } })`);
+        Quickshell.execDetached(["hyprctl", "eval", `hl.config({ decoration = { blur = { enabled = ${fxBlur} }, shadow = { enabled = ${fxShadow} } } })`]);
     }
     Process {
         id: fxB
