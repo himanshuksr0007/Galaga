@@ -55,6 +55,20 @@ PanelWindow {
     }
     PwObjectTracker { objects: root.dev ? [root.dev] : [] }
 
+    // playback streams, for the mixer on the first page: an app playing
+    // right now. Capture streams carry the other media class and stay
+    // out -- this is playback only. The tracker is what makes each
+    // stream's volume and mute live and writable
+    readonly property var streams: Pipewire.nodes.values
+        .filter(n => n.isStream && n.audio && n.properties?.["media.class"] === "Stream/Output/Audio")
+        .sort((a, b) => root.appName(a).localeCompare(root.appName(b)))
+    PwObjectTracker { objects: root.streams }
+    function appName(n) { return n.properties?.["application.name"] || n.description || n.name; }
+    function appIcon(n) {
+        const e = DesktopEntries.heuristicLookup(appName(n));
+        return e?.icon ? Quickshell.iconPath(e.icon, true) : "";
+    }
+
     visible: t > 0
     anchors { left: true; right: true; top: true; bottom: true }
     exclusionMode: ExclusionMode.Ignore
@@ -125,6 +139,66 @@ PanelWindow {
                         VolSlider { }
 
                         Out { id: outList; width: parent.width; open: true; inspectable: true; onInspect: n => root.showDevice(n) }
+
+                        // per-app volume: a row per app playing right now, the
+                        // device page's slider bound to the app's own stream.
+                        // No streams, no section -- never an empty mixer
+                        Column {
+                            id: mix
+                            visible: root.streams.length > 0
+                            width: parent.width
+                            spacing: 12
+                            Lb { x: 4; text: "apps" }
+                            Repeater {
+                                model: root.streams
+                                Column {
+                                    id: arow
+                                    required property var modelData
+                                    readonly property var node: modelData
+                                    readonly property bool muted: node.audio?.muted ?? false
+                                    width: mix.width
+                                    spacing: 6
+                                    opacity: muted ? 0.45 : 1
+                                    Behavior on opacity { NumberAnimation { duration: Theme.t } }
+                                    Row {
+                                        width: parent.width
+                                        spacing: 10
+                                        Item {
+                                            width: 22
+                                            height: 22
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            Image {
+                                                id: aimg
+                                                anchors.fill: parent
+                                                source: root.appIcon(arow.node)
+                                                sourceSize: Qt.size(44, 44)
+                                                mipmap: true
+                                                visible: status === Image.Ready
+                                            }
+                                            Icon {
+                                                anchors.centerIn: parent
+                                                visible: aimg.status !== Image.Ready
+                                                text: "\u{F075A}"
+                                                font.pixelSize: 17
+                                                color: Theme.grey
+                                            }
+                                            HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                            TapHandler { onTapped: { if (arow.node.audio) arow.node.audio.muted = !arow.node.audio.muted; } }
+                                        }
+                                        Text {
+                                            width: parent.width - 32
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            elide: Text.ElideRight
+                                            textFormat: Text.PlainText
+                                            text: root.appName(arow.node)
+                                            font { family: Theme.ui; pixelSize: 15; weight: Font.DemiBold }
+                                            color: Theme.fg
+                                        }
+                                    }
+                                    AppSlider { node: arow.node }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -497,6 +571,66 @@ PanelWindow {
                 if (Math.abs(wacc) < 0.02)
                     return;
                 set((sl.shown + wacc) * width);
+            }
+        }
+    }
+
+    // the device slider again, bound to one app's stream instead -- a
+    // stream carries its own level and mute, like any sink
+    component AppSlider: Rectangle {
+        id: sl
+        property var node
+        readonly property real value: sl.node?.audio?.muted ? 0 : (sl.node?.audio?.volume ?? 0)
+        readonly property real shown: area.pressed ? area.v : value
+        width: parent.width
+        height: 54
+        radius: Theme.corner(27)
+        color: Theme.s2
+        Row {
+            x: 10
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 11 - 2.8
+            Repeater {
+                model: Math.max(0, Math.floor((sl.width - 20) / 11) + 1)
+                Rectangle { width: 2.8; height: 2.8; radius: 1.4; color: Theme.mute }
+            }
+        }
+        Rectangle {
+            width: Math.max(height, sl.width * sl.shown)
+            height: parent.height
+            radius: Theme.corner(27)
+            color: Theme.fg
+            Behavior on width { enabled: !area.pressed; NumberAnimation { duration: 220; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+            Icon { x: 18; anchors.verticalCenter: parent.verticalCenter; text: sl.node?.audio?.muted ? "\u{F075F}" : "\u{F057E}"; font.pixelSize: 21; color: Theme.ink }
+        }
+        Rectangle {
+            anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
+            width: val.width + 16
+            height: val.height + 8
+            radius: Theme.corner(10)
+            color: Theme.s2
+            Lb { id: val; anchors.centerIn: parent; text: Math.round(sl.shown * 100); color: Theme.grey }
+        }
+        MouseArea {
+            id: area
+            property real v
+            property real wacc: 0
+            anchors.fill: parent
+            preventStealing: true
+            function set(x) {
+                if (!sl.node?.audio) return;
+                v = Math.max(0, Math.min(1, x / width));
+                sl.node.audio.muted = false;
+                sl.node.audio.volume = v;
+            }
+            onPressed: e => set(e.x)
+            onPositionChanged: e => set(e.x)
+            onWheel: e => {
+                wacc += (e.inverted ? -1 : 1) * (e.angleDelta.y || -e.angleDelta.x) / 120 * 0.05 * (e.phase === Qt.NoScrollPhase ? 1 : 0.25);
+                if (Math.abs(wacc) < 0.02)
+                    return;
+                set((sl.shown + wacc) * width);
+                wacc = 0;
             }
         }
     }
