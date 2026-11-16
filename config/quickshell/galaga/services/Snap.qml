@@ -202,19 +202,40 @@ Singleton {
     // the event-mode settle window after a drag stops (see above)
     Timer { id: settleT; interval: 1000 }
     Timer {
+        // the group sweep only needs client geometry (a grouped window
+        // resized or moved from the keyboard), so it takes the cheap
+        // clients-only fetch; the full fetch stays with actions and
+        // drag stops, which are the moments monitors can have changed
         interval: 2000
         repeat: true
         running: DragWatch.alive && Object.keys(root.groups).length > 0
-        onTriggered: if (!root.fetching && !root.pendingAct) root.fetch(null)
+        onTriggered: if (!root.fetching && !root.pendingAct) root.watchFetch()
+    }
+    // no setup is known yet: window events (a window opened, closed,
+    // moved between workspaces, floated or sunk) ask for one debounced
+    // look, so a hand-made arrangement is adopted and a new window is
+    // paired or raised within a beat of the change that made it --
+    // the same event pattern services/Game uses. A resize finished
+    // without any of those events lands on the backstop below.
+    Connections {
+        target: Hyprland
+        function onRawEvent(e) {
+            if (["openwindow", "closewindow", "movewindowv2", "changefloatingmode"].includes(e.name)) adoptT.restart();
+        }
     }
     Timer {
-        // no setup is known yet: a slow look every 5 s, and one at
-        // startup, so an arrangement already sitting on a workspace --
+        id: adoptT
+        interval: 400
+        onTriggered: if (!root.fetching && !root.pendingAct && Theme.state.snap && Object.keys(root.groups).length === 0) root.fetch(null)
+    }
+    Timer {
+        // the backstop for the event look above, and the one look at
+        // startup: an arrangement already sitting on a workspace --
         // placed by hand, or left there by a shell restart, records
         // being memory-only -- is adopted without waiting for a snap
         // action. Once a group forms the watchers above own the cadence
         // and this stops.
-        interval: 5000
+        interval: 60000
         repeat: true
         triggeredOnStart: true
         running: Theme.state.snap && Object.keys(root.groups).length === 0
