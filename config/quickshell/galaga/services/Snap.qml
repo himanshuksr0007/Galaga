@@ -261,6 +261,26 @@ Singleton {
         if (f[1] + f[3] < 1) zh -= gi / 2;
         return { x: Math.round(x), y: Math.round(y), w: Math.round(zw), h: Math.round(zh) };
     }
+    // the apps that draw their own window buttons, and so get no hyprbars
+    // bar -- the same classes as the ownButtons list in rules.lua, which
+    // the no_bar rule is built from (keep the two in step). Every other
+    // window carries the 32-tall bar at its top.
+    readonly property var ownButtons: [/^org\.gnome\..*$/, /^gnome-control-center$/, /^Code$/, /^VSCodium$/, /^codium$/,
+        /^steam$/, /^discord$/, /^vesktop$/, /^equibop$/, /^firefox$/, /^org\.mozilla\.firefox$/, /^firefox-esr$/,
+        /^zen$/, /^app\.zen_browser\.zen$/, /^io\.github\.zen_browser\.zen$/, /^org\.quickshell$/]
+    function hasBar(cls) { return !!cls && !ownButtons.some(r => r.test(cls)); }
+    // the rect a window is actually placed with: a window carrying the bar,
+    // set into a zone that touches the top, starts 32 lower -- its whole
+    // bar sits below the pill, not just its client area. The MAX zone is
+    // exempt (a maximised window hugs the strip, like the tiler's own lone
+    // window), and so are the own-buttons apps: no bar, no clearance.
+    function placedRect(addr, f, wa) {
+        const r = zoneRect(f, wa);
+        const c = client(addr);
+        if (c && Theme.state.barAt === "top" && f[1] === 0 && !(f[0] === 0 && f[2] === 1 && f[3] === 1) && hasBar(c.class))
+            return { x: r.x, y: r.y + 32, w: r.w, h: r.h - 32 };
+        return r;
+    }
     function rectOf(c) {
         return { x: c.at[0], y: c.at[1], w: c.size[0], h: c.size[1] };
     }
@@ -300,7 +320,10 @@ Singleton {
     // neighbours -- so the test has to expect the gap, not coincidence:
     // with gaps_in at 6, a coincidence test leaves every placed pair
     // ungrouped and linked resize with nothing to link.
-    function shareV(a, b) { return Math.abs(a.x + a.w + Rules.store.gapsIn - b.x) <= 2 && Math.abs(a.y - b.y) <= 2 && Math.abs(a.h - b.h) <= 2; }
+    // side by side: the inner edges touch, the bottoms sit on one line and
+    // the spans overlap. The tops may differ -- a window with the bar
+    // starts 32 lower than an own-buttons one in the same pair of zones.
+    function shareV(a, b) { return Math.abs(a.x + a.w + Rules.store.gapsIn - b.x) <= 2 && Math.abs((a.y + a.h) - (b.y + b.h)) <= 2 && spansOverlap(a.y, a.h, b.y, b.h); }
     function shareH(a, b) { return Math.abs(a.y + a.h + Rules.store.gapsIn - b.y) <= 2 && Math.abs(a.x - b.x) <= 2 && Math.abs(a.w - b.w) <= 2; }
     function linked(a, b) { return shareV(a, b) || shareV(b, a) || shareH(a, b) || shareH(b, a); }
     function regroupWs(ws) {
@@ -414,7 +437,7 @@ Singleton {
             else if (zone === "MAX" && rec.lastZone && zf[rec.lastZone]) { target = rec.lastZone; frac = zf[rec.lastZone]; }
             else { restore(addr); return; } // a half, a layout space, or MAX with nowhere to go back to
         }
-        place(addr, zoneRect(frac, wa), target);
+        place(addr, placedRect(addr, frac, wa), target);
         regroupWs(c.workspace.id);
         maybeAssist(addr, target, wa, c.workspace.id);
     }
@@ -439,7 +462,7 @@ Singleton {
         if (!comp.length) return;
         const empty = comp
             .map(z => ({ zone: z, frac: zf[z], rect: zoneRect(zf[z], wa), label: zlabel[z] }))
-            .filter(z => !Object.keys(recs).some(a => recs[a].ws === ws && rectEq(recs[a].rect, z.rect, 6))
+            .filter(z => !Object.keys(recs).some(a => recs[a].ws === ws && (recs[a].zone === z.zone || rectEq(recs[a].rect, z.rect, 6)))
                       && !(snapC ?? []).some(c => c.address !== addr && c.workspace.id === ws && rectEq(rectOf(c), z.rect, 6)));
         if (!empty.length) return;
         const cands = candidates(ws, addr);
@@ -458,7 +481,7 @@ Singleton {
             if (!c) { popCancel(); return; }
             const mon = monOf(c);
             if (!mon) { popCancel(); return; }
-            place(addr, zoneRect(z.frac, workarea(mon)), z.zone);
+            place(addr, placedRect(addr, z.frac, workarea(mon)), z.zone);
             regroupWs(assistWs);
             assistZones = assistZones.slice(1);
             assistCands = candidates(assistWs, "");
@@ -484,7 +507,7 @@ Singleton {
             const mon = monOf(c);
             if (!mon) { popCancel(); return; }
             const wa = workarea(mon), z0 = lay.zones[0];
-            place(addr, zoneRect(z0.f, wa), z0.zone);
+            place(addr, placedRect(addr, z0.f, wa), z0.zone);
             regroupWs(c.workspace.id);
             const rest = lay.zones.slice(1).map(z => ({ zone: z.zone, frac: z.f, rect: zoneRect(z.f, wa), label: z.label }));
             const cands = candidates(c.workspace.id, addr);
@@ -506,7 +529,7 @@ Singleton {
             const mon = monOf(first);
             if (!mon) return;
             const wa = workarea(mon);
-            addrs.slice(0, lay.zones.length).forEach((a, k) => place(a, zoneRect(lay.zones[k].f, wa), lay.zones[k].zone));
+            addrs.slice(0, lay.zones.length).forEach((a, k) => place(a, placedRect(a, lay.zones[k].f, wa), lay.zones[k].zone));
             regroupWs(first.workspace.id);
         });
     }
@@ -618,8 +641,8 @@ Singleton {
             // (a browser restoring its size, a slow first map): give it a
             // moment, then look again with a fresh fetch
             if (Date.now() - (seenAt[addr] ?? 0) < 600) { openT.restart(); continue; }
-            place(o.address, zoneRect(zf.L, wa), "L");
-            place(addr, zoneRect(zf.R, wa), "R");
+            place(o.address, placedRect(o.address, zf.L, wa), "L");
+            place(addr, placedRect(addr, zf.R, wa), "R");
             regroupWs(ws);
             return; // one pair per pass; another new window gets the next
         }
@@ -1026,7 +1049,7 @@ Singleton {
         if (l && t) zone = "TL"; else if (r && t) zone = "TR";
         else if (l && b) zone = "BL"; else if (r && b) zone = "BR";
         else if (t) zone = "MAX"; else if (l) zone = "L"; else if (r) zone = "R";
-        return zone ? { zone: zone, rect: zoneRect(zf[zone], wa) } : null;
+        return zone ? { zone: zone, rect: placedRect(c.address, zf[zone], wa) } : null;
     }
 
     function dragTick() {
@@ -1120,17 +1143,17 @@ Singleton {
             // to the dropped window's own old space when it had one (the
             // two trade places), else to this space's complement, so the
             // pair ends up side by side
-            const occ = Object.keys(recs).find(a => a !== d.addr && recs[a].ws === c.workspace.id && rectEq(recs[a].rect, target, 6));
+            const occ = Object.keys(recs).find(a => a !== d.addr && recs[a].ws === c.workspace.id && (recs[a].zone === zone || rectEq(recs[a].rect, target, 6)));
             if (occ) {
                 const mine = recs[d.addr];
-                if (mine && mine.zone && zf[mine.zone]) place(occ, zoneRect(zf[mine.zone], wa), mine.zone);
+                if (mine && mine.zone && zf[mine.zone]) place(occ, placedRect(occ, zf[mine.zone], wa), mine.zone);
                 else {
                     const free = complements(zone).filter(z => !Object.keys(recs).some(a => a !== occ && a !== d.addr
-                        && recs[a].ws === c.workspace.id && rectEq(recs[a].rect, zoneRect(zf[z], wa), 6)));
-                    if (free.length) place(occ, zoneRect(zf[free[0]], wa), free[0]);
+                        && recs[a].ws === c.workspace.id && (recs[a].zone === z || rectEq(recs[a].rect, zoneRect(zf[z], wa), 6))));
+                    if (free.length) place(occ, placedRect(occ, zf[free[0]], wa), free[0]);
                 }
             }
-            place(d.addr, target, zone, d.pre);
+            place(d.addr, placedRect(d.addr, zf[zone], wa), zone, d.pre);
             regroupWs(c.workspace.id);
         } else {
             const rec = recs[d.addr];
@@ -1175,7 +1198,7 @@ Singleton {
             : set.length === 2 ? layouts[0].zones
             : set.length === 3 ? layouts[2].zones
             : layouts[3].zones;
-        set.forEach((a, k) => place(a, zoneRect(zones[k].f, wa), zones[k].zone));
+        set.forEach((a, k) => place(a, placedRect(a, zones[k].f, wa), zones[k].zone));
         regroupWs(ws);
     }
 }
