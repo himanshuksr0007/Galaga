@@ -80,10 +80,13 @@ Scope {
     property var refs: ({})
     property int seq: 0
     readonly property int most: 4
-    // tile into the stack: c -- { app, summary, body, icon (icon theme), glyph (nerd font), crit }; ref -- the notification, for the action
-    function push(c, ref) {
-        root.note = { urgency: c.crit ? NotificationUrgency.Critical : NotificationUrgency.Normal };
-        noteT.restart();
+    // tile into the stack: c -- { app, summary, body, icon (icon theme), glyph (nerd font), crit }; ref -- the notification, for the action.
+    // flash -- the top strip flashes with the tile, unless the caller says the tile is enough (power's connection tiles do)
+    function push(c, ref, flash) {
+        if (flash !== false) {
+            root.note = { urgency: c.crit ? NotificationUrgency.Critical : NotificationUrgency.Normal };
+            noteT.restart();
+        }
         const key = String(++root.seq);
         if (ref) root.refs[key] = ref;
         stack.insert(0, Object.assign({ key, app: "", summary: "", body: "", icon: "", glyph: "", crit: false, leaving: false }, c));
@@ -106,7 +109,9 @@ Scope {
     property int warned: 100
     function hm(s) { const m = Math.round(s / 60); return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} m` : `${m} m`; }
     function power(summary, glyph, crit, time) {
-        if (root.armed && root.bat?.isLaptopBattery) root.push({ app: "power", summary, body: `${root.pct}%` + (time ? ` · ${time}` : ""), glyph, crit: !!crit });
+        // the connection tiles (charging, on battery, full) come without the strip
+        // flash -- the tile says it. The critical warning still flashes, red.
+        if (root.armed && root.bat?.isLaptopBattery) root.push({ app: "power", summary, body: `${root.pct}%` + (time ? ` · ${time}` : ""), glyph, crit: !!crit }, null, !!crit);
     }
     Connections {
         target: UPower
