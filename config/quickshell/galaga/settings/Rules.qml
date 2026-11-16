@@ -6,25 +6,14 @@ import Quickshell.Io
 import Quickshell.Services.UPower
 
 // house rules: ~/.config/demonshot/rules.json -- the single source of truth for settings.
-// Editing from Settings writes the file (writeAdapter) and calls the needed apply itself. applyAll is called only by shell.qml at startup:
+// Editing from Settings writes the file (writeAdapter) and calls the needed apply itself;
+// shell.qml calls the apply functions (monitor, windows, motion, night, input, idle) at startup.
 // the lock (lock.qml) also reads Theme -> Rules, but applies nothing
 Singleton {
     id: root
 
     readonly property string dir: Quickshell.env("HOME") + "/.config/demonshot"
     readonly property alias store: adapter
-
-    // eight colors in Theme order: void crypt wine plum rose crimson ash bone
-    readonly property var palettes: [
-        { name: "Demon's Shot", what: "blood & bone", c: ["#0D0B0E", "#151116", "#2B1820", "#4A2236", "#B8487A", "#C7303D", "#7A6870", "#E9DFDD"] },
-        { name: "Absinthe", what: "green fairy", c: ["#0B0D0B", "#121612", "#1E2A1F", "#2F4630", "#A9B85A", "#7CC24A", "#6E7A6C", "#E3E6D8"] },
-        { name: "Nightshade", what: "poison bloom", c: ["#0C0B10", "#131119", "#221A30", "#3A2852", "#8E6BD8", "#B04BD6", "#706A80", "#E4DFEA"] },
-        { name: "Holy Water", what: "cold blessing", c: ["#0A0C10", "#11151B", "#1A2433", "#263C57", "#5E9BD1", "#3F7FE0", "#687687", "#DDE4EA"] },
-        { name: "Rust", what: "old iron", c: ["#0E0B09", "#17120F", "#2E1D14", "#4D2E1C", "#D08A3E", "#D1532A", "#7E6E62", "#EADFD3"] },
-        { name: "Gilded", what: "altar gold", c: ["#0D0C0A", "#16140F", "#2E2716", "#4A3D1E", "#B88A4A", "#D9A43A", "#7A7262", "#EDE5D3"] },
-        { name: "Ghost", what: "no color left", c: ["#0C0C0D", "#141416", "#26262A", "#3A3A40", "#9A9AA6", "#E9E9EE", "#6E6E76", "#E2E2E6"] }
-    ]
-    readonly property var pal: palettes[adapter.palette] ?? palettes[0]
 
     // wait for the file when the singleton is created: otherwise the first one to read store (galaga at startup) gets the defaults, not rules.json
     Component.onCompleted: file.waitForJob()
@@ -104,9 +93,6 @@ Singleton {
             property int noteDeck: 5      // how many are visible in the deck
         }
     }
-
-    // kitty: include file with palette colors (kitty.conf includes it), SIGUSR1 -- reload the config
-    FileView { id: kitty; path: root.dir + "/kitty.conf"; printErrors: false }
 
     function hypr(lua) { Quickshell.execDetached(["hyprctl", "eval", lua]); }
 
@@ -302,29 +288,8 @@ Singleton {
         Quickshell.execDetached(["sh", "-c", 'f="$1/hypridle.conf"; printf %s "$2" | cmp -s - "$f" && pgrep -x hypridle >/dev/null && exit; '
                                        + 'printf %s "$2" > "$f"; pkill -x hypridle; exec hypridle -c "$f"', "sh", dir, conf]);
     }
-    function brightness() { Quickshell.execDetached(["brightnessctl", "-q", "set", store.brightness + "%"]); }
     function night() {
         Quickshell.execDetached(["sh", "-c", store.night ? `pkill -x hyprsunset; exec hyprsunset -t ${store.warmth}` : "pkill -x hyprsunset"]);
-    }
-
-    // palette: Theme repaints itself (bindings on pal), here -- what lives outside the shell
-    function paint() {
-        const c = pal.c;
-        if (store.paintHypr) {
-            const h = c.map(x => x.slice(1));
-            hypr(`hl.config({ general = { col = { active_border = { colors = { "rgb(${h[5]})", "rgb(${h[4]})", "rgb(${h[5]})" }, angle = 135 }, `
-               + `inactive_border = "rgb(${h[2]})" } }, decoration = { shadow = { color = "rgba(${h[5]}20)" } } })`);
-        }
-        if (store.paintKitty) {
-            kitty.setText([
-                ["foreground", c[7]], ["background", c[1]], ["cursor", c[7]], ["cursor_text_color", c[1]],
-                ["selection_foreground", c[7]], ["selection_background", c[3]], ["url_color", c[4]],
-                ["active_border_color", c[5]], ["inactive_border_color", c[2]],
-                ["active_tab_foreground", c[7]], ["active_tab_background", c[5]],
-                ["inactive_tab_foreground", c[6]], ["inactive_tab_background", c[1]], ["tab_bar_background", c[0]]
-            ].map(([k, v]) => `${k} ${v}`).join("\n") + "\n");
-            Quickshell.execDetached(["pkill", "-USR1", "-x", "kitty"]);
-        }
     }
 
     // is anything serving the profiles? PowerProfiles (Quickshell.Services.UPower) is only a proxy:
@@ -372,8 +337,4 @@ Singleton {
     readonly property bool blurOn: store.blur && !store.ultra && (!store.game || store.gameBlur)
     readonly property bool shadowOn: store.shadow && !store.ultra && (!store.game || store.gameShadow)
 
-    // shell startup: everything except brightness (it is changed by the keys and OSD, we must not overwrite it on every launch)
-    function applyAll() {
-        monitor(); windows(); motion(); night(); paint(); input(); idle();
-    }
 }

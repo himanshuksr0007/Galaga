@@ -29,13 +29,6 @@ Singleton {
         return "\u{F0597}";
     }
     function name(code) { return names[code] ?? "omens"; }
-    function compass(deg) { return ["n", "ne", "e", "se", "s", "sw", "w", "nw"][Math.round(deg / 45) % 8]; }
-
-    // moon phase: 0 -- new moon, 0.5 -- full moon
-    function moonPhase(d) {
-        const p = ((d.getTime() / 86400000 - 10962.76) / 29.530588) % 1; // from the new moon 2000-01-06 18:14 UTC
-        return p < 0 ? p + 1 : p;
-    }
 
     // location -- from refresh(): there may be no network at startup, then retry, like the weather
     Process {

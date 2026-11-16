@@ -42,7 +42,6 @@ Singleton {
     property bool resizeActive: false
     property string addr: "" // the dragged window, 0x form, while a drag is on
     readonly property bool dragging: moveActive || resizeActive
-    readonly property string kind: moveActive ? "move" : (resizeActive ? "resize" : "")
 
     signal dragStarted(string kind, string addr)
     signal dragStopped(string kind, string addr)

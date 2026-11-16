@@ -53,7 +53,7 @@ Singleton {
     // the returning node is a new node and nothing else re-runs engage).
     onEngagedChanged: {
         if (!feedFor) return;
-        if (!engaged) { linkedPairs = []; linkedFor = ""; return; }
+        if (!engaged) { linkedPairs = []; return; }
         if (alive && Pipewire.defaultAudioSink === node) ensureLinks(feedFor);
     }
 
@@ -150,7 +150,6 @@ Singleton {
     // in the log -- instead of sitting in the path swallowing the audio.
     // do not "simplify" this back to target.object.
     property var linkedPairs: [] // [{ outEp, inEp }] verified live
-    property string linkedFor: ""
     property bool linkBusy: false
     property string linkWant: ""
     property var cyclePairs: [] // pairs of the in-flight link cycle
@@ -238,7 +237,6 @@ Singleton {
                 plan.pairs.some(q => q.outId === p.outId && q.inId === p.inId && q.linked));
             if (ok) {
                 linkedPairs = cyclePairs.map(p => ({ outEp: p.outEp, inEp: p.inEp }));
-                linkedFor = name;
             } else {
                 console.warn("galaga eq: feed links to " + name + " did not land; eq disengaged, device left as plain default");
                 unlinkPairs(cyclePairs);
@@ -260,7 +258,6 @@ Singleton {
     function dropLinks() {
         unlinkPairs(linkedPairs);
         linkedPairs = [];
-        linkedFor = "";
     }
 
     // ---- pw-dump is the eyes for all of this: node ids for pw-cli (the

@@ -559,19 +559,6 @@ Singleton {
         });
     }
     // a whole layout at once: windows[k] takes zones[k], no picking
-    function applyLayout(i, addrs) {
-        const lay = layouts[i];
-        if (!lay) return;
-        fetch(() => {
-            const first = addrs.length ? client(addrs[0]) : null;
-            if (!first) return;
-            const mon = monOf(first);
-            if (!mon) return;
-            const wa = workarea(mon);
-            addrs.slice(0, lay.zones.length).forEach((a, k) => place(a, placedRect(a, lay.zones[k].f, wa), lay.zones[k].zone));
-            regroupWs(first.workspace.id);
-        });
-    }
     function popClose() {
         popOpen = false;
         popMode = "";
