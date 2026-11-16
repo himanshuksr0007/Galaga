@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Galaga Settings
+Comment=galaga system settings
+Exec=rice settings
+Icon=preferences-system
+Terminal=false
+Categories=Settings;System;

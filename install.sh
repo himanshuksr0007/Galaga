@@ -107,6 +107,7 @@ LINKS=(
     "config/fish/config.fish                    .config/fish/config.fish"
     "config/fish/functions/fish_greeting.fish   .config/fish/functions/fish_greeting.fish"
     "config/fonts                               .local/share/fonts/galaga"
+    "config/desktop/galaga-settings.desktop     .local/share/applications/galaga-settings.desktop"
 )
 
 say() { printf '\e[38;2;215;25;33m●\e[0m %s\n' "$*"; }

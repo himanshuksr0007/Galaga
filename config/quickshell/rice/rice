@@ -6,6 +6,7 @@
 #   rice restart|kill   restart (hypr too) / stop the current one
 #   rice switch <name>  stop the current one, return hypr to its config, start another
 #   rice lock           lock the current shell (keybind, hypridle, power menu)
+#   rice settings       toggle the settings app (the app list's Galaga Settings entry)
 q=$HOME/.config/quickshell
 state=${XDG_STATE_HOME:-$HOME/.local/state}/rice
 cur=$(cat "$state/shell" 2>/dev/null)
@@ -87,5 +88,6 @@ case $1 in
         term "$2"
         exec qs -p "$q/$2" -d ;;
     lock) pgrep -f '^qs .*/lock[.]qml' >/dev/null || exec qs -p "$q/$cur/lock.qml" ;;
-    *) sed -n '2,8s/^# //p' "$0"; exit 1 ;;
+    settings) exec qs -p "$q/$cur" ipc call settings toggle ;;
+    *) sed -n '2,9s/^# //p' "$0"; exit 1 ;;
 esac
