@@ -38,7 +38,7 @@ PACMAN=(
     # Arch -- there is no libspa-0.2-bluetooth package here; a wrong name aborts pacman)
     pipewire pipewire-pulse pipewire-alsa pipewire-audio wireplumber networkmanager bluez bluez-utils power-profiles-daemon
     # utilities called by keybinds and the shell
-    brightnessctl ddcutil playerctl wl-clipboard cliphist grim slurp swappy imagemagick libvips libqalculate
+    brightnessctl ddcutil playerctl wl-clipboard cliphist grim slurp imagemagick libvips libqalculate
     # drives: mounting (udisks2), the file manager's sidebar and phones (gvfs), mounting by itself (udiskie), common formats
     udisks2 gvfs gvfs-mtp gvfs-gphoto2 udiskie ntfs-3g exfatprogs dosfstools
     tesseract tesseract-data-eng zbar # shot: grab text (OCR) + scan QR/barcode

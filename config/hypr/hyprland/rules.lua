@@ -208,10 +208,7 @@ hl.window_rule({
 ---------------------
 
 hl.layer_rule({ match = { namespace = "hyprpicker" }, animation = "fade" })                 -- Colour picker out animation
-hl.layer_rule({ match = { namespace = "logout_dialog" }, animation = "fade" })              -- wlogout
 hl.layer_rule({ match = { namespace = "selection" }, animation = "fade" })                  -- slurp
-hl.layer_rule({ match = { namespace = "wayfreeze" }, animation = "fade" })                  -- wayfreeze
-hl.layer_rule({ match = { namespace = "launcher" }, animation = "popin 80%", blur = true }) -- Fuzzel
 
 -- Shell: all demonshot windows animate themselves (slam), the compositor stays out of it
 hl.layer_rule({ match = { namespace = "demonshot-.*" }, no_anim = true })

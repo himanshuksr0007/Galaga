@@ -196,8 +196,7 @@ hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURC
 hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
 hl.bind("SUPER + SHIFT + M", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
 -- Volume steps: handled by the shell (Sys.stepVol), like brightness -- it unmutes, steps
--- vars.volumeStep up to vars.volumeMax, and ticks. The mute keys above stay wpctl: a toggle,
--- not a level
+-- up to the max, and ticks. The mute keys above stay wpctl: a toggle, not a level
 hl.bind("XF86AudioRaiseVolume", hl.dsp.global("shell:volUp"), { locked = true, repeating = true })
 hl.bind("XF86AudioLowerVolume", hl.dsp.global("shell:volDown"), { locked = true, repeating = true })
 
@@ -211,14 +210,4 @@ hl.bind(
     "CTRL + SHIFT + ALT + V",
     hl.dsp.exec_cmd('sleep 0.5s && ydotool type -d 1 "$(cliphist list | head -1 | cliphist decode)"')
     -- no locked: on the lock screen it would type the last copied thing into the password field for anyone at the laptop
-)
-
--- Testing
-hl.bind(
-    "SUPER + ALT + F12",
-    hl.dsp.exec_cmd(
-        "notify-send -u low -i dialog-information-symbolic 'Test notification' " ..
-        [["Here's a really long message to test truncation and wrapping\nYou can middle click or flick this notification to dismiss it!"]] ..
-        " -a 'Shell' -A 'Test1=I got it!' -A 'Test2=Another action'"
-    )
 )

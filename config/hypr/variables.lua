@@ -72,8 +72,6 @@ return {
     inactiveWindowBorderColour = "rgb(" .. scheme.wine .. ")",
 
     -- Misc
-    volumeStep                 = 5,
-    volumeMax                  = 100,
     cursorTheme                = "Bibata-Modern-Classic",
     cursorSize                 = 23,
     sleepGestureCmd            = "systemctl suspend-then-hibernate || systemctl suspend", -- no hibernation -- regular sleep
@@ -93,13 +91,10 @@ return {
     kbPrevWs                   = "CTRL + SUPER + Left",
 
     -- Window Group
-    kbWindowGroupCycleNext     = "ALT + TAB",
-    kbWindowGroupCyclePrev     = "SHIFT + ALT + TAB",
     kbUngroup                  = "SUPER + U",
     kbToggleGroup              = "SUPER + Comma",
 
     -- Window Action
-    kbMoveWindow               = "SUPER + Z",
     kbResizeWindow             = "SUPER + X",
     kbWindowPip                = "SUPER + ALT + backslash",
     kbPinWindow                = "SUPER + SHIFT + P", -- Super+P -- vpn panel

@@ -10,7 +10,7 @@ hl.config({
             border_locked_inactive = vars.inactiveWindowBorderColour,
         },
         groupbar = {
-            font_family               = "Grenze Gotisch",
+            font_family               = "Space Grotesk",
             font_size                 = 15,
             gradients                 = true,
             gradient_round_only_edges = false,
