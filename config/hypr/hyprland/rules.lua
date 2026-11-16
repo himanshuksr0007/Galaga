@@ -189,6 +189,19 @@ hl.window_rule({
     match = { class = ownButtonsNoBar }, -- every entry anchored on its own -- see the note at the list
     ["hyprbars:no_bar"] = _G.GALAGA_HYPRBARS or nil,
 })
+-- The same grant once more, asserted on every fullscreen change. The rule
+-- applicator folds the masks of every rule that ever set a prop into that
+-- prop's entry: once the fullscreen rule above has fired for a window (a
+-- maximise counts), the no_bar entry carries the fullscreen bit, and the
+-- next fullscreen change erases the entry -- while only rules whose own
+-- masks touch fullscreen are re-run, so neither grant above is re-applied
+-- and the bar appears on restore and stays (Firefox, after its own
+-- maximise button, twice). This rule's mask touches fullscreen, so it is
+-- re-run on exactly those changes and puts the grant back in the same pass.
+hl.window_rule({
+    match = { class = ownButtonsNoBar, fullscreen = false },
+    ["hyprbars:no_bar"] = _G.GALAGA_HYPRBARS or nil,
+})
 
 ---------------------
 ---- Layer rules ----
