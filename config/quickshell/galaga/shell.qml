@@ -76,6 +76,7 @@ ShellRoot {
     LazyLoader { active: !Theme.state.welcomed; Welcome {} } // the first-login card; the features page brings it back
     readonly property bool autoGame: Game.on // starts services/Game: a fullscreen game turns on game mode and dnd
     readonly property bool autoPower: PowerAuto.on // starts services/PowerAuto: battery saver on battery, by itself (settings -> battery)
+    readonly property bool shakeOn: Shake.on // starts services/Shake: aero shake parks a shaken window's neighbours (settings -> features)
     // starts services/Sounds (its players preload) and keeps it quiet while a game is fullscreen
     Binding { target: Sounds; property: "gameQuiet"; value: Game.playing }
     Walls { id: walls }
