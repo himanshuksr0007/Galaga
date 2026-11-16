@@ -611,14 +611,16 @@ Singleton {
         adopt();
     }
 
-    // ---- arrange on open: a window that opens beside a lone window
-    // filling the screen does not land on top of it or behind it -- the
-    // two are placed side by side and grouped, the arrangement a person
-    // would otherwise make by hand. The tiler's own splits are left
-    // alone: there the first window stops filling the screen the moment
-    // the second one lands, so the test below simply never matches.
-    // Dialogs and tools stay out: a small floating window is doing what
-    // it was told, and a fullscreen window is left to its fullscreen.
+    // ---- arrange on open: a window that opens onto a workspace whose
+    // windows already fill the screen does not land behind them or on top
+    // of them -- it joins the arrangement, and the whole set is laid out
+    // again for its new count: two windows side by side, three in
+    // columns, four in a grid (the drop arrangement's own layouts). The
+    // windows already there keep their left-to-right order; the new one
+    // takes the last space. A lone snapped window keeps its space and the
+    // new window takes the complement. Dialogs and tools stay out: a
+    // small floating window is doing what it was told, and a true
+    // fullscreen window is left to its fullscreen.
     function openArrange() {
         if (!Theme.state.snap || !Theme.state.snapOpen || popOpen || DragWatch.dragging || dragT) return;
         const nowMs = Date.now();
@@ -627,38 +629,55 @@ Singleton {
             const age = nowMs - (seenAt[addr] ?? 0);
             if (age > 3000) continue; // an opening is acted on while it is one
             const n = client(addr);
-            if (!n || recs[addr] || (n.fullscreen ?? 0) > 0 || n.workspace.id < 0) continue;
+            if (!n || recs[addr] || (n.fullscreen ?? 0) === 2 || n.workspace.id < 0) continue;
             if ((n.class ?? "") === "org.quickshell") continue; // the shell's own windows float by rule
             const ws = n.workspace.id;
-            const others = (snapC ?? []).filter(c => c.workspace.id === ws && c.address !== addr);
-            if (others.length !== 1) continue;
-            const o = others[0];
-            if (groupOf(o.address)) continue;
-            if ((o.fullscreen ?? 0) > 0 || (o.class ?? "") === "org.quickshell") continue;
-            // the partner must be settled, not itself an opening -- a
-            // window under 1.5 s old is still arriving (a window here since
-            // the shell started counts as settled at any age). While either
-            // side is still arriving, look again shortly: candidacy runs on
-            // the stamp's age, not on the pass that stamped it, so the
-            // deferred look still finds the window an opening.
-            if (!bootSeen[o.address] && nowMs - (seenAt[o.address] ?? 0) < 1500) { openT.restart(); continue; }
-            const mon = monOf(o);
+            const others = (snapC ?? []).filter(c => c.workspace.id === ws && c.address !== addr
+                && (c.class ?? "") !== "org.quickshell" && (c.fullscreen ?? 0) !== 2);
+            if (others.length < 1 || others.length > 3) continue;
+            const mon = monOf(n);
             if (!mon) continue;
             const wa = workarea(mon);
-            // the lone window fills the screen -- a snap maximise, a hand
-            // maximise, the tiler's single tile. Anything less is a
-            // deliberate float and stays exactly as it is.
-            if (!rectEq(rectOf(o), zoneRect(zf.MAX, wa), 10)) continue;
             const nr = rectOf(n);
-            if (n.floating && nr.w * nr.h < 0.8 * wa.w * wa.h) continue;
+            if (n.floating && nr.w * nr.h < 0.8 * wa.w * wa.h) continue; // a dialog, not a window joining
+            // what is already there must be a full-screen arrangement the
+            // new window joins: snapped windows (records) whose spaces
+            // together fill the screen, or the lone window filling it --
+            // a snap maximise, a hand maximise, the tiler's single tile.
+            // A partner still arriving defers the look; a deliberate float
+            // ends it, and the window is raised instead (openRaise).
+            let area = 0, joinable = true;
+            for (const o of others) {
+                if (recs[o.address]) { const r = recs[o.address].rect; area += r.w * r.h; continue; }
+                if (others.length === 1 && (rectEq(rectOf(o), zoneRect(zf.MAX, wa), 10) || rectEq(rectOf(o), wa, 10))) { area = wa.w * wa.h; continue; }
+                if (!bootSeen[o.address] && nowMs - (seenAt[o.address] ?? 0) < 1500) openT.restart();
+                joinable = false; break;
+            }
+            if (!joinable) continue;
+            if (others.length > 1 && area < 0.9 * wa.w * wa.h) continue;
             // a new window's first geometry is not always its settled one
             // (a browser restoring its size, a slow first map): give it a
             // moment, then look again with a fresh fetch
             if (age < 600) { openT.restart(); continue; }
-            place(o.address, placedRect(o.address, zf.L, wa), "L");
-            place(addr, placedRect(addr, zf.R, wa), "R");
+            // a maximised window -- its own maximise button, an app that
+            // opens maximised -- is placed like any other: place() only
+            // clears true fullscreen, so clear the maximise first
+            for (const c of others.concat([n]))
+                if ((c.fullscreen ?? 0) === 1)
+                    dsp(`hl.dsp.window.fullscreen({ mode = "maximized", action = "off", window = "address:${c.address}" })`);
+            if (others.length === 1 && recs[others[0].address]) {
+                const comp = complements(recs[others[0].address].zone);
+                if (comp.length === 1 && zf[comp[0]]) {
+                    place(addr, placedRect(addr, zf[comp[0]], wa), comp[0]);
+                    regroupWs(ws);
+                    return;
+                }
+            }
+            const set = others.slice().sort((p, q) => (p.at[0] - q.at[0]) || (p.at[1] - q.at[1])).map(x => x.address).concat([addr]);
+            const zones = set.length === 2 ? layouts[0].zones : set.length === 3 ? layouts[2].zones : layouts[3].zones;
+            set.forEach((a, k) => place(a, placedRect(a, zones[k].f, wa), zones[k].zone));
             regroupWs(ws);
-            return; // one pair per pass; another new window gets the next
+            return; // one arrangement per pass; another new window gets the next
         }
     }
 
