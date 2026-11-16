@@ -56,6 +56,13 @@ ShellRoot {
     } }
     function openSettings(page) { settingsL.active = true; settingsL.item.open(page); }
     function toggleSettings() { settingsL.active = true; settingsL.item.toggle(); }
+    // charms loads on first open, not at shell start: its data file (charms.js,
+    // ~116 KB of emoji, kaomoji and symbols) otherwise parses on every login
+    // for a picker most sessions never open. Unlike settings it then stays
+    // loaded -- it holds no processes or timers, and re-parsing per open
+    // would trade the saving away
+    LazyLoader { id: charmsL; Charms {} }
+    function toggleCharms() { charmsL.active = true; charmsL.item.toggle(); }
     // the app list's Galaga Settings entry runs `rice settings`, which
     // lands here -- scripts reach the shell over qs ipc (altf4.sh and
     // minimise.sh do the same)
@@ -78,7 +85,6 @@ ShellRoot {
     Buds {}
     Cal { id: cal }
     Clip { id: clip }
-    Charms { id: charms }
     Deck { id: deck }
     DropDeck {}
     Desktops { id: desktops }
@@ -240,7 +246,7 @@ ShellRoot {
     Shortcut { name: "editshot"; description: "edit the last screenshot"; onPressed: shot.editLast() }
     Shortcut { name: "pact"; description: "vpn: clash verge"; onPressed: vpn.toggle() }
     Shortcut { name: "clip"; description: "clipboard"; onPressed: clip.toggle() }
-    Shortcut { name: "charms"; description: "emoji, kaomoji, symbols"; onPressed: charms.toggle() }
+    Shortcut { name: "charms"; description: "emoji, kaomoji, symbols"; onPressed: shell.toggleCharms() }
     Shortcut { name: "wall"; description: "wallpapers"; onPressed: walls.toggle() }
     Shortcut { name: "game"; description: "game mode"; onPressed: Rules.store.game = !Rules.store.game }
 
