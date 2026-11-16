@@ -9,10 +9,10 @@ import qs.services
 // the settings app: a real window in the shell's clothes. Self-drawn mac discs in the
 // header (the window is org.quickshell, so hyprbars leaves it alone -- rules.lua). The
 // minimise and fullscreen discs act on this window, the focused one, through the same
-// hyprctl dispatchers the title bars use; the close disc instead hides the window
-// itself -- a compositor close destroys the surface, and a destroyed surface cannot
-// be shown again this session. Sidebar + pages; every page lives in its own file
-// beside this one.
+// hyprctl dispatchers the title bars use. The close disc calls close(), and closing
+// is a real close: the shell unloads the whole app (see shell.qml), so a closed
+// settings holds nothing and opening it builds it fresh, like any other app.
+// Sidebar + pages; every page lives in its own file beside this one.
 FloatingWindow {
     id: win
 
@@ -21,11 +21,6 @@ FloatingWindow {
     height: 780
     color: Theme.bg
     visible: false
-    // a close from outside (alt+f4, the close bind) destroys the surface but leaves
-    // visible reading true, so toggle() would "close" a window that is already gone
-    // and the app could never reopen. closed() is not sent for visible = false,
-    // so syncing the intent here cannot loop.
-    onClosed: visible = false
 
     property string page: "about"
     property string query: ""
@@ -33,6 +28,7 @@ FloatingWindow {
     property real t: visible ? 1 : 0
     signal wallRequested
     signal vpnRequested
+    signal closeRequested
 
     Behavior on t { NumberAnimation { duration: Theme.t; easing { type: Easing.Bezier; bezierCurve: Theme.glide } } }
 
@@ -68,6 +64,7 @@ FloatingWindow {
     function close() {
         visible = false;
         Sounds.play("pop");
+        closeRequested();
     }
     function toggle() { visible ? close() : open(); }
     function select(p) {

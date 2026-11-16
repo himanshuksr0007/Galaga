@@ -4,6 +4,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 import "app"
 import "bar"
 import "buds"
@@ -40,13 +41,28 @@ ShellRoot {
     BtMenu { id: btMenu; onSettingsRequested: shell.openSettings("bt") }
     WifiMenu { id: wifiMenu; onSettingsRequested: shell.openSettings("wifi") }
     // the settings app loads on first use, not at shell start: it is the
-    // biggest object tree in the shell and most sessions never open it. Once
-    // loaded it stays loaded -- page memory and open state behave exactly as
-    // when it was instantiated eagerly.
+    // biggest object tree in the shell and most sessions never open it.
+    // Closing it unloads it again -- the app asks out, the loader drops it
+    // once the call has unwound, and the next open builds it fresh, like
+    // any other app. A close from outside (alt+f4, the close bind) reaches
+    // the window's own closed signal and unloads it the same way, so no
+    // half-open state can wedge the app shut for the rest of the session.
     Power { id: power }
-    LazyLoader { id: settingsL; Settings { onWallRequested: walls.open(); onVpnRequested: vpn.toggle() } }
+    LazyLoader { id: settingsL; Settings {
+        onWallRequested: walls.open()
+        onVpnRequested: vpn.toggle()
+        onCloseRequested: Qt.callLater(() => { if (settingsL.item && !settingsL.item.visible) settingsL.active = false; })
+        onClosed: Qt.callLater(() => settingsL.active = false)
+    } }
     function openSettings(page) { settingsL.active = true; settingsL.item.open(page); }
     function toggleSettings() { settingsL.active = true; settingsL.item.toggle(); }
+    // the app list's Galaga Settings entry runs `rice settings`, which
+    // lands here -- scripts reach the shell over qs ipc (altf4.sh and
+    // minimise.sh do the same)
+    IpcHandler {
+        target: "settings"
+        function toggle(): string { shell.toggleSettings(); return "ok"; }
+    }
     // a hot corner fired (quick/Corners.qml): the action ids are the ones
     // settings -> desktop & deck offers
     function cornerAct(a) {
