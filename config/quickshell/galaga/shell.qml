@@ -157,7 +157,7 @@ ShellRoot {
         // only picks light or dark within it (a palette without a pair keeps its own theme)
         if (want !== Theme.light) Theme.setLight(want);
     }
-    Timer { interval: 30000; repeat: true; running: true; onTriggered: shell.autoTheme() }
+    Timer { interval: 30000; repeat: true; running: Theme.state.themeMode === 1; onTriggered: shell.autoTheme() }
     // what lives in the hypr config. It re-reads it itself: save any hypr file (the links are live -- both git pull and branch
     // switch), hyprctl reload -- and it returns the variables.lua defaults: demonshot borders, monitor, input, animations. We apply
     // ours again. hyprctl eval does not send configreloaded -- no loop. Night light and hypridle -- their own processes, reload does not touch them

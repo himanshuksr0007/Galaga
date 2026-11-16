@@ -33,7 +33,7 @@ PanelWindow {
     // the way out -- a Binding here used to own Cava.active outright
     readonly property string cavaKey: "home:" + (root.screen?.name ?? "?")
     // shell performance lite: the matrix stands down too -- cava then has no consumers and stops
-    readonly property bool cavaWant: Theme.state.homeBento && !Theme.perfLite && root.homes.some(s => Theme.scr(s.name, "widgets").includes("cava"))
+    readonly property bool cavaWant: Theme.state.homeBento && !Theme.perfLite && Media.playing && root.homes.some(s => Theme.scr(s.name, "widgets").includes("cava"))
     onCavaWantChanged: Cava.use(cavaKey, cavaWant)
     Component.onCompleted: Cava.use(cavaKey, cavaWant)
     Component.onDestruction: Cava.use(cavaKey, false)

@@ -109,22 +109,26 @@ Singleton {
     readonly property string layout: kbd.slice(0, 2).toLowerCase() // "English (US)" → en
 
     // ---- recording and airplane mode: hypr keybinds toggle them too, hence polling. Night light -- shared with demonshot, in its rules.json
-    // ponytail: pgrep on the shell's check cadence (Theme.sysPollMs); if it becomes noticeable -- watch processes via systemd-run --scope ----
+    // the two halves poll apart: the recorder check is one pgrep on the shell's check cadence
+    // (Theme.sysPollMs) -- no shell, no pipeline; the rfkill state only changes when someone
+    // toggles it (our own toggleAir sets it at once), so it rides a slow beat of its own and
+    // Quick asks for a fresh read when it opens (pollAir)
     property bool rec: false
     readonly property bool night: Rules.store.night
     property bool air: false
     Process {
-        id: poll
-        command: ["sh", "-c", "pgrep -f '^gpu-screen-recorder' >/dev/null && echo rec; "
-                            + "rfkill -rno SOFT | grep -qv '^blocked' || echo air"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                root.rec = text.includes("rec");
-                root.air = text.includes("air");
-            }
-        }
+        id: recPoll
+        command: ["pgrep", "-f", "^gpu-screen-recorder"]
+        stdout: StdioCollector { onStreamFinished: root.rec = text.trim().length > 0 }
     }
-    Timer { running: true; repeat: true; interval: Theme.sysPollMs; triggeredOnStart: true; onTriggered: poll.running = true }
+    Timer { running: true; repeat: true; interval: Theme.sysPollMs; triggeredOnStart: true; onTriggered: recPoll.running = true }
+    Process {
+        id: airPoll
+        command: ["sh", "-c", "rfkill -rno SOFT | grep -qv '^blocked' || echo air"]
+        stdout: StdioCollector { onStreamFinished: root.air = text.includes("air") }
+    }
+    Timer { running: true; repeat: true; interval: 15000; triggeredOnStart: true; onTriggered: airPoll.running = true }
+    function pollAir() { if (!airPoll.running) airPoll.running = true; }
 
     function sh(c) { Quickshell.execDetached(["sh", "-c", c]); }
     // recording settings from Theme.state (quick/Rec) -> gpu-screen-recorder flags; the screenshot tool takes them too

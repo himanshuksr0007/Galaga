@@ -86,8 +86,11 @@ Singleton {
     property int ddcWant: -1        // what to set, -1 -- nothing
     property real ddcSetAt: 0       // when the last write went: reading right after it isn't possible
     Timer {
+        // a backstop only: the one reader of ddc (quick's brightness slider) asks for a
+        // fresh read when it opens (ddcRefreshSoon), so the standing read can afford a
+        // slow beat -- a getvcp call is hundreds of ms of i2c on a real monitor
         running: !!root.ddcBus
-        interval: Theme.ddcMs
+        interval: 60000
         repeat: true
         onTriggered: root.ddcRead()
     }

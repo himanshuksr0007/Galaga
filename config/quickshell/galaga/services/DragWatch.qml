@@ -131,10 +131,13 @@ Singleton {
         }
     }
     Timer {
+        // the presence check only has something to prove while the plugin is
+        // believed present: if it is unloaded, one check clears alive and the
+        // timer stops with it; if it is loaded later, its first event is what
+        // latches alive (and restarts this) -- the sampling world runs either way
         interval: 15000
         repeat: true
-        running: true
-        triggeredOnStart: true
+        running: root.alive
         onTriggered: if (!plist.running) plist.running = true
     }
 
