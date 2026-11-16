@@ -104,7 +104,8 @@ Singleton {
     // arrange-on-open bookkeeping: when each address was first seen, and
     // which addresses the current observe pass is seeing for the first time
     property var seenAt: ({})
-    property var freshNow: []
+    property var bootSeen: ({}) // windows already here at the shell's first pass
+    property bool bootDone: false
 
     Process {
         id: pc
@@ -545,18 +546,19 @@ Singleton {
 
     function observe() {
         if (!snapC) return;
-        // who is new: stamp first sightings, forget the closed. A window
-        // first seen in this same pass can be arranged but can never be
-        // the lone window it pairs with, so a shell start -- where every
-        // window is new at once -- rearranges nothing.
+        // who is new: stamp first sightings, forget the closed. Windows
+        // already here at the first pass are marked bootSeen and are never
+        // treated as openings, so a shell start -- where every window is
+        // first seen at once -- rearranges nothing.
         const nowMs = Date.now();
         const aliveNow = {};
-        freshNow = [];
         for (const c of snapC) {
             aliveNow[c.address] = true;
-            if (!(c.address in seenAt)) { seenAt[c.address] = nowMs; freshNow.push(c.address); }
+            if (!(c.address in seenAt)) seenAt[c.address] = nowMs;
         }
         for (const a in seenAt) if (!aliveNow[a]) delete seenAt[a];
+        if (!bootDone) { for (const a in seenAt) bootSeen[a] = true; bootDone = true; }
+        for (const a in bootSeen) if (!aliveNow[a]) delete bootSeen[a];
         const touched = {};
         // the pass reads the records as they were when it started:
         // linkedResize writes a mate's new rect into the live records
@@ -605,6 +607,7 @@ Singleton {
         }
         for (const ws in touched) regroupWs(Number(ws));
         openArrange();
+        openRaise();
         adopt();
     }
 
@@ -618,7 +621,11 @@ Singleton {
     // it was told, and a fullscreen window is left to its fullscreen.
     function openArrange() {
         if (!Theme.state.snap || !Theme.state.snapOpen || popOpen || DragWatch.dragging || dragT) return;
-        for (const addr of freshNow) {
+        const nowMs = Date.now();
+        for (const addr of Object.keys(seenAt)) {
+            if (bootSeen[addr]) continue; // here since the shell started: not an opening
+            const age = nowMs - (seenAt[addr] ?? 0);
+            if (age > 3000) continue; // an opening is acted on while it is one
             const n = client(addr);
             if (!n || recs[addr] || (n.fullscreen ?? 0) > 0 || n.workspace.id < 0) continue;
             if ((n.class ?? "") === "org.quickshell") continue; // the shell's own windows float by rule
@@ -626,8 +633,15 @@ Singleton {
             const others = (snapC ?? []).filter(c => c.workspace.id === ws && c.address !== addr);
             if (others.length !== 1) continue;
             const o = others[0];
-            if (freshNow.includes(o.address) || groupOf(o.address)) continue;
+            if (groupOf(o.address)) continue;
             if ((o.fullscreen ?? 0) > 0 || (o.class ?? "") === "org.quickshell") continue;
+            // the partner must be settled, not itself an opening -- a
+            // window under 1.5 s old is still arriving (a window here since
+            // the shell started counts as settled at any age). While either
+            // side is still arriving, look again shortly: candidacy runs on
+            // the stamp's age, not on the pass that stamped it, so the
+            // deferred look still finds the window an opening.
+            if (!bootSeen[o.address] && nowMs - (seenAt[o.address] ?? 0) < 1500) { openT.restart(); continue; }
             const mon = monOf(o);
             if (!mon) continue;
             const wa = workarea(mon);
@@ -640,11 +654,40 @@ Singleton {
             // a new window's first geometry is not always its settled one
             // (a browser restoring its size, a slow first map): give it a
             // moment, then look again with a fresh fetch
-            if (Date.now() - (seenAt[addr] ?? 0) < 600) { openT.restart(); continue; }
+            if (age < 600) { openT.restart(); continue; }
             place(o.address, placedRect(o.address, zf.L, wa), "L");
             place(addr, placedRect(addr, zf.R, wa), "R");
             regroupWs(ws);
             return; // one pair per pass; another new window gets the next
+        }
+    }
+
+    // a window that opens where snapped windows already fill the screen
+    // lands in the tiler's layer, underneath them -- open and focused, but
+    // invisible. When no pairing took it, float it instead, so it opens on
+    // top of them where it can be seen (and snapped, if wanted).
+    function openRaise() {
+        if (!Theme.state.snap || popOpen || DragWatch.dragging || dragT) return;
+        const nowMs = Date.now();
+        for (const addr of Object.keys(seenAt)) {
+            if (bootSeen[addr] || recs[addr]) continue;
+            if (nowMs - (seenAt[addr] ?? 0) > 3000) continue;
+            const n = client(addr);
+            if (!n || n.floating || (n.fullscreen ?? 0) > 0 || n.workspace.id < 0) continue;
+            if ((n.class ?? "") === "org.quickshell") continue;
+            const nr = rectOf(n);
+            let cover = 0;
+            for (const a of Object.keys(recs)) {
+                if (recs[a].ws !== n.workspace.id) continue;
+                const r = recs[a].rect;
+                const ox = Math.max(0, Math.min(nr.x + nr.w, r.x + r.w) - Math.max(nr.x, r.x));
+                const oy = Math.max(0, Math.min(nr.y + nr.h, r.y + r.h) - Math.max(nr.y, r.y));
+                cover += ox * oy;
+            }
+            if (cover < 0.5 * nr.w * nr.h) continue;
+            dsp(floatStr(addr, true));
+            dsp(`hl.dsp.focus({ window = "address:${addr}" })`);
+            guard();
         }
     }
 
