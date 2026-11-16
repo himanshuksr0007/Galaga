@@ -101,6 +101,10 @@ Singleton {
     property bool haveM: false
     property bool haveA: false
     property var pendingAct: null
+    // arrange-on-open bookkeeping: when each address was first seen, and
+    // which addresses the current observe pass is seeing for the first time
+    property var seenAt: ({})
+    property var freshNow: []
 
     Process {
         id: pc
@@ -213,6 +217,13 @@ Singleton {
         repeat: true
         triggeredOnStart: true
         running: Theme.state.snap && Object.keys(root.groups).length === 0
+        onTriggered: if (!root.fetching && !root.pendingAct) root.fetch(null)
+    }
+    // a window that might pair on open gets one more look once it has had
+    // a moment to settle into its first geometry (see openArrange)
+    Timer {
+        id: openT
+        interval: 650
         onTriggered: if (!root.fetching && !root.pendingAct) root.fetch(null)
     }
 
@@ -511,6 +522,18 @@ Singleton {
 
     function observe() {
         if (!snapC) return;
+        // who is new: stamp first sightings, forget the closed. A window
+        // first seen in this same pass can be arranged but can never be
+        // the lone window it pairs with, so a shell start -- where every
+        // window is new at once -- rearranges nothing.
+        const nowMs = Date.now();
+        const aliveNow = {};
+        freshNow = [];
+        for (const c of snapC) {
+            aliveNow[c.address] = true;
+            if (!(c.address in seenAt)) { seenAt[c.address] = nowMs; freshNow.push(c.address); }
+        }
+        for (const a in seenAt) if (!aliveNow[a]) delete seenAt[a];
         const touched = {};
         // the pass reads the records as they were when it started:
         // linkedResize writes a mate's new rect into the live records
@@ -558,7 +581,48 @@ Singleton {
             }
         }
         for (const ws in touched) regroupWs(Number(ws));
+        openArrange();
         adopt();
+    }
+
+    // ---- arrange on open: a window that opens beside a lone window
+    // filling the screen does not land on top of it or behind it -- the
+    // two are placed side by side and grouped, the arrangement a person
+    // would otherwise make by hand. The tiler's own splits are left
+    // alone: there the first window stops filling the screen the moment
+    // the second one lands, so the test below simply never matches.
+    // Dialogs and tools stay out: a small floating window is doing what
+    // it was told, and a fullscreen window is left to its fullscreen.
+    function openArrange() {
+        if (!Theme.state.snap || !Theme.state.snapOpen || popOpen || DragWatch.dragging || dragT) return;
+        for (const addr of freshNow) {
+            const n = client(addr);
+            if (!n || recs[addr] || (n.fullscreen ?? 0) > 0 || n.workspace.id < 0) continue;
+            if ((n.class ?? "") === "org.quickshell") continue; // the shell's own windows float by rule
+            const ws = n.workspace.id;
+            const others = (snapC ?? []).filter(c => c.workspace.id === ws && c.address !== addr);
+            if (others.length !== 1) continue;
+            const o = others[0];
+            if (freshNow.includes(o.address) || groupOf(o.address)) continue;
+            if ((o.fullscreen ?? 0) > 0 || (o.class ?? "") === "org.quickshell") continue;
+            const mon = monOf(o);
+            if (!mon) continue;
+            const wa = workarea(mon);
+            // the lone window fills the screen -- a snap maximise, a hand
+            // maximise, the tiler's single tile. Anything less is a
+            // deliberate float and stays exactly as it is.
+            if (!rectEq(rectOf(o), zoneRect(zf.MAX, wa), 10)) continue;
+            const nr = rectOf(n);
+            if (n.floating && nr.w * nr.h < 0.8 * wa.w * wa.h) continue;
+            // a new window's first geometry is not always its settled one
+            // (a browser restoring its size, a slow first map): give it a
+            // moment, then look again with a fresh fetch
+            if (Date.now() - (seenAt[addr] ?? 0) < 600) { openT.restart(); continue; }
+            place(o.address, zoneRect(zf.L, wa), "L");
+            place(addr, zoneRect(zf.R, wa), "R");
+            regroupWs(ws);
+            return; // one pair per pass; another new window gets the next
+        }
     }
 
     // ---- adoption: a setup is understood from its geometry, not from
