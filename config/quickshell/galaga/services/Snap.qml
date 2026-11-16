@@ -1021,13 +1021,14 @@ Singleton {
         const mate = members.find(m => m !== addr);
         const mr = recs[mate];
         if (!mr) return;
-        const a = rec.rect, b = mr.rect, gi = Rules.store.gapsIn;
-        let union = null;
-        if (shareV(a, b)) union = { x: a.x, y: a.y, w: a.w + gi + b.w, h: a.h };
-        else if (shareV(b, a)) union = { x: b.x, y: b.y, w: b.w + gi + a.w, h: b.h };
-        else if (shareH(a, b)) union = { x: a.x, y: a.y, w: a.w, h: a.h + gi + b.h };
-        else if (shareH(b, a)) union = { x: b.x, y: b.y, w: b.w, h: b.h + gi + a.h };
-        if (!union) return;
+        const a = rec.rect, b = mr.rect;
+        if (!shareV(a, b) && !shareV(b, a) && !shareH(a, b) && !shareH(b, a)) return;
+        // the space the pair tiles is the two rects' own union -- never one
+        // window's top and height: in a mixed pair the bar window starts 32
+        // lower, and a mate filling the space must not inherit that offset
+        // (a dragged kitty left Firefox maximised under a 32 gap)
+        const ux = Math.min(a.x, b.x), uy = Math.min(a.y, b.y);
+        const union = { x: ux, y: uy, w: Math.max(a.x + a.w, b.x + b.w) - ux, h: Math.max(a.y + a.h, b.y + b.h) - uy };
         dragFill = { mate: mate, rect: { x: b.x, y: b.y, w: b.w, h: b.h }, zone: mr.zone };
         place(mate, union, mr.zone);
     }
