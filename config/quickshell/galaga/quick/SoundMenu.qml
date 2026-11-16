@@ -58,9 +58,13 @@ PanelWindow {
     // playback streams, for the mixer on the first page: an app playing
     // right now. Capture streams carry the other media class and stay
     // out -- this is playback only. The tracker is what makes each
-    // stream's volume and mute live and writable
+    // stream's volume and mute live and writable -- and the filter must
+    // not test n.audio to find them: an unbound node has no audio iface
+    // yet, so that test keeps every stream out and the tracker binds
+    // nothing (the section simply never appeared). Registry facts only
+    // (isStream, the media class); binding is the tracker's business.
     readonly property var streams: Pipewire.nodes.values
-        .filter(n => n.isStream && n.audio && n.properties?.["media.class"] === "Stream/Output/Audio")
+        .filter(n => n.isStream && n.properties?.["media.class"] === "Stream/Output/Audio")
         .sort((a, b) => root.appName(a).localeCompare(root.appName(b)))
     PwObjectTracker { objects: root.streams }
     function appName(n) { return n.properties?.["application.name"] || n.description || n.name; }
@@ -299,7 +303,7 @@ PanelWindow {
 
                         // not the output right now -- one tap makes it so (through Eq, like the rows)
                         Rectangle {
-                            visible: !!root.dev && Pipewire.defaultAudioSink !== root.dev && Eq.engaged !== root.dev
+                            visible: !!root.dev && Pipewire.defaultAudioSink !== root.dev && !(Pipewire.defaultAudioSink === Eq.node && Eq.engaged === root.dev)
                             width: parent.width
                             height: 46
                             radius: Theme.corner(23)

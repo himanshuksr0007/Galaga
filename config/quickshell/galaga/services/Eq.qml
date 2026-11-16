@@ -83,8 +83,12 @@ Singleton {
     // eq on -- the chain in front, eq off -- the device itself
     function pick(dev) {
         if (!dev || dev === node) return;
-        if (alive && store(dev.name).on) engage(dev);
-        else Pipewire.preferredDefaultAudioSink = dev;
+        if (alive && store(dev.name).on) { engage(dev); return; }
+        // a plain pick: the chain steps aside entirely -- it does not
+        // keep feeding the previous device in the background, so exactly
+        // one output is ever the output
+        if (feedFor) { dropLinks(); feedFor = ""; }
+        Pipewire.preferredDefaultAudioSink = dev;
     }
 
     function engage(dev) {

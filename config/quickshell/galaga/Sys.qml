@@ -55,10 +55,12 @@ Singleton {
     // only seeds the list: what is already connected at shell start is
     // a state, not a connection, and a shell restart must not yank the
     // output away from where the user left it ----
-    readonly property var btOuts: Pipewire.nodes.values.filter(n => n.isSink && n.audio && !n.isStream && /^bluez_output/.test(n.name))
+    readonly property var btOuts: Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && /^bluez_output/.test(n.name))
     property var btOutNames: null
     property string homeSink: ""
-    readonly property var effOut: Eq.engaged ?? (sink && sink !== Eq.node ? sink : null)
+    // the output sound actually comes out of: the device the chain feeds
+    // when the chain is the default, the default itself otherwise
+    readonly property var effOut: sink === Eq.node ? Eq.engaged : sink
     onEffOutChanged: if (effOut && !/^bluez_output/.test(effOut.name)) homeSink = effOut.name
     onBtOutsChanged: btAuto()
     function btAuto() {
@@ -74,7 +76,7 @@ Singleton {
         }
         if (!gone.length) return;
         if (effOut && /^bluez_output/.test(effOut.name)) return; // another bluetooth device still has the output
-        const rest = Pipewire.nodes.values.filter(n => n.isSink && n.audio && !n.isStream && n !== Eq.node && !/^bluez_output/.test(n.name));
+        const rest = Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && n !== Eq.node && !/^bluez_output/.test(n.name));
         const home = rest.find(n => n.name === homeSink)
                   ?? rest.find(n => !/^raop_sink/.test(n.name) && !/\.usb-/.test(n.name) && !/HDMI/.test(n.name))
                   ?? rest[0];

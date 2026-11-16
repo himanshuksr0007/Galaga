@@ -38,7 +38,7 @@ Rectangle {
     // unplugged HDMI ports stay as sinks; only a connected one carries the monitor's name (ELD) as its nick.
     // ponytail: a monitor that reports no name hides as unplugged
     readonly property var outs: Pipewire.nodes.values
-        .filter(n => n.isSink && n.audio && !n.isStream && n.name !== "galaga-eq" && !/^HDMI \d+$/.test(n.nickname))
+        .filter(n => n.isSink && !n.isStream && n.name !== "galaga-eq" && !/^HDMI \d+$/.test(n.nickname))
         .sort((a, b) => kind(a)[2] - kind(b)[2] || name(a).localeCompare(name(b)))
 
     visible: t > 0
@@ -67,7 +67,13 @@ Rectangle {
                 id: row
                 required property var modelData
                 readonly property var o: modelData
-                readonly property bool on: Pipewire.defaultAudioSink === o || Eq.engaged === o
+                // the one output sound actually comes out of: the device
+                // itself when it is the default, or the device the chain
+                // feeds when the chain is the default. Eq.engaged alone
+                // does not make a row "on" -- the chain can still be
+                // feeding a device the default has since left, and that
+                // device is not the output (both rows lit up as default).
+                readonly property bool on: Pipewire.defaultAudioSink === o || (Pipewire.defaultAudioSink === Eq.node && Eq.engaged === o)
                 readonly property var k: root.kind(o)
                 width: list.width
                 height: 56
