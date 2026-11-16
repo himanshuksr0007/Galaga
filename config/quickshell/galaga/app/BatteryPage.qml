@@ -48,7 +48,6 @@ Item {
         Rules.checkPower();
         if (!healthProc.running) healthProc.running = true;
     }
-    Component.onCompleted: { if (!healthProc.running) healthProc.running = true; }
 
     Process {
         id: healthProc

@@ -111,7 +111,6 @@ Item {
 
     function detect() { if (!detProc.running) detProc.running = true; }
     onActiveChanged: if (active) detect()
-    Component.onCompleted: detect()
 
     Process {
         id: detProc

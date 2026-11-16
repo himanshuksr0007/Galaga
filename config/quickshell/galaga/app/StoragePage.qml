@@ -74,7 +74,6 @@ Item {
         if (!cacheProc.running) cacheProc.running = true;
     }
     onActiveChanged: if (active) refresh()
-    Component.onCompleted: refresh()
 
     Process {
         id: volProc

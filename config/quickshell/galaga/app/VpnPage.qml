@@ -39,7 +39,6 @@ Item {
         if (!actProc.running) actProc.running = true;
     }
     onActiveChanged: if (active) refresh()
-    Component.onCompleted: refresh()
 
     Process {
         id: conProc

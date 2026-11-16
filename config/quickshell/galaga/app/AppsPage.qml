@@ -85,7 +85,6 @@ Item {
         else if (haveFlat === true && !flProc.running) flProc.running = true;
     }
     onActiveChanged: if (active) refresh()
-    Component.onCompleted: refresh()
 
     Process {
         id: qeProc

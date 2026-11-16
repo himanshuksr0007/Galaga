@@ -37,7 +37,6 @@ Item {
         if (!zones.length && !zoneProc.running) zoneProc.running = true;
     }
     onActiveChanged: if (active) refresh()
-    Component.onCompleted: refresh()
 
     Process {
         id: hostProc
@@ -67,7 +66,7 @@ Item {
     }
     Timer { id: reread; interval: 1000; onTriggered: pg.refresh() }
 
-    SystemClock { id: clock; precision: SystemClock.Seconds }
+    SystemClock { id: clock; enabled: pg.active; precision: SystemClock.Seconds }
 
     Flickable {
         anchors.fill: parent

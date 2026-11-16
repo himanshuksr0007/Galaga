@@ -82,7 +82,6 @@ Item {
         if (!pg.term && !termProc.running) termProc.running = true;
     }
     onActiveChanged: if (active) refresh()
-    Component.onCompleted: refresh()
 
     Process {
         id: passwdProc

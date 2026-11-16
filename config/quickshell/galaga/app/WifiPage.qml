@@ -123,6 +123,7 @@ Item {
     Timer { id: wifiCycle; interval: 700; onTriggered: Networking.wifiEnabled = true }
     onActiveChanged: {
         if (active) {
+            if (!hostProc.running) hostProc.running = true;
             nmActiveProc.running = true;
             if (wdev) {
                 nmInfoProc.command = ["nmcli", "-g", "GENERAL.DRIVER,GENERAL.PRODUCT,IP4.ADDRESS", "device", "show", wdev.name];
@@ -135,7 +136,6 @@ Item {
             joinOpen = false;
         }
     }
-    Component.onCompleted: hostProc.running = true
 
     Flickable {
         anchors.fill: parent
