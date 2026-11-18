@@ -10,8 +10,9 @@ import qs.services
 // through quickshell (the adapter's address and the bluez version through
 // bluetoothctl -- quickshell does not expose them). The adapter switch and
 // discoverable, every device bluez knows -- paired ones tap to connect or
-// disconnect, new ones tap to pair (trusted, then connect: bluez bonds inside
-// connect, where Pair() alone leaves a bare ACL link it drops seconds later),
+// disconnect, new ones tap to pair (trusted, pair, then connect when the
+// pairing ends: connect alone leaves a device that does not demand security
+// connected but never bonded),
 // battery where the device reports one. Scanning runs only while this page
 // is open. The advanced block: adapter facts, a power-cycle reset, the
 // service restart (pkexec), remove every device (two taps, armed).
@@ -28,6 +29,22 @@ Item {
     readonly property var adapter: Bluetooth.defaultAdapter
     property string adapterAddress: ""
     property string bluezVer: ""
+
+    // a device whose pairing this page started: connect it when the
+    // pairing ends, bonded or not (see BtMenu's tapDev -- the same flow,
+    // and the same reason: connect alone never bonds a device that does
+    // not demand security). The timer drops a pairing that never starts.
+    property var pairTarget: null
+    Connections {
+        target: pg.pairTarget
+        function onPairingChanged() {
+            const o = pg.pairTarget;
+            if (!o || o.pairing) return;
+            pg.pairTarget = null;
+            if (!o.connected) o.connect();
+        }
+    }
+    Timer { interval: 30000; running: pg.pairTarget ? !pg.pairTarget.pairing : false; onTriggered: pg.pairTarget = null }
     property bool armWipe: false
 
     function barHas(w) { return Theme.state.bar.includes(w); }
@@ -199,7 +216,7 @@ Item {
                 onHit: {
                     if (brow.on) brow.o.disconnect();
                     else if (brow.o.paired || brow.o.bonded) brow.o.connect();
-                    else { brow.o.trusted = true; brow.o.connect(); } // connect, not pair: bluez bonds inside connect; Pair() alone drops the link (see BtMenu)
+                    else { brow.o.trusted = true; pg.pairTarget = brow.o; brow.o.pair(); } // pair first, connect when the pairing ends (see BtMenu's tapDev)
                 }
             }
             SetButton {

@@ -57,13 +57,31 @@ PanelWindow {
     function btIcon(i) {
         return /audio|head/.test(i ?? "") ? "\u{F02CB}" : /mouse/.test(i ?? "") ? "\u{F037D}" : /keyboard/.test(i ?? "") ? "\u{F030C}" : /phone/.test(i ?? "") ? "\u{F03F2}" : "\u{F00AF}";
     }
+    // a device whose pairing this menu started: when the pairing ends,
+    // connect it -- bonded if the device accepted the bond, plain if it
+    // refused (the connect is the floor; a refused bond must not leave a
+    // working device unconnected). Cleared by hand when a tap cancels
+    // the pairing, and by the timer if the pairing never even starts.
+    property var pairTarget: null
+    Connections {
+        target: root.pairTarget
+        function onPairingChanged() {
+            const o = root.pairTarget;
+            if (!o || o.pairing) return;
+            root.pairTarget = null;
+            if (!o.connected) o.connect();
+        }
+    }
+    Timer { interval: 30000; running: root.pairTarget ? !root.pairTarget.pairing : false; onTriggered: root.pairTarget = null }
     function tapDev(o) {
-        if (o.pairing) return o.cancelPair();
-        // a new device goes through connect(), not pair(): bluez bonds as part of
-        // connecting (the bluetoothctl sequence -- connect, bonded, paired,
-        // profiles), while Pair() alone raises a bare ACL link for the bonding
-        // and drops it seconds later when no profile ever connects
-        if (!o.paired && !o.bonded) { o.trusted = true; return o.connect(); }
+        if (o.pairing) { if (root.pairTarget === o) root.pairTarget = null; return o.cancelPair(); }
+        // a new device pairs FIRST, then connects (the watcher above).
+        // Connect alone is not enough: bluez bonds inside connect only
+        // when the device demands security, and a device that does not --
+        // the leaf buds -- connects with no bond ever stored, works for
+        // the session, and is back to "tap to pair" after disconnect,
+        // never paired at all (2026-11-18, on-machine).
+        if (!o.paired && !o.bonded) { o.trusted = true; root.pairTarget = o; return o.pair(); }
         return o.connected ? o.disconnect() : o.connect();
     }
 
