@@ -36,7 +36,7 @@ PACMAN=(
     sddm quickshell qt6-multimedia polkit-gnome gnome-keyring geoclue upower xdg-user-dirs
     # audio, network, bluetooth (pipewire-audio carries the SPA Bluetooth plugins on
     # Arch -- there is no libspa-0.2-bluetooth package here; a wrong name aborts pacman)
-    pipewire pipewire-pulse pipewire-alsa pipewire-audio wireplumber networkmanager bluez bluez-utils power-profiles-daemon
+    pipewire pipewire-pulse pipewire-alsa pipewire-audio wireplumber networkmanager bluez bluez-utils python-gobject power-profiles-daemon
     # utilities called by keybinds and the shell
     brightnessctl ddcutil playerctl wl-clipboard cliphist grim slurp imagemagick libvips libqalculate
     # drives: mounting (udisks2), the file manager's sidebar and phones (gvfs), mounting by itself (udiskie), common formats
