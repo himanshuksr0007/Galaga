@@ -219,8 +219,10 @@ Item {
                 }
             }
 
-            // idle: minutes without input, on one scale. Dots dim on each
-            // event: awake -> locked -> screen off -> asleep. Past 60 — never
+            // idle: minutes without input before sleep, on one scale. The
+            // lock and screen-off marks used to live here; they are lock
+            // behaviour, so they moved to the lock page (one setting, one
+            // home). Past 60 — never
             Column {
                 width: parent.width
                 spacing: 10
@@ -230,7 +232,7 @@ Item {
                         id: idleLine
                         width: parent.width
                         height: 268
-                        readonly property var at: [lk.v, dpms.v, zz.v]
+                        readonly property var at: [zz.v]
 
                         Repeater {
                             model: 61
@@ -242,7 +244,7 @@ Item {
                                 width: 7
                                 height: 7
                                 radius: 3.5
-                                color: [Theme.fg, Theme.grey, Theme.mute, Theme.s3][lvl]
+                                color: [Theme.fg, Theme.s3][lvl]
                             }
                         }
                         // never -- an empty ring beyond the scale
@@ -253,14 +255,12 @@ Item {
                         }
                         Lb { x: 62 * 12 - width / 2; y: 246; text: "never"; px: 10 }
 
-                        Mark { id: lk; row: 0; label: "lock"; value: Rules.store.lockAfter; onMoved: v => { Rules.store.lockAfter = v; Rules.idle(); } }
-                        Mark { id: dpms; row: 1; label: "screen off"; value: Rules.store.dpmsAfter; onMoved: v => { Rules.store.dpmsAfter = v; Rules.idle(); } }
-                        Mark { id: zz; row: 2; label: Rules.hibernateOn ? "sleep · hibernate" : "sleep"; value: Rules.store.sleepAfter; onMoved: v => { Rules.store.sleepAfter = v; Rules.idle(); } }
+                        Mark { id: zz; row: 0; label: Rules.hibernateOn ? "sleep · hibernate" : "sleep"; value: Rules.store.sleepAfter; onMoved: v => { Rules.store.sleepAfter = v; Rules.idle(); } }
                     }
                     Row {
                         spacing: 26
                         Repeater {
-                            model: [["awake", Theme.fg], ["locked", Theme.grey], ["dark", Theme.mute], ["asleep", Theme.s3]]
+                            model: [["awake", Theme.fg], ["asleep", Theme.s3]]
                             Row {
                                 required property var modelData
                                 spacing: 10

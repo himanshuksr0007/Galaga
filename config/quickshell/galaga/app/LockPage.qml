@@ -5,11 +5,12 @@ import Quickshell.Io
 import qs
 import qs.components
 import qs.services
+import qs.settings
 
-// lock: everything about the face -- the photo, a wallpaper of its own, the
-// clock's shape, and what may show on it. The desktop's look stays on the
-// appearance page; this page is the lock alone (and the greeter, which shares
-// the face).
+// lock: when it comes on (auto lock, below), and everything about the face --
+// the photo, a wallpaper of its own, the clock's shape, and what may show on
+// it. The desktop's look stays on the appearance page; this page is the lock
+// alone (and the greeter, which shares the face).
 Item {
     id: pg
 
@@ -19,6 +20,15 @@ Item {
     visible: opacity > 0.01
     Behavior on opacity { NumberAnimation { duration: Theme.t; easing { type: Easing.Bezier; bezierCurve: Theme.glide } } }
     transform: Translate { y: (1 - pg.opacity) * 12 }
+
+    // auto lock timings: minutes of no input in the rules store (0 --
+    // never), applied by Rules.idle(), which rewrites the hypridle config
+    // and restarts it. The picks offer fixed stops; a stored value that is
+    // not a stop (the old battery scale allowed any minute) joins the list
+    // so it still shows as the current one.
+    readonly property var idleStops: [0, 1, 3, 5, 10, 15, 30, 60]
+    function idleVals(cur) { return pg.idleStops.includes(cur) ? pg.idleStops : [...pg.idleStops, cur].sort((a, b) => a - b); }
+    function idleText(v) { return v === 0 ? "never" : v === 60 ? "1 hour" : v + " min"; }
 
     // profile photo: set copies the file next to galaga.json (state.avatar) and
     // to ~/.face; a ~/.face that was already there is backed up into the state
@@ -99,6 +109,30 @@ Item {
             id: col
             width: parent.width
             spacing: 22
+
+            // auto lock: how long the machine sits idle before the lock
+            // comes on and before the screen goes dark. Never -- it stays
+            // on and unlocked until you lock it yourself.
+            Column {
+                width: parent.width
+                spacing: 10
+                SetHead { text: "auto lock" }
+                SetCard {
+                    SetPick {
+                        label: "lock after"
+                        opts: pg.idleVals(Rules.store.lockAfter).map(pg.idleText)
+                        cur: pg.idleVals(Rules.store.lockAfter).indexOf(Rules.store.lockAfter)
+                        onPicked: i => { Rules.store.lockAfter = pg.idleVals(Rules.store.lockAfter)[i]; Rules.idle(); }
+                    }
+                    SetPick {
+                        label: "screen off after"
+                        opts: pg.idleVals(Rules.store.dpmsAfter).map(pg.idleText)
+                        cur: pg.idleVals(Rules.store.dpmsAfter).indexOf(Rules.store.dpmsAfter)
+                        divider: false
+                        onPicked: i => { Rules.store.dpmsAfter = pg.idleVals(Rules.store.dpmsAfter)[i]; Rules.idle(); }
+                    }
+                }
+            }
 
             // profile photo: a path field and a live preview -- the picker this
             // shell can stand behind (there is no file dialog in its toolkit).
