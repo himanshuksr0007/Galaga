@@ -57,36 +57,31 @@ PanelWindow {
     function btIcon(i) {
         return /audio|head/.test(i ?? "") ? "\u{F02CB}" : /mouse/.test(i ?? "") ? "\u{F037D}" : /keyboard/.test(i ?? "") ? "\u{F030C}" : /phone/.test(i ?? "") ? "\u{F03F2}" : "\u{F00AF}";
     }
-    // pairing runs through bluetoothctl, not quickshell's pair():
-    // quickshell registers no pairing agent with bluez, and without an
-    // agent anywhere bluez never completes a bond -- an unpaired device
-    // "connects" as a bare radio link, no audio profile, nothing stored,
-    // and disconnect puts it back at "tap to pair" (proven on-machine
-    // 2026-11-18: the ui alone never bonded the leaf buds; the same ui
-    // taps with bluetoothctl running -- its agent registered -- bonded
-    // them at once). bluetoothctl brings its own agent, so the shell
-    // pairs through it and connects when it exits: bonded if the
-    // pairing worked, a plain connect if it did not -- the old
-    // behaviour is the floor, never a regression.
+    // a device whose pairing this menu started: connect it when the
+    // pairing ends -- bonded, or plain if the bond was refused (the
+    // connect is the floor; a refused bond must not leave a working
+    // device unconnected). Cleared by hand when a tap cancels the
+    // pairing, and by the timer if the pairing never even starts.
     property var pairTarget: null
-    function resolvePair() {
-        const o = root.pairTarget;
-        root.pairTarget = null;
-        if (o && !o.connected) o.connect();
-    }
-    Process {
-        id: pairProc
-        onExited: root.resolvePair()
-    }
-    Timer { interval: 90000; running: pairProc.running; onTriggered: { pairProc.running = false; root.resolvePair(); } }
-    function tapDev(o) {
-        if (o.pairing) {
-            // a tap while this device is pairing cancels it: drop the
-            // pending connect, stop the pairing process, tell bluez
-            if (root.pairTarget === o) { root.pairTarget = null; pairProc.running = false; }
-            return o.cancelPair();
+    Connections {
+        target: root.pairTarget
+        function onPairingChanged() {
+            const o = root.pairTarget;
+            if (!o || o.pairing) return;
+            root.pairTarget = null;
+            if (!o.connected) o.connect();
         }
-        if (!o.paired && !o.bonded) { o.trusted = true; root.pairTarget = o; pairProc.exec(["bluetoothctl", "pair", o.address]); return; }
+    }
+    Timer { interval: 30000; running: root.pairTarget ? !root.pairTarget.pairing : false; onTriggered: root.pairTarget = null }
+    function tapDev(o) {
+        if (o.pairing) { if (root.pairTarget === o) root.pairTarget = null; return o.cancelPair(); }
+        // a new device pairs first, then connects (the watcher above).
+        // The pairing completes because the shell runs its own agent
+        // (services/BtAgent.qml): bluez finishes no bond at all without
+        // an agent somewhere, which is what used to strand devices at
+        // "tap to pair" -- connected as a bare radio link, no audio
+        // profile, nothing stored (2026-11-18, proven on-machine).
+        if (!o.paired && !o.bonded) { o.trusted = true; root.pairTarget = o; return o.pair(); }
         return o.connected ? o.disconnect() : o.connect();
     }
 

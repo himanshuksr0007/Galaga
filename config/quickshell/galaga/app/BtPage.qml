@@ -10,9 +10,8 @@ import qs.services
 // through quickshell (the adapter's address and the bluez version through
 // bluetoothctl -- quickshell does not expose them). The adapter switch and
 // discoverable, every device bluez knows -- paired ones tap to connect or
-// disconnect, new ones tap to pair (trusted, then paired through
-// bluetoothctl -- quickshell registers no pairing agent, and without one
-// bluez never completes a bond),
+// disconnect, new ones tap to pair (trusted, pair, then connect when the
+// pairing ends -- the shell's own agent is what lets bluez complete it),
 // battery where the device reports one. Scanning runs only while this page
 // is open. The advanced block: adapter facts, a power-cycle reset, the
 // service restart (pkexec), remove every device (two taps, armed).
@@ -30,21 +29,21 @@ Item {
     property string adapterAddress: ""
     property string bluezVer: ""
 
-    // pairing runs through bluetoothctl, not quickshell's pair():
-    // quickshell registers no pairing agent, and without one bluez
-    // never completes a bond (see BtMenu's tapDev for the on-machine
-    // proof). Connect when the pairing process exits, bonded or not.
+    // a device whose pairing this page started: connect it when the
+    // pairing ends, bonded or not. The pairing completes because the
+    // shell runs its own agent (services/BtAgent.qml) -- without an
+    // agent bluez finishes no bond at all (see BtMenu's tapDev).
     property var pairTarget: null
-    function resolvePair() {
-        const o = pg.pairTarget;
-        pg.pairTarget = null;
-        if (o && !o.connected) o.connect();
+    Connections {
+        target: pg.pairTarget
+        function onPairingChanged() {
+            const o = pg.pairTarget;
+            if (!o || o.pairing) return;
+            pg.pairTarget = null;
+            if (!o.connected) o.connect();
+        }
     }
-    Process {
-        id: pairProc
-        onExited: pg.resolvePair()
-    }
-    Timer { interval: 90000; running: pairProc.running; onTriggered: { pairProc.running = false; pg.resolvePair(); } }
+    Timer { interval: 30000; running: pg.pairTarget ? !pg.pairTarget.pairing : false; onTriggered: pg.pairTarget = null }
     property bool armWipe: false
 
     function barHas(w) { return Theme.state.bar.includes(w); }
@@ -216,7 +215,7 @@ Item {
                 onHit: {
                     if (brow.on) brow.o.disconnect();
                     else if (brow.o.paired || brow.o.bonded) brow.o.connect();
-                    else { brow.o.trusted = true; pg.pairTarget = brow.o; pairProc.exec(["bluetoothctl", "pair", brow.o.address]); } // pair through bluetoothctl -- it brings the agent (see BtMenu's tapDev)
+                    else { brow.o.trusted = true; pg.pairTarget = brow.o; brow.o.pair(); } // pair first, connect when the pairing ends (see BtMenu's tapDev)
                 }
             }
             SetButton {
