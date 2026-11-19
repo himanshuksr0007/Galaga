@@ -57,17 +57,28 @@ Scope {
 
             required property var modelData
             readonly property bool open: root.on === modelData
+            // a TRUE fullscreen window on this screen's workspace (a video,
+            // a game): only there is the bottom edge silent (see visible).
+            // The wayland handle's fullscreen is that state alone, and it
+            // is live; Hyprland's workspace hasfullscreen lumps maximized
+            // in with it, which silenced the deck over every maximized
+            // window -- most single windows, most of the time
+            readonly property bool trueFs: {
+                const wsId = Hyprland.monitorFor(modelData)?.activeWorkspace?.id ?? -1;
+                return wsId > 0 && Hyprland.toplevels.values.some(tp => tp.workspace?.id === wsId && (tp.wayland?.fullscreen ?? false));
+            }
             // DragWatch sample from when this hover began; the dwell decides with it
             property var s1: null
             property real t: open ? 1 : 0
             Behavior on t { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
 
             screen: modelData
-            // in fullscreen Top is not drawn, Qt stops committing frames and a layer
+            // in true fullscreen Top is not drawn, Qt stops committing frames and a layer
             // change is never seen by Hyprland -- so there is no strip there, and
             // Super+Space creates the window anew, already in Overlay.
-            // hasFullscreen covers maximized too (Super+Alt+F): the edge is silent there as well
-            visible: Theme.state.deckHover && root.ids.length > 0 && !Hyprland.monitorFor(modelData)?.activeWorkspace?.hasFullscreen || t > 0
+            // A maximized window is not that (Top draws over it normally),
+            // so the gate is trueFs, not hasFullscreen
+            visible: Theme.state.deckHover && root.ids.length > 0 && !trueFs || t > 0
             anchors.bottom: true
             implicitWidth: Math.ceil(panel.width * Theme.s)
             implicitHeight: Math.ceil((panel.height + 14) * Theme.s)
