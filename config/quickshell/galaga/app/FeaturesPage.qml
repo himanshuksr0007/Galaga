@@ -107,7 +107,6 @@ Item {
                 SetCard {
                     SetToggle { label: "reactive edges"; on: Theme.state.featEdges; onFlip: want => Theme.state.featEdges = want }
                     SetToggle { label: "exposé"; on: Theme.state.featExpose; onFlip: want => Theme.state.featExpose = want }
-                    SetToggle { label: "aero shake"; on: Theme.state.featShake; onFlip: want => Theme.state.featShake = want }
                     SetToggle { label: "launcher smarts"; on: Theme.state.featLauncher; onFlip: want => Theme.state.featLauncher = want }
                     SetToggle { label: "focus in bar"; on: Theme.state.featFocus; onFlip: want => Theme.state.featFocus = want }
                     SetToggle { label: "named desktops"; on: Theme.state.featDesktops; divider: false; onFlip: want => Theme.state.featDesktops = want }

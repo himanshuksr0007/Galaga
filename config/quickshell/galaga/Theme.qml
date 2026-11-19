@@ -252,7 +252,6 @@ Singleton {
             property bool featGenieBack: true  // restore expands the park-time snapshot back out of the minimised section (genie/Genie.qml)
             property bool featEdges: true      // reactive galaga edges: music VU, charging fill, focus drain (galaga/Galaga.qml)
             property bool featExpose: true     // all-windows exposé of the current desktop (expose/Expose.qml)
-            property bool featShake: true      // aero shake: shake a dragged window, the workspace's others park (services/Shake.qml)
             property bool featLockMedia: true  // media controls + notification summary on the session lock (lock/LockFace.qml)
             property bool featEssential: false // essential notifications: only the picked apps light the edges (Notes.qml); off by default -- it changes notification behaviour
             property var essentialApps: []     // desktop entry ids picked in settings -> notifications
