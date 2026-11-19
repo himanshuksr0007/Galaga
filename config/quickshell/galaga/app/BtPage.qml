@@ -10,9 +10,10 @@ import qs.services
 // through quickshell (the adapter's address and the bluez version through
 // bluetoothctl -- quickshell does not expose them). The adapter switch and
 // discoverable, every device bluez knows -- paired ones tap to connect or
-// disconnect, new ones tap to pair (trusted, pair, then connect when the
-// pairing ends -- the shell's own agent is what lets bluez complete it),
-// battery where the device reports one. Scanning runs only while this page
+// disconnect, new ones tap to pair (trusted, then connect() alone: bluez
+// bonds inside the connect, the shell's own agent lets it complete --
+// the quick panel picker's flow, copied; see BtMenu's tapDev), battery
+// where the device reports one. Scanning runs only while this page
 // is open. The advanced block: adapter facts, a power-cycle reset, the
 // service restart (pkexec), remove every device (two taps, armed).
 Item {
@@ -29,21 +30,6 @@ Item {
     property string adapterAddress: ""
     property string bluezVer: ""
 
-    // a device whose pairing this page started: connect it when the
-    // pairing ends, bonded or not. The pairing completes because the
-    // shell runs its own agent (services/BtAgent.qml) -- without an
-    // agent bluez finishes no bond at all (see BtMenu's tapDev).
-    property var pairTarget: null
-    Connections {
-        target: pg.pairTarget
-        function onPairingChanged() {
-            const o = pg.pairTarget;
-            if (!o || o.pairing) return;
-            pg.pairTarget = null;
-            if (!o.connected) o.connect();
-        }
-    }
-    Timer { interval: 30000; running: pg.pairTarget ? !pg.pairTarget.pairing : false; onTriggered: pg.pairTarget = null }
     property bool armWipe: false
 
     function barHas(w) { return Theme.state.bar.includes(w); }
@@ -214,8 +200,8 @@ Item {
                 label: brow.on ? "disconnect" : brow.o.paired || brow.o.bonded ? "connect" : "pair"
                 onHit: {
                     if (brow.on) brow.o.disconnect();
-                    else if (brow.o.paired || brow.o.bonded) brow.o.connect();
-                    else { brow.o.trusted = true; pg.pairTarget = brow.o; brow.o.pair(); } // pair first, connect when the pairing ends (see BtMenu's tapDev)
+                    else if (brow.o.paired) brow.o.connect();
+                    else { brow.o.trusted = true; brow.o.connect(); } // the picker's flow: connect() bonds, no pair() first
                 }
             }
             SetButton {

@@ -57,31 +57,19 @@ PanelWindow {
     function btIcon(i) {
         return /audio|head/.test(i ?? "") ? "\u{F02CB}" : /mouse/.test(i ?? "") ? "\u{F037D}" : /keyboard/.test(i ?? "") ? "\u{F030C}" : /phone/.test(i ?? "") ? "\u{F03F2}" : "\u{F00AF}";
     }
-    // a device whose pairing this menu started: connect it when the
-    // pairing ends -- bonded, or plain if the bond was refused (the
-    // connect is the floor; a refused bond must not leave a working
-    // device unconnected). Cleared by hand when a tap cancels the
-    // pairing, and by the timer if the pairing never even starts.
-    property var pairTarget: null
-    Connections {
-        target: root.pairTarget
-        function onPairingChanged() {
-            const o = root.pairTarget;
-            if (!o || o.pairing) return;
-            root.pairTarget = null;
-            if (!o.connected) o.connect();
-        }
-    }
-    Timer { interval: 30000; running: root.pairTarget ? !root.pairTarget.pairing : false; onTriggered: root.pairTarget = null }
+    // device taps: the quick panel picker's flow, copied exactly --
+    // it is the one that works on this machine. Pairing in flight, a
+    // tap cancels it; a new device is trusted, then connect() alone:
+    // bluez bonds inside the connect (the shell's own agent is what
+    // lets that bond complete -- services/BtAgent). pair() first and
+    // connect() when the pairing ends was tried here and on the
+    // settings page (2026-11-18/19): the leaf buds connected, dropped
+    // seconds later and lost the bond entirely, back at "tap to
+    // pair", while the picker's single connect held. One call, no
+    // watcher, nothing deferred.
     function tapDev(o) {
-        if (o.pairing) { if (root.pairTarget === o) root.pairTarget = null; return o.cancelPair(); }
-        // a new device pairs first, then connects (the watcher above).
-        // The pairing completes because the shell runs its own agent
-        // (services/BtAgent.qml): bluez finishes no bond at all without
-        // an agent somewhere, which is what used to strand devices at
-        // "tap to pair" -- connected as a bare radio link, no audio
-        // profile, nothing stored (2026-11-18, proven on-machine).
-        if (!o.paired && !o.bonded) { o.trusted = true; root.pairTarget = o; return o.pair(); }
+        if (o.pairing) return o.cancelPair();
+        if (!o.paired) { o.trusted = true; return o.connect(); }
         return o.connected ? o.disconnect() : o.connect();
     }
 
