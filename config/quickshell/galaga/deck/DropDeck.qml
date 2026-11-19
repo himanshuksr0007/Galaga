@@ -180,12 +180,24 @@ Scope {
                                 Component.onDestruction: root.unregRect(key)
                                 // the first registration happens while the
                                 // strip has never been shown and its window
-                                // may not have its real geometry yet -- so
-                                // register again the moment it rises, when
-                                // the layout is the one on screen
+                                // may not have its real geometry yet, and a
+                                // single re-register as it rises is not
+                                // enough either: on the strip's first-ever
+                                // rise the window is only then mapped, and
+                                // its real size lands after the callLater
+                                // below -- the rects stayed wrong for the
+                                // whole first drag and every drop missed
+                                // (the second drag worked: the window
+                                // existed by then). So while the strip is
+                                // up the rects re-register on every cursor
+                                // sample -- the cost is bounded by the
+                                // drag, exactly like the sampling itself,
+                                // and any geometry settle is picked up
+                                // within a tick.
                                 Connections {
                                     target: root
                                     function onShownChanged() { if (root.shown) Qt.callLater(cell.report); }
+                                    function onCurChanged() { cell.report(); }
                                 }
                                 onXChanged: report()
                                 onYChanged: report()
