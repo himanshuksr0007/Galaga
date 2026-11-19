@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Task Manager
+Comment=galaga task manager
+Exec=rice taskmgr
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Monitor;

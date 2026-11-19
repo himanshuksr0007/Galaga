@@ -56,6 +56,13 @@ ShellRoot {
     } }
     function openSettings(page) { settingsL.active = true; settingsL.item.open(page); }
     function toggleSettings() { settingsL.active = true; settingsL.item.toggle(); }
+    // the task manager, hosted exactly like settings: loaded on first
+    // use (ctrl+shift+esc, the app list entry), unloaded on close
+    LazyLoader { id: taskmgrL; TaskMgr {
+        onCloseRequested: Qt.callLater(() => { if (taskmgrL.item && !taskmgrL.item.visible) taskmgrL.active = false; })
+        onClosed: Qt.callLater(() => taskmgrL.active = false)
+    } }
+    function toggleTaskMgr() { taskmgrL.active = true; taskmgrL.item.toggle(); }
     // charms loads on first open, not at shell start: its data file (charms.js,
     // ~116 KB of emoji, kaomoji and symbols) otherwise parses on every login
     // for a picker most sessions never open. Unlike settings it then stays
@@ -69,6 +76,11 @@ ShellRoot {
     IpcHandler {
         target: "settings"
         function toggle(): string { shell.toggleSettings(); return "ok"; }
+    }
+    // the app list's Task Manager entry runs `rice taskmgr`, which lands here
+    IpcHandler {
+        target: "taskmgr"
+        function toggle(): string { shell.toggleTaskMgr(); return "ok"; }
     }
     Galaga {}
     Buds {}
@@ -223,6 +235,7 @@ ShellRoot {
     Shortcut { name: "quick"; description: "quick settings"; onPressed: quick.toggle() }
     Shortcut { name: "ward"; description: "quick settings"; onPressed: quick.toggle() } // Super+N in demonshot -- same toggles
     Shortcut { name: "settings"; description: "settings"; onPressed: shell.toggleSettings() }
+    Shortcut { name: "taskmgr"; description: "task manager"; onPressed: shell.toggleTaskMgr() }
     Shortcut { name: "snapleft"; description: "snap window left"; onPressed: Snap.snapDir("left") }
     Shortcut { name: "snapright"; description: "snap window right"; onPressed: Snap.snapDir("right") }
     Shortcut { name: "snapup"; description: "snap window up"; onPressed: Snap.snapDir("up") }

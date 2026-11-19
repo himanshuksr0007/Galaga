@@ -43,6 +43,7 @@ end
 -- Misc
 hl.bind(vars.kbAltar, hl.dsp.global("shell:altar"))
 hl.bind("SUPER + I", hl.dsp.global("shell:settings"))
+hl.bind("CTRL + SHIFT + Escape", hl.dsp.global("shell:taskmgr")) -- task manager, the windows combo
 hl.bind("SUPER + N", hl.dsp.global("shell:ward"))
 hl.bind("SUPER + P", hl.dsp.global("shell:pact"))
 hl.bind("SUPER + A", hl.dsp.global("shell:quick")) -- galaga quick settings

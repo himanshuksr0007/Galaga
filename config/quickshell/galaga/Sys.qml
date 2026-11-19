@@ -17,6 +17,8 @@ Singleton {
 
     // deck (bottom panel) open -- SysStats needs detailed polling, as on an empty workspace (Home)
     property bool deckOpen: false
+    // task manager open -- its performance page reads SysStats live, whether a home screen is up or not
+    property bool taskMgrOpen: false
     // wallpaper picker open -- home changes the wallpaper immediately, without a wave: the picker already showed it
     property bool wallOpen: false
 

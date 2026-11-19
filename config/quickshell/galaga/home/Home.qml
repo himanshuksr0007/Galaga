@@ -28,7 +28,7 @@ PanelWindow {
     // does not give the value back -- remove a widget and cava would run forever.
     // ponytail: cava counts if it is in the set, even one that did not fit the 3x3
     readonly property var homes: Quickshell.screens.filter(s => Theme.scr(s.name, "home") && idle(s))
-    Binding { target: SysStats; property: "detailed"; value: root.homes.length > 0 || Sys.deckOpen }
+    Binding { target: SysStats; property: "detailed"; value: root.homes.length > 0 || Sys.deckOpen || Sys.taskMgrOpen }
     // cava is shared (the galaga edges register as "edges"): register by name (per screen), unregister on
     // the way out -- a Binding here used to own Cava.active outright
     readonly property string cavaKey: "home:" + (root.screen?.name ?? "?")
