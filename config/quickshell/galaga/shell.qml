@@ -70,17 +70,6 @@ ShellRoot {
         target: "settings"
         function toggle(): string { shell.toggleSettings(); return "ok"; }
     }
-    // a hot corner fired (quick/Corners.qml): the action ids are the ones
-    // settings -> desktop & deck offers
-    function cornerAct(a) {
-        if (a === "expose") { if (Theme.state.featExpose) expose.toggle(); }
-        else if (a === "desktops") desktops.toggle();
-        else if (a === "deck") deck.toggle();
-        else if (a === "quick") quick.toggle();
-        else if (a === "launcher") launcher.toggle();
-        else if (a === "power") power.toggle();
-        else if (a === "lock") Quickshell.execDetached([Quickshell.env("HOME") + "/.config/quickshell/rice/rice", "lock"]);
-    }
     Galaga {}
     Buds {}
     Cal { id: cal }
@@ -113,8 +102,6 @@ ShellRoot {
             // window: visible from its own screen is a loop (the window is recreated, screen changes)
             Home { screen: s.modelData; visible: Theme.scr(s.modelData.name, "home") }
             Hot { screen: s.modelData; onTriggered: quick.peek() }
-            Corners { id: cornersW; screen: s.modelData }
-            Connections { target: cornersW; function onFired(a) { shell.cornerAct(a); } }
             Bar {
                 screen: s.modelData
                 visible: Theme.scr(s.modelData.name, "bar")

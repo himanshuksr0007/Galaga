@@ -175,12 +175,6 @@ Item {
         Theme.state.wsWalls = w;
         if (p) wcopy.exec(["bash", "-c", "b=$(basename \"$1\"); [ \"$2/$b.jpg\" -nt \"$1\" ] || { magick \"$1[0]\" -resize \"$3\" -quality 90 \"$2/.$b.jpg\" 2>/dev/null && mv \"$2/.$b.jpg\" \"$2/$b.jpg\"; }", "bash", p, Theme.wallCache, wres]);
     }
-    // ---- hot corners (quick/Corners.qml): one action per corner, stored
-    // by id in Theme.state.hotCorners ----
-    readonly property var cornerIds: ["off", "expose", "desktops", "deck", "quick", "launcher", "power", "lock"]
-    readonly property var cornerOpts: ["off", "exposé", "desktops", "deck", "quick settings", "launcher", "power menu", "lock"]
-    function cornerAct(key) { return Theme.state.hotCorners?.[key] ?? "off"; }
-    function setCorner(key, id) { const c = Object.assign({}, Theme.state.hotCorners); c[key] = id; Theme.state.hotCorners = c; }
     Process {
         id: wscan
         command: ["bash", "-c", "shopt -s nullglob nocaseglob; for f in \"$1\"/*.{jpg,jpeg,png,webp}; do printf '%s\n' \"$f\"; done", "bash", Theme.state.wallDir || Quickshell.env("HOME") + "/Pictures/Wallpapers"]
@@ -613,42 +607,6 @@ Item {
                     icons: pg.icons
                     used: Theme.state.bar
                     onToggled: key => pg.barCur = pg.flip("bar", key, pg.barCur)
-                }
-            }
-
-            // ---- CORNERS: an action per screen corner, fired by a dwell
-            // in the corner (quick/Corners.qml) ----
-            Column {
-                width: parent.width
-                spacing: 10
-                SetHead { text: "corners" }
-                Lb { text: "flick the pointer into a corner and hold a beat"; px: 11; color: Theme.mute }
-                SetCard {
-                    SetPick {
-                        label: "top left"
-                        opts: pg.cornerOpts
-                        cur: pg.cornerIds.indexOf(pg.cornerAct("tl"))
-                        onPicked: i => pg.setCorner("tl", pg.cornerIds[i])
-                    }
-                    SetPick {
-                        label: "top right"
-                        opts: pg.cornerOpts
-                        cur: pg.cornerIds.indexOf(pg.cornerAct("tr"))
-                        onPicked: i => pg.setCorner("tr", pg.cornerIds[i])
-                    }
-                    SetPick {
-                        label: "bottom left"
-                        opts: pg.cornerOpts
-                        cur: pg.cornerIds.indexOf(pg.cornerAct("bl"))
-                        onPicked: i => pg.setCorner("bl", pg.cornerIds[i])
-                    }
-                    SetPick {
-                        label: "bottom right"
-                        opts: pg.cornerOpts
-                        cur: pg.cornerIds.indexOf(pg.cornerAct("br"))
-                        divider: false
-                        onPicked: i => pg.setCorner("br", pg.cornerIds[i])
-                    }
                 }
             }
 
