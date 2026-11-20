@@ -17,7 +17,7 @@ hl.window_rule({ match = { fullscreen = false }, opacity = vars.windowOpacity ..
 local ownButtons = {
     "org\\.gnome\\..*", -- GNOME apps: headerbars (Nautilus, Settings, Text Editor, Loupe, ...)
     "gnome-control-center",
-    "Code", "VSCodium", "codium", -- VS Code: own titlebar, see README "Window buttons"
+    "code", "Code", "VSCodium", "codium", -- VS Code: own titlebar, see README "Window buttons" (the class is case-sensitive: the repo build reports lowercase "code", the microsoft build "Code" -- both stay)
     "steam", -- own titlebar; the games themselves are fullscreen anyway
     "discord", "vesktop", "equibop", -- own titlebars
     "firefox", "org\\.mozilla\\.firefox", "firefox-esr", -- Firefox: own titlebar buttons (see README "Window buttons")

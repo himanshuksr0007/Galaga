@@ -287,7 +287,7 @@ Singleton {
     // bar -- the same classes as the ownButtons list in rules.lua, which
     // the no_bar rule is built from (keep the two in step). Every other
     // window carries the 32-tall bar at its top.
-    readonly property var ownButtons: [/^org\.gnome\..*$/, /^gnome-control-center$/, /^Code$/, /^VSCodium$/, /^codium$/,
+    readonly property var ownButtons: [/^org\.gnome\..*$/, /^gnome-control-center$/, /^code$/, /^Code$/, /^VSCodium$/, /^codium$/,
         /^steam$/, /^discord$/, /^vesktop$/, /^equibop$/, /^firefox$/, /^org\.mozilla\.firefox$/, /^firefox-esr$/,
         /^zen$/, /^app\.zen_browser\.zen$/, /^io\.github\.zen_browser\.zen$/, /^org\.quickshell$/]
     function hasBar(cls) { return !!cls && !ownButtons.some(r => r.test(cls)); }
