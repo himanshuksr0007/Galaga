@@ -33,7 +33,8 @@ Rectangle {
     // "Ryzen HD Audio Controller Speaker" → Speaker; HDMI goes by the monitor's name
     function name(n) {
         if (/HDMI/.test(n.name) && n.nickname) return n.nickname;
-        return n.description.replace(/^.*Controller /, "").replace(/ \(.*\)$/, "") || n.nickname || n.name;
+        const label = n.description.replace(/^.*Controller /, "").replace(/ \(.*\)$/, "") || n.nickname || n.name;
+        return label.replace(/^(built-in audio) analog stereo$/i, "$1");
     }
     // unplugged HDMI ports stay as sinks; only a connected one carries the monitor's name (ELD) as its nick.
     // ponytail: a monitor that reports no name hides as unplugged

@@ -431,7 +431,6 @@ PanelWindow {
                                         }
                                     }
                                 }
-                                Lb { x: 4; px: 10; color: Theme.mute; text: "applied by the pc before the sound leaves · saved for this device" }
                             }
                         }
 

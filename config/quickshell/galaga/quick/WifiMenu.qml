@@ -47,7 +47,6 @@ PanelWindow {
     readonly property alias t: entrance.progress
     PopoverMotion { id: entrance; opened: root.open }
 
-    readonly property real colW: 336 // the panel's content width (380 - 44), the rows' measure
     readonly property var dev: Networking.devices.values.find(d => d.type === DeviceType.Wifi) ?? null
     property string view: "main" // "main" | "hotspot" | "info"
     property var ask: null         // the network whose password is being typed
@@ -504,31 +503,28 @@ PanelWindow {
                         Column {
                             width: parent.width
                             spacing: 8
-                            InfoLine { k: "interface"; v: root.dev?.name || "—" }
-                            InfoLine { k: "mac"; v: root.dev?.address || "—" }
-                            InfoLine { k: "card"; v: root.drv.product || "—" }
-                            InfoLine { k: "driver"; v: root.drv.driver || "—" }
-                            InfoLine { k: "ip address"; v: root.drv.ip || "—" }
-                            InfoLine { k: "network"; v: root.connNet?.name || "—" }
-                            InfoLine { k: "state"; v: Networking.wifiEnabled ? "on" : "off" }
+                            MenuInfoLine { k: "interface"; v: root.dev?.name || "—" }
+                            MenuInfoLine { k: "mac"; v: root.dev?.address || "—" }
+                            MenuInfoLine { k: "card"; v: root.drv.product || "—" }
+                            MenuInfoLine { k: "driver"; v: root.drv.driver || "—" }
+                            MenuInfoLine { k: "ip address"; v: root.drv.ip || "—" }
+                            MenuInfoLine { k: "network"; v: root.connNet?.name || "—" }
+                            MenuInfoLine { k: "state"; v: Networking.wifiEnabled ? "on" : "off" }
                         }
 
                         Column {
                             width: parent.width
                             spacing: 10
-                            ActLine {
+                            MenuInfoAction {
                                 label: "restart wi-fi"
-                                sub: "radio off and on — drops the current network, then rejoins"
                                 onHit: { Networking.wifiEnabled = false; wifiCycle.restart(); }
                             }
-                            ActLine {
+                            MenuInfoAction {
                                 label: "restart networkmanager"
-                                sub: "pkexec — asks for your password · drops every connection"
                                 onHit: { Quickshell.execDetached(["pkexec", "systemctl", "restart", "NetworkManager"]); root.close(); }
                             }
-                            ActLine {
+                            MenuInfoAction {
                                 label: root.armForget ? "tap again to forget all networks" : "forget all saved networks"
-                                sub: "passwords go with them — each network must be joined again"
                                 danger: root.armForget
                                 onHit: {
                                     if (!root.armForget) { root.armForget = true; return; }
@@ -550,7 +546,7 @@ PanelWindow {
         readonly property var o: modelData
         readonly property bool on: o.connected
         readonly property bool busy: o.stateChanging
-        width: root.colW
+        width: parent.width
         height: 56
         radius: Theme.corner(28)
         color: hov.hovered ? Theme.s3 : "transparent"
@@ -628,7 +624,7 @@ PanelWindow {
         property alias text: fin.text
         property int echo: TextInput.Normal
         signal edited
-        width: root.colW
+        width: parent.width
         height: 48
         radius: Theme.corner(24)
         color: Theme.s2
@@ -652,7 +648,7 @@ PanelWindow {
     component BackRow: Item {
         id: brow
         property string text: ""
-        width: root.colW
+        width: parent.width
         height: 24
         Row {
             spacing: 8
@@ -663,37 +659,18 @@ PanelWindow {
         TapHandler { onTapped: root.view = "main" }
     }
 
-    component InfoLine: Item {
-        property string k: ""
-        property string v: ""
-        width: root.colW
-        height: 22
-        Lb { x: 4; anchors.verticalCenter: parent.verticalCenter; text: k }
-        Text {
-            anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
-            width: parent.width * 0.62
-            horizontalAlignment: Text.AlignRight
-            elide: Text.ElideRight
-            textFormat: Text.PlainText
-            text: v
-            font { family: Theme.mono; pixelSize: 12 }
-            color: Theme.fg
-        }
-    }
-
     component ActLine: Rectangle {
         property string label: ""
         property string sub: ""
-        property bool danger: false
         signal hit
-        width: root.colW
+        width: parent.width
         height: 54
         radius: Theme.corner(27)
         color: ahov.hovered ? Theme.s3 : Theme.s2
         Column {
             anchors { left: parent.left; leftMargin: 20; right: parent.right; rightMargin: 16; verticalCenter: parent.verticalCenter }
             spacing: 2
-            Text { textFormat: Text.PlainText; width: parent.width; elide: Text.ElideRight; text: label; font { family: Theme.ui; pixelSize: 14; weight: Font.DemiBold } color: danger ? Theme.red : Theme.fg }
+            Text { textFormat: Text.PlainText; width: parent.width; elide: Text.ElideRight; text: label; font { family: Theme.ui; pixelSize: 14; weight: Font.DemiBold } color: Theme.fg }
             Lb { visible: !!sub; px: 10; color: Theme.mute; text: sub }
         }
         HoverHandler { id: ahov; cursorShape: Qt.PointingHandCursor }

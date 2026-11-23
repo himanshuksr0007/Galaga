@@ -369,6 +369,7 @@ PanelWindow {
     property alias powerAnimationDuration: popMotion.durationOverride
     property int powPeek: -1
 
+    onPowOpenChanged: if (powOpen) Sounds.play("pop")
     onPowerAnchorChanged: if (!powerAnchor) powOpen = false
     function togglePowerCard(item) {
         if (powOpen && powerAnchor === item) {

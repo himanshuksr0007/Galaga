@@ -44,7 +44,6 @@ PanelWindow {
     PopoverMotion { id: entrance; opened: root.open }
 
     readonly property var adapter: Bluetooth.defaultAdapter
-    readonly property real colW: 336 // the panel's content width (380 - 44), the rows' measure
     property string view: "main" // "main" | "info"
     property bool armWipe: false
     property string adapterAddress: ""
@@ -273,30 +272,27 @@ PanelWindow {
                         Column {
                             width: parent.width
                             spacing: 8
-                            InfoLine { k: "name"; v: root.adapter?.name || "—" }
-                            InfoLine { k: "address"; v: root.adapterAddress || "—" }
-                            InfoLine { k: "adapter"; v: root.adapter?.adapterId || "—" }
-                            InfoLine { k: "bluez"; v: root.bluezVer ? `version ${root.bluezVer}` : "—" }
-                            InfoLine { k: "discoverable"; v: root.adapter?.discoverable ? "on" : "off" }
-                            InfoLine { k: "state"; v: root.adapter?.enabled ? "on" : "off" }
+                            MenuInfoLine { k: "name"; v: root.adapter?.name || "—" }
+                            MenuInfoLine { k: "address"; v: root.adapterAddress || "—" }
+                            MenuInfoLine { k: "adapter"; v: root.adapter?.adapterId || "—" }
+                            MenuInfoLine { k: "bluez"; v: root.bluezVer ? `version ${root.bluezVer}` : "—" }
+                            MenuInfoLine { k: "discoverable"; v: root.adapter?.discoverable ? "on" : "off" }
+                            MenuInfoLine { k: "state"; v: root.adapter?.enabled ? "on" : "off" }
                         }
 
                         Column {
                             width: parent.width
                             spacing: 10
-                            ActLine {
+                            MenuInfoAction {
                                 label: "reset the adapter"
-                                sub: "power-cycle — connected devices drop, then reconnect"
                                 onHit: if (root.adapter) { root.adapter.enabled = false; btCycle.restart(); }
                             }
-                            ActLine {
+                            MenuInfoAction {
                                 label: "restart the bluetooth service"
-                                sub: "pkexec — asks for your password"
                                 onHit: { Quickshell.execDetached(["pkexec", "systemctl", "restart", "bluetooth"]); root.close(); }
                             }
-                            ActLine {
+                            MenuInfoAction {
                                 label: root.armWipe ? "tap again to remove all devices" : "remove all devices"
-                                sub: "unpairs everything — each device must be paired again"
                                 danger: root.armWipe
                                 onHit: {
                                     if (!root.armWipe) { root.armWipe = true; return; }
@@ -319,7 +315,7 @@ PanelWindow {
         readonly property var o: modelData
         readonly property bool on: o.connected
         readonly property bool busy: o.pairing || o.state === BluetoothDeviceState.Connecting || o.state === BluetoothDeviceState.Disconnecting
-        width: root.colW
+        width: parent.width
         height: 56
         radius: Theme.corner(28)
         color: hov.hovered ? Theme.s3 : "transparent"
@@ -390,40 +386,4 @@ PanelWindow {
         TapHandler { onTapped: sw.flip() }
     }
 
-    component InfoLine: Item {
-        property string k: ""
-        property string v: ""
-        width: root.colW
-        height: 22
-        Lb { x: 4; anchors.verticalCenter: parent.verticalCenter; text: k }
-        Text {
-            anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
-            width: parent.width * 0.62
-            horizontalAlignment: Text.AlignRight
-            elide: Text.ElideRight
-            textFormat: Text.PlainText
-            text: v
-            font { family: Theme.mono; pixelSize: 12 }
-            color: Theme.fg
-        }
-    }
-
-    component ActLine: Rectangle {
-        property string label: ""
-        property string sub: ""
-        property bool danger: false
-        signal hit
-        width: root.colW
-        height: 54
-        radius: Theme.corner(27)
-        color: ahov.hovered ? Theme.s3 : Theme.s2
-        Column {
-            anchors { left: parent.left; leftMargin: 20; right: parent.right; rightMargin: 16; verticalCenter: parent.verticalCenter }
-            spacing: 2
-            Text { textFormat: Text.PlainText; width: parent.width; elide: Text.ElideRight; text: label; font { family: Theme.ui; pixelSize: 14; weight: Font.DemiBold } color: danger ? Theme.red : Theme.fg }
-            Lb { visible: !!sub; px: 10; color: Theme.mute; text: sub }
-        }
-        HoverHandler { id: ahov; cursorShape: Qt.PointingHandCursor }
-        TapHandler { onTapped: hit() }
-    }
 }
