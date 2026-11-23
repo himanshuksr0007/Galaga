@@ -11,7 +11,7 @@ import Quickshell.Wayland
 import qs.services
 import qs.settings
 
-// what the bar, quick settings, Galaga and the lock touch: sound, brightness, layout, recording, night light, airplane mode, caffeine, vpn
+// what the bar, quick settings, Galaga and the lock touch: sound, brightness, recording, night light, airplane mode, caffeine, vpn
 Singleton {
     id: root
 
@@ -96,19 +96,6 @@ Singleton {
     readonly property real panelBri: panelBriExternal ? Backlight.ddc : Backlight.value
     function setPanelBri(v) { panelBriExternal ? Backlight.setDdc(v) : Backlight.set(v); }
     Binding { target: Backlight; property: "steps"; value: Theme.state.briSteps }
-
-    // ---- layout: start -- the main keyboard from hyprctl, then the activelayout event ----
-    property string kbd: ""
-    Process {
-        running: true
-        command: ["hyprctl", "devices", "-j"]
-        stdout: StdioCollector { onStreamFinished: { try { root.kbd = JSON.parse(this.text).keyboards.find(k => k.main)?.active_keymap ?? ""; } catch (e) {} } }
-    }
-    Connections {
-        target: Hyprland
-        function onRawEvent(e) { if (e.name === "activelayout") root.kbd = e.data.slice(e.data.lastIndexOf(",") + 1); }
-    }
-    readonly property string layout: kbd.slice(0, 2).toLowerCase() // "English (US)" → en
 
     // ---- recording and airplane mode: hypr keybinds toggle them too, hence polling. Night light -- shared with demonshot, in its rules.json
     // the two halves poll apart: the recorder check is one pgrep on the shell's check cadence
