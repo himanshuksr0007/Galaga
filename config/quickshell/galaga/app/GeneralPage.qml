@@ -214,12 +214,11 @@ Item {
                                 color: Theme.accent
                                 anchors { left: parent.left; leftMargin: 4; verticalCenter: parent.verticalCenter }
                             }
-                            Text {
+                            SetLabel {
                                 x: 24
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: modelData
-                                font { family: Theme.ui; pixelSize: 14 }
-                                color: cur ? Theme.fg : Theme.grey
+                                color: cur ? foreground : Theme.grey
                             }
                             HoverHandler { id: zhov; cursorShape: Qt.PointingHandCursor }
                             TapHandler {

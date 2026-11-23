@@ -31,10 +31,8 @@ Item {
         anchors { left: parent.left; verticalCenter: parent.verticalCenter }
         width: parent.width - tailBox.width - 16
         spacing: 3
-        Text {
+        SetLabel {
             text: root.label
-            font { family: Theme.ui; pixelSize: 15 }
-            color: Theme.fg
             elide: Text.ElideRight
             width: parent.width
         }

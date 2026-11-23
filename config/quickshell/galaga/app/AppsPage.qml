@@ -266,10 +266,8 @@ Item {
                                 Column {
                                     anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
                                     spacing: 8
-                                    Text {
+                                    SetLabel {
                                         text: "remove " + modelData.name + "?"
-                                        font { family: Theme.ui; pixelSize: 14; weight: Font.DemiBold }
-                                        color: Theme.fg
                                     }
                                     Lb {
                                         width: parent.width
@@ -332,10 +330,8 @@ Item {
                                 Column {
                                     anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
                                     spacing: 8
-                                    Text {
+                                    SetLabel {
                                         text: "remove " + modelData.name + "?"
-                                        font { family: Theme.ui; pixelSize: 14; weight: Font.DemiBold }
-                                        color: Theme.fg
                                     }
                                     Lb {
                                         width: parent.width

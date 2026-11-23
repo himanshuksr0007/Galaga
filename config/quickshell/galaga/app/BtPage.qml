@@ -184,7 +184,7 @@ Item {
         }
         Column {
             anchors { left: bic.right; leftMargin: 14; right: bact.left; rightMargin: 12; verticalCenter: parent.verticalCenter }
-            Text { textFormat: Text.PlainText; width: parent.width; elide: Text.ElideRight; text: brow.o.name || brow.o.deviceName || brow.o.address; font { family: Theme.ui; pixelSize: 15; weight: Font.DemiBold } color: Theme.fg }
+            SetLabel { width: parent.width; elide: Text.ElideRight; text: brow.o.name || brow.o.deviceName || brow.o.address }
             Lb {
                 px: 10
                 text: (brow.o.pairing ? "pairing" : brow.o.state === BluetoothDeviceState.Connecting ? "connecting" : brow.o.state === BluetoothDeviceState.Disconnecting ? "disconnecting"

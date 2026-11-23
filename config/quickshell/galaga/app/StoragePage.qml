@@ -183,11 +183,9 @@ Item {
                             Item {
                                 width: parent.width
                                 height: 26
-                                Text {
+                                SetLabel {
                                     anchors { left: parent.left; verticalCenter: parent.verticalCenter }
                                     text: modelData.mount
-                                    font { family: Theme.ui; pixelSize: 15 }
-                                    color: Theme.fg
                                 }
                                 Lb {
                                     anchors { right: parent.right; verticalCenter: parent.verticalCenter }

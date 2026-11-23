@@ -405,7 +405,7 @@ Item {
         }
         Column {
             anchors { left: nic.right; leftMargin: 14; right: nact.left; rightMargin: 12; verticalCenter: parent.verticalCenter }
-            Text { textFormat: Text.PlainText; width: parent.width; elide: Text.ElideRight; text: nrow.o.name; font { family: Theme.ui; pixelSize: 15; weight: Font.DemiBold } color: Theme.fg }
+            SetLabel { width: parent.width; elide: Text.ElideRight; text: nrow.o.name }
             Lb {
                 px: 10
                 text: `${nrow.on ? "connected" : nrow.busy ? "connecting" : nrow.o.known ? "saved" : WifiSecurityType.toString(nrow.o.security).toLowerCase()} · ${Math.round(nrow.o.signalStrength * 100)}%`

@@ -18,13 +18,13 @@ Item {
     width: parent ? parent.width : 0
     height: 48
 
-    Text {
-        anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+    SetLabel {
+        anchors { left: parent.left; right: segments.left; rightMargin: 12; verticalCenter: parent.verticalCenter }
+        elide: Text.ElideRight
         text: root.label
-        font { family: Theme.ui; pixelSize: 15 }
-        color: Theme.fg
     }
     Rectangle {
+        id: segments
         anchors { right: parent.right; verticalCenter: parent.verticalCenter }
         width: root.seg * root.opts.length
         height: 34

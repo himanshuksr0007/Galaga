@@ -147,14 +147,13 @@ Item {
                                         source: prow.modelData.src
                                         sourceSize: Qt.size(24, 24)
                                     }
-                                    Text {
+                                    SetLabel {
                                         x: 48
                                         anchors.verticalCenter: parent.verticalCenter
                                         width: parent.width - 110
                                         elide: Text.ElideRight
                                         text: prow.modelData.name
-                                        font { family: Theme.ui; pixelSize: 14 }
-                                        color: prow.on ? Theme.fg : Theme.grey
+                                        color: prow.on ? foreground : Theme.grey
                                     }
                                     Rectangle {
                                         anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter }

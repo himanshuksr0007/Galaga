@@ -36,13 +36,11 @@ Item {
 
     Timer { id: wait; interval: 200; onTriggered: root.moved(root.v) }
 
-    Text {
+    SetLabel {
         id: lab
         anchors { left: parent.left; verticalCenter: parent.verticalCenter }
         width: 150
         text: root.label
-        font { family: Theme.ui; pixelSize: 15 }
-        color: Theme.fg
         elide: Text.ElideRight
     }
     Item {

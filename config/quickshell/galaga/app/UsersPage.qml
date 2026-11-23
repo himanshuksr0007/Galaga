@@ -240,10 +240,8 @@ Item {
                             spacing: 3
                             Row {
                                 spacing: 8
-                                Text {
+                                SetLabel {
                                     text: pg.meUser ? pg.meUser.name : ""
-                                    font { family: Theme.ui; pixelSize: 15; weight: Font.DemiBold }
-                                    color: Theme.fg
                                 }
                                 Badge { visible: pg.meUser !== null && pg.meUser.admin; text: "admin" }
                             }
@@ -294,10 +292,8 @@ Item {
                                 spacing: 3
                                 Row {
                                     spacing: 8
-                                    Text {
+                                    SetLabel {
                                         text: modelData.name
-                                        font { family: Theme.ui; pixelSize: 15; weight: Font.DemiBold }
-                                        color: Theme.fg
                                     }
                                     Badge { visible: modelData.you; text: "you" }
                                     Badge { visible: modelData.admin; text: "admin" }

@@ -180,7 +180,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 78
                                 spacing: 3
-                                Text { textFormat: Text.PlainText; width: parent.width; elide: Text.ElideRight; text: pg.selDev ? outList.name(pg.selDev) : ""; font { family: Theme.ui; pixelSize: 17; weight: Font.DemiBold } color: Theme.fg }
+                                SetLabel { width: parent.width; elide: Text.ElideRight; text: pg.selDev ? outList.name(pg.selDev) : "" }
                                 Lb {
                                     px: 10
                                     text: pg.selDev ? [outList.kind(pg.selDev)[0],
@@ -317,7 +317,7 @@ Item {
                 Art { id: sart; x: 10; anchors.verticalCenter: parent.verticalCenter; width: 56; height: 56; step: 4; url: Media.player?.trackArtUrl ?? "" }
                 Column {
                     anchors { left: sart.right; leftMargin: 14; right: sctl.left; rightMargin: 12; verticalCenter: parent.verticalCenter }
-                    Text { textFormat: Text.PlainText; width: parent.width; elide: Text.ElideRight; text: Media.player?.trackTitle || "Nothing on"; font { family: Theme.ui; pixelSize: 15; weight: Font.DemiBold } color: Theme.fg }
+                    SetLabel { width: parent.width; elide: Text.ElideRight; text: Media.player?.trackTitle || "Nothing on" }
                     Text { textFormat: Text.PlainText; width: parent.width; elide: Text.ElideRight; text: Media.player?.trackArtist ?? ""; font { family: Theme.ui; pixelSize: 12 } color: Theme.grey }
                 }
                 Controls { id: sctl; anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter } size: 18; play: 40 }
