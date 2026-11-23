@@ -36,10 +36,100 @@ ShellRoot {
     id: shell
 
     Launcher { id: launcher }
-    Quick { id: quick; onPowerRequested: power.open(); onSettingsRequested: shell.openSettings() }
+    Quick {
+        id: quick
+        onPowerRequested: power.open()
+        onSettingsRequested: shell.openSettings()
+    }
+    property PanelWindow activePowerBar
+    readonly property var statusMenus: [wifiMenu, btMenu, soundMenu]
+    function statusOpen(except) {
+        return statusMenus.some(menu => menu !== except && menu.open)
+            || (activePowerBar && activePowerBar !== except && activePowerBar.powOpen);
+    }
+    function closeStatus(except, duration) {
+        for (const menu of statusMenus) {
+            if (menu === except || !menu.open) continue;
+            menu.animationDuration = duration;
+            menu.close();
+        }
+        if (activePowerBar && activePowerBar !== except && activePowerBar.powOpen) {
+            activePowerBar.powerAnimationDuration = duration;
+            activePowerBar.powOpen = false;
+        }
+    }
+    function toggleStatus(menu, bar, origin) {
+        const switching = statusOpen(menu);
+        closeStatus(menu, switching ? 180 : 0);
+        closeTray();
+        quick.close();
+        menu.animationDuration = switching ? 312 : 0;
+        if (!menu.open) {
+            menu.screen = bar.screen;
+            menu.triggerBar = bar;
+            menu.popoverOrigin = origin;
+        }
+        menu.toggle();
+    }
+    function toggleBarPower(bar, anchor) {
+        const switching = statusOpen(bar);
+        closeStatus(bar, switching ? 180 : 0);
+        closeTray();
+        quick.close();
+        bar.powerAnimationDuration = switching ? 312 : 0;
+        activePowerBar = bar;
+        bar.togglePowerCard(anchor);
+    }
+    function toggleQuick(screen) {
+        if (!quick.open) quick.screen = screen;
+        quick.toggle();
+    }
+    function focusedScreen() {
+        const name = Hyprland.focusedMonitor?.name;
+        return Quickshell.screens.find(screen => screen.name === name) ?? null;
+    }
     SoundMenu { id: soundMenu; onSettingsRequested: shell.openSettings("sound") }
     BtMenu { id: btMenu; onSettingsRequested: shell.openSettings("bt") }
     WifiMenu { id: wifiMenu; onSettingsRequested: shell.openSettings("wifi") }
+    property PanelWindow trayBar
+    property Item trayAnchor
+    property bool trayOpen: false
+    onTrayAnchorChanged: if (!trayAnchor) trayOpen = false
+    function closeTray() { trayOpen = false; }
+    function clearTray() {
+        closeTray();
+        trayAnchor = null;
+        trayBar = null;
+    }
+    function toggleTray(bar, anchor) {
+        if (trayOpen && trayAnchor === anchor) return closeTray();
+        quick.close();
+        closeStatus(null, 0);
+        launcher.close();
+        trayBar = bar;
+        trayAnchor = anchor;
+        trayOpen = true;
+        Sounds.play("pop");
+    }
+    LazyLoader {
+        active: !!shell.trayAnchor
+        TrayMenu {
+            barWindow: shell.trayBar
+            anchorItem: shell.trayAnchor
+            opened: shell.trayOpen
+            onDismissed: shell.closeTray()
+            onExited: shell.clearTray()
+        }
+    }
+    Connections {
+        target: quick
+        function onOpenChanged() { if (quick.open) { shell.closeTray(); shell.closeStatus(null, 0); } }
+    }
+    Connections {
+        target: Theme.state
+        function onBarAtChanged() { shell.clearTray(); }
+        function onBarChanged() { if (!Theme.state.bar.includes("trayApps")) shell.clearTray(); }
+    }
     // the settings app loads on first use, not at shell start: it is the
     // biggest object tree in the shell and most sessions never open it.
     // Closing it unloads it again -- the app asks out, the loader drops it
@@ -113,17 +203,34 @@ ShellRoot {
             // bar and home can be taken off a screen (settings -> displays); the wallpaper stays. Here, not in the
             // window: visible from its own screen is a loop (the window is recreated, screen changes)
             Home { screen: s.modelData; visible: Theme.scr(s.modelData.name, "home") }
-            Hot { screen: s.modelData; onTriggered: quick.peek() }
+            Hot { screen: s.modelData; onTriggered: { if (!quick.open) quick.screen = s.modelData; quick.peek(); } }
             Bar {
+                id: screenBar
                 screen: s.modelData
                 visible: Theme.scr(s.modelData.name, "bar")
-                onMarkClicked: launcher.toggle()
-                onTrayClicked: { soundMenu.close(); btMenu.close(); wifiMenu.close(); quick.toggle(); }
-                onSoundClicked: { quick.close(); btMenu.close(); wifiMenu.close(); soundMenu.toggle(); }
-                onBtClicked: { quick.close(); soundMenu.close(); wifiMenu.close(); btMenu.toggle(); }
-                onWifiClicked: { quick.close(); soundMenu.close(); btMenu.close(); wifiMenu.toggle(); }
-                onPowerClicked: power.toggle()
-                onClockClicked: cal.toggle()
+                onVisibleChanged: if (!visible) {
+                    screenBar.powOpen = false;
+                    if (shell.trayBar === screenBar) shell.clearTray();
+                }
+                onTrayAppsClicked: anchor => shell.toggleTray(screenBar, anchor)
+                onMarkClicked: { shell.closeStatus(null, 0); shell.closeTray(); launcher.toggle(); }
+                onTrayClicked: shell.toggleQuick(s.modelData)
+                onSoundClicked: origin => shell.toggleStatus(soundMenu, screenBar, origin)
+                onBtClicked: origin => shell.toggleStatus(btMenu, screenBar, origin)
+                onWifiClicked: origin => shell.toggleStatus(wifiMenu, screenBar, origin)
+                onPowerCardClicked: anchor => shell.toggleBarPower(screenBar, anchor)
+                onPowerClicked: { shell.closeStatus(null, 0); shell.closeTray(); power.toggle(); }
+                onClockClicked: origin => {
+                    shell.closeStatus(null, 0);
+                    shell.closeTray();
+                    quick.close();
+                    if (!cal.open) {
+                        cal.screen = screenBar.screen;
+                        cal.triggerBar = screenBar;
+                        cal.popoverOrigin = origin;
+                    }
+                    cal.toggle();
+                }
             }
         }
     }
@@ -224,7 +331,7 @@ ShellRoot {
     Shortcut {
         name: "launcher"
         description: "launcher (tap Super)"
-        onPressed: launcher.toggle()
+        onPressed: { shell.closeTray(); launcher.toggle(); }
     }
     // Super+Space (altar in demonshot) -- deck, bottom dashboard: the launcher is already on tapping Super
     Shortcut { name: "altar"; description: "deck: bottom dashboard"; onPressed: deck.toggle() }
@@ -232,8 +339,8 @@ ShellRoot {
     Shortcut { name: "expose"; description: "exposé: windows on this desktop"; onPressed: { if (Theme.state.featExpose) expose.toggle(); } }
     Shortcut { name: "switcher"; description: "window switcher"; onPressed: switcher.step(1) }
     Shortcut { name: "switcherback"; description: "window switcher, backwards"; onPressed: switcher.step(-1) }
-    Shortcut { name: "quick"; description: "quick settings"; onPressed: quick.toggle() }
-    Shortcut { name: "ward"; description: "quick settings"; onPressed: quick.toggle() } // Super+N in demonshot -- same toggles
+    Shortcut { name: "quick"; description: "quick settings"; onPressed: { shell.toggleQuick(shell.focusedScreen()); } }
+    Shortcut { name: "ward"; description: "quick settings"; onPressed: { shell.toggleQuick(shell.focusedScreen()); } } // Super+N in demonshot -- same toggles
     Shortcut { name: "settings"; description: "settings"; onPressed: shell.toggleSettings() }
     Shortcut { name: "taskmgr"; description: "task manager"; onPressed: shell.toggleTaskMgr() }
     Shortcut { name: "snapleft"; description: "snap window left"; onPressed: Snap.snapDir("left") }

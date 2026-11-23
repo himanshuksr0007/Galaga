@@ -20,11 +20,13 @@ PanelWindow {
 
     signal markClicked
     signal trayClicked
-    signal soundClicked
-    signal btClicked
-    signal wifiClicked
+    signal trayAppsClicked(Item anchor)
+    signal soundClicked(var origin)
+    signal btClicked(var origin)
+    signal wifiClicked(var origin)
     signal powerClicked
-    signal clockClicked
+    signal clockClicked(var origin)
+    signal powerCardClicked(Item anchor)
 
     readonly property bool vert: Theme.state.barAt !== "top" // everything but top (and unknown) -- at the left
     anchors { left: true; right: !vert; top: true; bottom: vert }
@@ -48,6 +50,11 @@ PanelWindow {
 
     // hyprland 0.56 with lua: dispatch accepts a lua expression
     function go(ws) { Hyprland.dispatch(`hl.dsp.focus({ workspace = "${ws}" })`); }
+
+    function popoverOrigin(item) {
+        if (vert) return null;
+        return item.mapToItem(contentItem, 0, 0, item.width, item.height);
+    }
 
     SystemClock { id: clock; precision: SystemClock.Minutes }
 
@@ -134,7 +141,7 @@ PanelWindow {
             Pile {
                 id: clk
                 anchors.centerIn: parent
-                TapHandler { onTapped: root.clockClicked() }
+                TapHandler { onTapped: root.clockClicked(root.popoverOrigin(parent)) }
                 HoverHandler { cursorShape: Qt.PointingHandCursor }
                 Num { text: Theme.hh(clock.date); font.pixelSize: 30 }
                 Num { visible: !root.vert; text: ":"; font.pixelSize: 30 }
@@ -147,9 +154,8 @@ PanelWindow {
                 }
             }
 
-            // tray -- Theme.state.bar in order (settings, BAR section). Layout, notifications, battery: a click opens
-            // quick settings -- except sound, bluetooth and wi-fi, whose clicks open their own menus (quick/SoundMenu,
-            // quick/BtMenu, quick/WifiMenu). Power mode and power -- their own clicks
+            // Tray in the order set in Desktop & Deck. Notifications open Quick.
+            // Sound, Bluetooth, Wi-Fi and battery have their own menus.
             Pile {
                 x: root.vert ? (parent.width - width) / 2 : parent.width - width - 22
                 y: root.vert ? parent.height - height - 22 : (parent.height - height) / 2
@@ -160,8 +166,10 @@ PanelWindow {
                     Loader {
                         id: part
                         required property string modelData
-                        readonly property bool quick: modelData !== "mode" && modelData !== "power" && modelData !== "focus"
-                        sourceComponent: root.parts[modelData] ?? null
+                        // Keep the old slot dimensions so saved layouts keep their spacing.
+                        readonly property bool reserved: modelData === "mode"
+                        readonly property bool barAction: !reserved && modelData !== "power" && modelData !== "focus"
+                        sourceComponent: reserved ? modeGap : root.parts[modelData] ?? null
                         visible: !!sourceComponent && (modelData !== "battery" || root.bat.isLaptopBattery) && (modelData !== "focus" || Theme.state.featFocus)
                         // the glyphs are small and the tray's spacing leaves 20 px of dead
                         // space between them: the hit area grows 10 px into the gap on
@@ -171,9 +179,21 @@ PanelWindow {
                         MouseArea {
                             anchors.fill: parent
                             anchors.margins: -10
-                            enabled: part.quick
+                            enabled: part.barAction
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: modelData === "sound" ? root.soundClicked() : modelData === "bluetooth" ? root.btClicked() : modelData === "wifi" ? root.wifiClicked() : root.trayClicked()
+                            onClicked: {
+                                if (part.modelData === "battery") {
+                                    root.powerCardClicked(part);
+                                    return;
+                                }
+                                switch (part.modelData) {
+                                case "trayApps": root.trayAppsClicked(part); break;
+                                case "sound": root.soundClicked(root.popoverOrigin(part)); break;
+                                case "bluetooth": root.btClicked(root.popoverOrigin(part)); break;
+                                case "wifi": root.wifiClicked(root.popoverOrigin(part)); break;
+                                default: root.trayClicked();
+                                }
+                            }
                         }
                     }
                 }
@@ -181,7 +201,23 @@ PanelWindow {
         }
     }
 
-    readonly property var parts: ({ wifi: wifiC, bluetooth: btC, sound: soundC, notes: notesC, focus: focusC, battery: batC, mode: modeC, power: powerC, cat: catC })
+    readonly property var parts: ({ wifi: wifiC, bluetooth: btC, sound: soundC, notes: notesC, focus: focusC, battery: batC, power: powerC, cat: catC, trayApps: trayAppsC })
+    Component {
+        id: trayAppsC
+        Icon {
+            text: "\u{F0143}"
+            width: 16
+            font.pixelSize: 16
+            horizontalAlignment: Text.AlignHCenter
+            activeFocusOnTab: true
+            Accessible.role: Accessible.Button
+            Accessible.name: "background apps"
+            Accessible.onPressAction: root.trayAppsClicked(parent)
+            Keys.onReturnPressed: root.trayAppsClicked(parent)
+            Keys.onEnterPressed: root.trayAppsClicked(parent)
+            Keys.onSpacePressed: root.trayAppsClicked(parent)
+        }
+    }
     // RunCat: the busier the cpu, the faster it runs (250 ms a frame idle, 50 at full load). cpu is polled
     // while it is in the tray; the Binding is not in a delegate -- a destroyed value is not given back.
     // Grey as-is; in the light theme it would vanish on white, so it inverts to black, like the buds.
@@ -253,7 +289,6 @@ PanelWindow {
         id: batC
         Pile {
             id: batc
-            HoverHandler { onHoveredChanged: { root.batHot = hovered; root.peek(batc); } Component.onDestruction: root.batHot = false }
             spacing: 8
             readonly property bool ac: !UPower.onBattery
             readonly property bool charging: root.bat.state === UPowerDeviceState.Charging
@@ -285,33 +320,7 @@ PanelWindow {
             Lb { id: full; visible: false; text: "100"; px: 12; font.bold: true }
         }
     }
-    // power mode as ticks (Rules.modes): battery saver -- one, performance -- all; click -- next,
-    // hover (and on the battery) -- a card with a choice
-    Component {
-        id: modeC
-        Item {
-            id: ticks
-            width: 40
-            height: 22
-            Row {
-                anchors.centerIn: parent
-                spacing: 2
-                Repeater {
-                    model: Rules.modeCount
-                    Rectangle {
-                        required property int index
-                        anchors.bottom: parent.bottom
-                        width: 3
-                        height: 5 + index * 3
-                        radius: 1.5
-                        color: index <= Rules.mode ? Theme.fg : Theme.s3
-                    }
-                }
-            }
-            HoverHandler { cursorShape: Qt.PointingHandCursor; onHoveredChanged: { root.tickHot = hovered; root.peek(ticks); } Component.onDestruction: root.tickHot = false }
-            MouseArea { anchors.fill: parent; anchors.margins: -10; cursorShape: Qt.PointingHandCursor; onClicked: Rules.setMode((Rules.mode + 1) % Rules.modeCount) }
-        }
-    }
+    Component { id: modeGap; Item { width: 40; height: 22 } }
     Component {
         id: powerC
         Icon {
@@ -352,24 +361,27 @@ PanelWindow {
         }
     }
 
-    // ---- battery and power mode: hover the battery or the ticks -- a card to the right of the bar, like caelestia's popover.
-    // Doto charge, status, scale; below, modes as circles with ticks -- a click selects, under the cursor -- what it does.
-    // Left both the bar and the card -- fades ----
-    property bool batHot: false
-    property bool tickHot: false
-    readonly property bool powHot: batHot || tickHot || popHov.hovered
+    // Battery and performance share one card. Only clicks open it or select a power mode.
     readonly property bool batLow: UPower.onBattery && root.bat.percentage < 0.15
-    // the card aligns to what was hovered (battery or ticks): at the side -- its bottom to its bottom, on top -- its
-    // right edge to its right; while visible -- it does not jump
+    property Item powerAnchor
     property point popAt
-    function peek(it) { if (!pop.visible) popAt = it.mapToItem(pill, it.width, it.height); }
     property bool powOpen: false
+    property alias powerAnimationDuration: popMotion.durationOverride
     property int powPeek: -1
-    onPowHotChanged: powHot ? powOpenT.restart() : powCloseT.restart()
-    Timer { id: powOpenT; interval: 180; onTriggered: if (root.powHot) root.powOpen = true }
-    Timer { id: powCloseT; interval: 300; onTriggered: if (!root.powHot) root.powOpen = false }
 
-    // ---- the focus card: the battery card's sibling, same anchoring and manners ----
+    onPowerAnchorChanged: if (!powerAnchor) powOpen = false
+    function togglePowerCard(item) {
+        if (powOpen && powerAnchor === item) {
+            powOpen = false;
+            return;
+        }
+        powerAnchor = item;
+        popAt = item.mapToItem(pill, item.width, item.height);
+        popMotion.origin = popoverOrigin(item);
+        powOpen = true;
+    }
+
+    // ---- the focus card: the battery card's sibling, same anchoring with its own hover trigger ----
     property bool focHot: false
     property point focAt
     property bool focOpen: false
@@ -384,31 +396,40 @@ PanelWindow {
         : !UPower.onBattery ? "on ac · full"
         : "on battery" + (root.bat.timeToEmpty ? ` · ${hm(root.bat.timeToEmpty)} left` : "")
 
-    PopupWindow {
+    PopoverMotion { id: popMotion; opened: root.powOpen }
+    PanelWindow {
         id: pop
-        property real t: root.powOpen ? 1 : 0
-        Behavior on t { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
-        visible: t > 0
-        // from the bar pill's inner edge with a gap of 14; at the side it grows up from popAt, on top -- down and left
-        anchor.item: pill
-        anchor.rect: root.vert ? Qt.rect(pill.width + 14, root.popAt.y, 1, 1) : Qt.rect(root.popAt.x, pill.height + 14, 1, 1)
-        anchor.edges: Edges.Top | Edges.Left
-        anchor.gravity: root.vert ? Edges.Top | Edges.Right : Edges.Bottom | Edges.Left
-        implicitWidth: Math.ceil(440 * Theme.s)
-        implicitHeight: Math.ceil(card.height * Theme.s)
+        screen: root.screen
+        visible: root.powOpen || popMotion.progress > 0
+        anchors { left: true; right: true; top: true; bottom: true }
+        exclusionMode: ExclusionMode.Ignore
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "galaga-bar-pow"
+        WlrLayershell.keyboardFocus: root.powOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
         color: "transparent"
+        mask: Region { item: root.powOpen ? card : null }
+        HyprlandFocusGrab {
+            windows: [pop, root]
+            active: root.powOpen && pop.visible
+            onCleared: if (root.powOpen) root.powOpen = false
+        }
 
         Stage {
-            Rectangle {
+            PopoverCard {
                 id: card
-                width: 440
+                motion: popMotion
+                unit: Theme.s
+                x: root.vert ? 92 : Math.max(14, Math.min(parent.width - width - 14, pill.x + root.popAt.x - width))
+                y: root.vert ? Math.max(14, Math.min(parent.height - height - 14, pill.y + root.popAt.y - height)) : 88
+                width: Math.min(root.vert ? 440 : 380, parent.width - (root.vert ? 106 : 28))
+                Behavior on x {
+                    enabled: root.powOpen && popMotion.progress === 1 && popMotion.moving && !root.vert
+                    NumberAnimation { duration: 288; easing.type: Easing.OutCubic }
+                }
                 height: body.height + 52
-                radius: Theme.corner(36)
-                color: Theme.s1
-                border { width: 1; color: Theme.s2 }
-                opacity: pop.t
-                transform: Translate { x: root.vert ? -16 * (1 - pop.t) : 0; y: root.vert ? 0 : -16 * (1 - pop.t) }
-                HoverHandler { id: popHov }
+                transform: Translate { x: root.vert ? -16 * (1 - popMotion.progress) : 0 }
+                focus: true
+                Keys.onEscapePressed: root.powOpen = false
 
                 Column {
                     id: body
@@ -418,31 +439,43 @@ PanelWindow {
                     spacing: 18
 
                     Row {
+                        id: chargeRow
+                        width: body.width
                         spacing: 14
-                        Num { text: Math.round(root.bat.percentage * 100); font.pixelSize: 72 }
+                        Num {
+                            id: charge
+                            text: Math.round(root.bat.percentage * 100)
+                            font.pixelSize: Math.min(72, chargeRow.width / 3)
+                        }
                         Column {
+                            width: Math.max(0, chargeRow.width - charge.width - chargeRow.spacing)
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 6
-                            Lb { text: "% battery"; color: Theme.fg }
-                            Lb { text: root.batState }
+                            Lb { width: parent.width; text: "% battery"; color: Theme.fg }
+                            Lb { width: parent.width; text: root.batState; wrapMode: Text.Wrap }
                         }
                     }
                     Seg { width: parent.width; height: 6; n: 24; f: root.bat.percentage; on: root.batLow ? Theme.red : Theme.fg }
 
                     Lb { topPadding: 6; text: "power mode" }
                     Row {
-                        spacing: (body.width - Rules.modeCount * 80) / Math.max(1, Rules.modeCount - 1)
+                        id: modes
+                        width: body.width
+                        spacing: 8
+                        readonly property real cellWidth: (width - (Rules.modeCount - 1) * spacing) / Rules.modeCount
                         Repeater {
                             model: Rules.modeCount
                             Column {
                                 id: mo
                                 required property int index
                                 readonly property bool on: Rules.mode === index
+                                width: modes.cellWidth
                                 spacing: 10
                                 Rectangle {
-                                    width: 80
-                                    height: 80
-                                    radius: 40
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    width: Math.min(parent.width, root.vert ? 80 : 62)
+                                    height: width
+                                    radius: width / 2
                                     color: mo.on ? Theme.fg : moHov.hovered ? Theme.s3 : Theme.s2
                                     Behavior on color { ColorAnimation { duration: Theme.t } }
                                     // ticks: how many are lit -- that much power
@@ -468,7 +501,13 @@ PanelWindow {
                                     }
                                     TapHandler { onTapped: Rules.setMode(mo.index) }
                                 }
-                                Lb { anchors.horizontalCenter: parent.horizontalCenter; text: mo.index === 3 ? "max" : Rules.modes[mo.index].name; color: mo.on ? Theme.fg : Theme.grey }
+                                Lb {
+                                    width: parent.width
+                                    horizontalAlignment: Text.AlignHCenter
+                                    wrapMode: Text.Wrap
+                                    text: mo.index === 3 ? "max" : Rules.modes[mo.index].name
+                                    color: mo.on ? Theme.fg : Theme.grey
+                                }
                             }
                         }
                     }

@@ -285,7 +285,7 @@ Singleton {
             property string lockWall: ""     // the lock's own wallpaper: the copy in the state dir; "" -- the desktop wallpaper (settings -> lock)
             property int lockClock: 0        // the lock's clock: 0 matrix, 1 stacked, 2 analogue (settings -> lock)
             property var deck: ["clock", "weather", "perf", "net", "media", "min"] // its sections in order, see decks
-            property var bar: ["wifi", "bluetooth", "sound", "notes", "focus", "battery", "mode", "power"] // bar tray from top to bottom, see bars
+            property var bar: ["trayApps", "wifi", "bluetooth", "sound", "notes", "focus", "battery", "mode", "power"] // bar tray from top to bottom, see bars
             // Drop the retired keyboard indicator from saved tray orders.
             onBarChanged: if (Array.isArray(bar) && bar.includes("layout")) bar = bar.filter(id => id !== "layout")
             property bool barTitle: true   // window title stacked in the bar
@@ -311,7 +311,7 @@ Singleton {
     // deck sections
     readonly property var decks: ["clock", "weather", "perf", "net", "media", "min"]
     // bar tray
-    readonly property var bars: ["wifi", "bluetooth", "sound", "notes", "focus", "battery", "mode", "power", "cat"]
+    readonly property var bars: ["trayApps", "wifi", "bluetooth", "sound", "notes", "focus", "battery", "power", "cat"]
 
     // ---- the look of everything outside the shell. Called only by shell.qml: at startup and on theme change ----
     // hypr inherits from demonshot: monitor, input, idle, night light and motion are set by its Rules (shell.qml), animations -- from the

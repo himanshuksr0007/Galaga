@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Services.Pipewire
 import Quickshell.Wayland
 import qs
@@ -38,8 +39,11 @@ PanelWindow {
         }
     }
 
-    property real t: open ? 1 : 0
-    Behavior on t { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+    property PanelWindow triggerBar
+    property alias animationDuration: entrance.durationOverride
+    property alias popoverOrigin: entrance.origin
+    readonly property alias t: entrance.progress
+    PopoverMotion { id: entrance; opened: root.open }
 
     // ---- pages ----
     property string view: "out" // "out" | "dev"
@@ -73,32 +77,36 @@ PanelWindow {
         return e?.icon ? Quickshell.iconPath(e.icon, true) : "";
     }
 
-    visible: t > 0
+    visible: open || t > 0
     anchors { left: true; right: true; top: true; bottom: true }
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
+    mask: Region { item: root.open ? panel : null }
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     WlrLayershell.namespace: "galaga-sound"
 
-    MouseArea { anchors.fill: parent; onClicked: root.close() }
+    HyprlandFocusGrab {
+        windows: root.triggerBar ? [root, root.triggerBar] : [root]
+        active: root.open && root.visible
+        onCleared: if (root.open) root.close()
+    }
 
-    Rectangle {
+    PopoverCard {
         id: panel
+        motion: entrance
         readonly property bool barTop: Theme.state.barAt === "top"
-        width: 380
+        width: entrance.continuous ? 340 : 380
         height: (root.view === "out" ? outCol.height : devCol.height) + 44
         Behavior on height { NumberAnimation { duration: 300; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
         x: parent.width - width - 14
-        y: barTop ? Math.ceil(86 * Theme.s) : parent.height - height - Math.ceil(86 * Theme.s)
-        opacity: root.t
+        y: barTop ? Math.ceil(88 * Theme.s) : parent.height - height - Math.ceil(86 * Theme.s)
         transform: [
-            Translate { y: (1 - root.t) * (panel.barTop ? -8 : 8) },
-            Scale { origin.x: panel.width; origin.y: panel.barTop ? 0 : panel.height; xScale: 0.97 + 0.03 * root.t; yScale: 0.97 + 0.03 * root.t }
+            Translate { y: entrance.continuous ? 0 : (1 - root.t) * (panel.barTop ? -8 : 8) },
+            Scale { origin.x: panel.width; origin.y: panel.barTop ? 0 : panel.height; xScale: entrance.continuous ? 1 : 0.97 + 0.03 * root.t; yScale: xScale }
         ]
         radius: Theme.corner(36)
         color: Theme.s1
-        border { width: 1; color: Theme.s2 }
         focus: true
         Keys.onEscapePressed: { if (root.view === "dev") root.view = "out"; else root.close(); }
         MouseArea { anchors.fill: parent } // clicking the panel does not close it

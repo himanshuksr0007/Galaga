@@ -37,7 +37,7 @@ Item {
         battery: "\u{F0079}", buds: "\u{F02CB}", player: "\u{F040A}", system: "\u{F0128}", cat: "\u{F011B}", cava: "\u{F0EA2}",
         clock: "\u{F0150}", perf: "\u{F04C5}", net: "\u{F05A9}", media: "\u{F075A}",
         wifi: "\u{F05A9}", bluetooth: "\u{F00AF}", sound: "\u{F057E}", notes: "\u{F009A}", focus: "\u{F13AB}",
-        mode: "\u{F04C5}", power: "\u{F0425}"
+        power: "\u{F0425}", trayApps: "\u{F0143}"
     })
     // round home widgets, the rest -- a square
     readonly property var rounds: ["weather", "cpu", "ram", "gpu", "disk", "battery", "buds", "cava"]
@@ -454,7 +454,7 @@ Item {
                 width: parent.width
                 spacing: 10
                 SetHead { text: "bar" }
-                Lb { text: `bar · ${Theme.state.bar.length} of ${Theme.bars.length} in the tray · ${pg.barOnTop ? "top" : "left"} edge`; px: 11; color: Theme.mute }
+                Lb { text: `bar · ${Theme.state.bar.filter(id => id !== "mode").length} of ${Theme.bars.length} in the tray · ${pg.barOnTop ? "top" : "left"} edge`; px: 11; color: Theme.mute }
                 Item {
                     width: parent.width
                     height: barStrip.height * pg.barK
@@ -516,7 +516,7 @@ Item {
                                 Lb {
                                     x: pg.barOnTop ? (parent.width - width) / 2 : parent.width + 24
                                     y: pg.barOnTop ? bdot.y + bdot.height + 10 : (parent.height - height) / 2
-                                    text: bs.modelData
+                                    text: bs.modelData === "mode" ? "space" : bs.modelData
                                     px: 10
                                     color: bs.on ? Theme.fg : Theme.grey
                                 }

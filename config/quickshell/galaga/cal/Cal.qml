@@ -1,10 +1,11 @@
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Wayland
 import qs
 import qs.components
 
-// calendar and focus timer: click the bar clock. Panel 440 by the bar (on the screen side), centered -- opposite the clock, slides in from the bar.
+// Calendar and focus timer: click the bar clock. The top card expands from that clock.
 // Month as a 7x6 grid (today -- white circle), arrows and left/right scroll, click on the month -- back to today. Below the timer:
 // ring of dots fills clockwise, minute presets, start/pause (and space), reset. While running -- Galaga fills the bottom strip.
 // Esc or click outside -- close
@@ -17,16 +18,29 @@ PanelWindow {
     property int shift: 0 // months from the current one
     onOpenChanged: if (open) shift = 0
 
-    property real t: open ? 1 : 0
-    Behavior on t { NumberAnimation { duration: Theme.t; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.glide } }
+    property PanelWindow triggerBar
+    property alias popoverOrigin: entrance.origin
+    readonly property alias t: entrance.progress
+    PopoverMotion { id: entrance; opened: root.open }
 
-    visible: t > 0
+    visible: open || t > 0
     anchors { left: true; right: true; top: true; bottom: true }
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: !open ? WlrKeyboardFocus.None
+        : entrance.continuous ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive
     WlrLayershell.namespace: "galaga-cal"
+    mask: Region {
+        item: root.open && entrance.continuous ? panel : null
+        width: root.open && !entrance.continuous ? root.width : 0
+        height: root.open && !entrance.continuous ? root.height : 0
+    }
+    HyprlandFocusGrab {
+        windows: root.triggerBar ? [root, root.triggerBar] : [root]
+        active: entrance.continuous && root.open && root.visible
+        onCleared: if (root.open) root.close()
+    }
 
     SystemClock { id: clock; precision: SystemClock.Hours }
     readonly property var en: Qt.locale("en_US")
@@ -35,25 +49,23 @@ PanelWindow {
 
     Rectangle {
         anchors.fill: parent
+        anchors.topMargin: entrance.continuous ? root.triggerBar?.exclusiveZone ?? 0 : 0
         color: "#000000"
-        opacity: 0.35 * root.t
-        MouseArea { anchors.fill: parent; onClicked: root.close() }
+        opacity: 0.35 * (entrance.continuous ? entrance.content : root.t)
+        MouseArea { anchors.fill: parent; enabled: root.open && !entrance.continuous; onClicked: root.close() }
     }
 
     Stage {
-        Rectangle {
+        PopoverCard {
             id: panel
-            // the bar pill's inner edge (14 + 64) and gap 14, slides out from the bar; across -- centered, where the clock is
-            readonly property real off: 92 - 24 * (1 - root.t)
+            motion: entrance
+            unit: Theme.s
+            readonly property real off: entrance.continuous ? 92 : 92 - 24 * (1 - root.t)
             readonly property bool onTop: Theme.state.barAt === "top"
             x: onTop ? (parent.width - width) / 2 : off
             y: onTop ? off : (parent.height - height) / 2
             width: 440
             height: col.height + 52
-            opacity: root.t
-            radius: Theme.corner(36)
-            color: Theme.s1
-            border { width: 1; color: Theme.s2 }
             focus: true
             Keys.onPressed: e => {
                 if (e.key === Qt.Key_Escape) root.close();
