@@ -17,6 +17,7 @@ import "expose"
 import "genie"
 import "galaga"
 import "home"
+import "inspect"
 import "launcher"
 import "power"
 import "quick"
@@ -182,6 +183,21 @@ ShellRoot {
     Expose { id: expose }
     Switcher { id: switcher }
     Genie {}
+    property bool liveTextOpen: false
+    LazyLoader {
+        active: Theme.state.featLiveText
+        Shortcut { name: "livetext"; onPressed: shell.liveTextOpen = !shell.liveTextOpen }
+    }
+    LazyLoader {
+        active: Theme.state.featLiveText && shell.liveTextOpen
+        Inspect {
+            onDismissed: shell.liveTextOpen = false
+        }
+    }
+    Connections {
+        target: Theme.state
+        function onFeatLiveTextChanged() { if (!Theme.state.featLiveText) shell.liveTextOpen = false; }
+    }
     Shot { id: shot }
     SnapPop {}
     SnapZone {}

@@ -45,7 +45,11 @@ ShellRoot {
     // engaged: a breath after the process starts, so the players (services/SoundFx)
     // have had their moment to decode. The greeter never runs this file -- no sounds there
     Timer { id: lockSnd; interval: 200; onTriggered: Sounds.play("lock") }
-    Component.onCompleted: lockSnd.start()
+    Component.onCompleted: {
+        lockSnd.start();
+        if (Theme.state.featLiveText)
+            Quickshell.execDetached(["qs", "-p", Quickshell.shellPath("."), "ipc", "call", "inspect", "close"]);
+    }
 
     property string layout: "en"
     function short(name) { return name.slice(0, 2).toLowerCase(); }

@@ -184,6 +184,7 @@ hl.bind(vars.kbFileExplorer, hl.dsp.exec_cmd(vars.fileExplorer))
 hl.bind("CTRL + ALT + V", hl.dsp.exec_cmd(vars.audioSettings))
 
 -- Utilities
+hl.bind("SUPER + SHIFT + T", hl.dsp.global("shell:livetext"))
 hl.bind("Print", hl.dsp.global("shell:shot"))
 hl.bind("SUPER + SHIFT + S", hl.dsp.global("shell:shot"))
 hl.bind("SUPER + SHIFT + E", hl.dsp.global("shell:editshot")) -- edit the last screenshot

@@ -20,6 +20,7 @@ Rectangle {
     Text {
         id: lbl
         anchors.centerIn: parent
+        textFormat: Text.PlainText
         text: root.label
         font { family: Theme.ui; pixelSize: 13; weight: Font.DemiBold }
         color: root.danger && !hov.hovered ? Theme.red : (hov.hovered ? Theme.ink : Theme.fg)

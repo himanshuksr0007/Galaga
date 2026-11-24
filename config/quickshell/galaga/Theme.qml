@@ -263,6 +263,7 @@ Singleton {
             property bool featDesktops: true   // per-desktop names + wallpapers (settings -> desktop & deck)
             property var wsNames: ({})         // desktop id (as string) -> name; missing -- just the number
             property var wsWalls: ({})         // desktop id (as string) -> wallpaper path; missing/"" -- the global wall above
+            property bool featLiveText: false
             property bool featShot: true       // shot: grab text (OCR) and scan QR modes (shot/Shot.qml)
             property bool featGameAuto: true   // a fullscreen game turns on game mode (+ dnd) by itself (services/Game.qml)
             property bool snap: true       // windows-style snapping (services/Snap): super+arrows snap, super+z opens the layouts

@@ -216,6 +216,8 @@ hl.layer_rule({ match = { namespace = "demonshot-.*" }, no_anim = true })
 -- the power menu has no animation of its own -- a soft fade
 hl.layer_rule({ match = { namespace = "galaga-power" }, animation = "fade" })
 hl.layer_rule({ match = { namespace = "galaga-(launcher|edge|island|buds|quick|home|bar|caffeine|shot|clip|charms|vpn|deck|hot|cal|wall|back)" }, no_anim = true })
+-- A frozen capture must map exactly over its source.
+hl.layer_rule({ match = { namespace = "galaga-inspect" }, no_anim = true })
 -- The shell drives the bar popovers in both directions. A compositor slide
 -- would move the full-screen drawing surface away from the trigger icon.
 hl.layer_rule({ match = { namespace = "galaga-(wifi|bt|sound|tray|bar-pow)" }, no_anim = true })

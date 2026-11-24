@@ -118,6 +118,7 @@ Item {
                 spacing: 10
                 SetHead { text: "system" }
                 SetCard {
+                    SetToggle { label: "live text · super+shift+t"; on: Theme.state.featLiveText; onFlip: want => Theme.state.featLiveText = want }
                     SetToggle { label: "shot text + qr"; on: Theme.state.featShot; onFlip: want => Theme.state.featShot = want }
                     SetToggle { label: "auto game mode"; on: Theme.state.featGameAuto; onFlip: want => Theme.state.featGameAuto = want }
                     SetToggle {
