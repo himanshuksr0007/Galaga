@@ -207,6 +207,7 @@ hl.window_rule({
 ---- Layer rules ----
 ---------------------
 
+hl.layer_rule({ match = { namespace = "galaga-colour-picker" }, no_anim = true })
 hl.layer_rule({ match = { namespace = "hyprpicker" }, animation = "fade" })                 -- Colour picker out animation
 hl.layer_rule({ match = { namespace = "selection" }, animation = "fade" })                  -- slurp
 

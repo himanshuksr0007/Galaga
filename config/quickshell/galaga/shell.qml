@@ -19,6 +19,7 @@ import "galaga"
 import "home"
 import "inspect"
 import "launcher"
+import "meter"
 import "power"
 import "quick"
 import "settings"
@@ -36,7 +37,21 @@ import "services"
 ShellRoot {
     id: shell
 
+    property bool meterOpen: false
     Launcher { id: launcher }
+    IpcHandler {
+        target: "colourpicker"
+        enabled: Theme.state.featColourMeter
+        function toggle(): void { shell.meterOpen = !shell.meterOpen; }
+    }
+    LazyLoader {
+        active: Theme.state.featColourMeter && shell.meterOpen
+        ColourMeter { onDismissed: shell.meterOpen = false }
+    }
+    Connections {
+        target: Theme.state
+        function onFeatColourMeterChanged() { if (!Theme.state.featColourMeter) shell.meterOpen = false; }
+    }
     Quick {
         id: quick
         onPowerRequested: power.open()

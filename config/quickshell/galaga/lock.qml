@@ -65,6 +65,7 @@ ShellRoot {
 
     WlSessionLock {
         id: lock
+        Component.onCompleted: if (Theme.state.featColourMeter) Quickshell.execDetached(["qs", "-p", Quickshell.shellPath("."), "ipc", "call", "colourmeter", "close"])
         locked: true
         // ponytail: lockedChanged does not arrive after locked = false (quickshell 0.3.2), and secure crashes -- we exit on it
         onSecureChanged: if (!secure) Qt.quit()

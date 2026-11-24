@@ -192,7 +192,7 @@ hl.bind("SUPER + CTRL + S", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/
 hl.bind("SUPER + ALT + R", fn.record(false, true))
 hl.bind("CTRL + ALT + R", fn.record(false, false))
 hl.bind("SUPER + SHIFT + ALT + R", fn.record(true, false))
-hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a"))
+hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd(vars.rice .. " pick"))
 hl.bind("SUPER + SHIFT + U", hl.dsp.exec_cmd("hyprctl kill"))
 -- Volume
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })

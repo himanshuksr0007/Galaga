@@ -89,6 +89,9 @@ case $1 in
         term "$2"
         exec qs -p "$q/$2" -d ;;
     lock) pgrep -f '^qs .*/lock[.]qml' >/dev/null || exec qs -p "$q/$cur/lock.qml" ;;
+    pick)
+        if [ "$cur" = galaga ] && qs -p "$q/$cur" ipc call colourpicker toggle >/dev/null 2>&1; then exit 0; fi
+        exec hyprpicker -a ;;
     settings) exec qs -p "$q/$cur" ipc call settings toggle ;;
     taskmgr) exec qs -p "$q/$cur" ipc call taskmgr toggle ;;
     *) sed -n '2,10s/^# //p' "$0"; exit 1 ;;

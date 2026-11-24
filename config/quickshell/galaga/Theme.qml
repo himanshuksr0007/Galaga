@@ -255,6 +255,7 @@ Singleton {
             property bool featEssential: false // essential notifications: only the picked apps light the edges (Notes.qml); off by default -- it changes notification behaviour
             property var essentialApps: []     // desktop entry ids picked in settings -> notifications
             property var peek: []              // latest notifications [{ app, summary }] -- written by Notes, read by the lock face
+            property bool featColourMeter: false
             property bool featLauncher: true   // launcher smarts in apps mode: maths, conversions, kill, files (launcher/Launcher.qml)
             property bool featFocus: true      // focus timer as a bar tray widget (bar/Bar.qml); the timer itself also lives in cal/Cal.qml
             property int themeMode: 0          // 0 -- manual (the light field above decides), 1 -- auto on the schedule below
